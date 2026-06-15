@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RunX
 
-## Getting Started
+An AI-powered code execution, DSA, and complexity visualizer for students.
 
-First, run the development server:
+RunX lets you **run code step-by-step**, **visualize data structures and
+algorithms** in real time, and (later) **analyze time/space complexity** with an
+AI explanation layer. The goal is to replace the opaque "Code → Output" mental
+model with visibility into execution, memory, variables, the call stack, and
+data-structure changes.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Status — Phase 1 (MVP)
+
+The end-to-end execution pipeline is working:
+
+**Editor → Execution Engine → Snapshots → State Store → Inspector**
+
+- ✅ Monaco editor with Python input
+- ✅ Pyodide runtime in a Web Worker, tracing every line via `sys.settrace()`
+- ✅ Per-line snapshots (line, call stack, locals, stdout) serialized to JSON
+- ✅ Zustand store with run / step-forward / step-back / jump-to-step controls
+- ✅ Variable Inspector, Call Stack, and Output panels
+- ✅ Current-line highlighting + time-travel slider
+
+## Tech stack
+
+- **Framework:** Next.js (App Router) + TypeScript
+- **Styling:** Tailwind CSS v4 + shadcn/ui
+- **Editor:** Monaco (`@monaco-editor/react`)
+- **State:** Zustand
+- **Python execution:** Pyodide (loaded from CDN, run in a classic Web Worker)
+- Later: Framer Motion (animation), React Flow + D3 (graphs/trees), Supabase
+  (db/auth), OpenAI/Gemini (AI layer)
+
+## Architecture
+
+```
+Monaco Editor                         src/components/editor
+   ↓
+Execution Engine (Pyodide + settrace) public/workers/pyodide.worker.js
+   ↓                                  src/lib/execution/pyodide-client.ts
+Snapshot Generator                    (line, variables, call stack per step)
+   ↓
+State Store (Zustand)                 src/lib/store/execution-store.ts
+   ↓
+Visualizer Engine                     src/components/visualizers (Phase 3+)
+   ↓
+AI Analysis Layer                     src/lib/ai (Phase 7+)
+   ↓
+UI Components                         src/components
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The contract between the worker and the UI lives in `src/types/snapshot.ts`
+(`Snapshot`, `StackFrame`, `Variable`, `ValueNode`, `RunResult`). The same
+`ValueNode` tree feeds the variable inspector today and the DSA visualizers
+later.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Getting started
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev
+```
 
-## Learn More
+Open http://localhost:3000, edit the Python in the left pane, hit **Run**, then
+step through execution with the controls (or the ← / → arrow keys) and watch the
+variables, call stack, and output update at each step.
 
-To learn more about Next.js, take a look at the following resources:
+> The first run downloads the Pyodide runtime (~several MB) from the jsDelivr
+> CDN, so it needs network access and takes a moment on first load.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+public/workers/        Pyodide execution worker (classic worker)
+src/app/               Next.js App Router entry + global styles
+src/components/
+  editor/              Monaco code editor
+  execution/           Run/step controls, call stack, output
+  inspector/           Variable inspector + recursive value renderer
+  visualizers/         DSA visualizers (Phase 3+)
+  ui/                  shadcn/ui primitives
+src/lib/
+  execution/           Typed worker client
+  store/               Zustand execution store
+  ai/                  AI provider interface (Phase 7+)
+  supabase/            DB/auth client (later)
+src/types/             Shared snapshot/value types
+```
