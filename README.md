@@ -1,4 +1,5 @@
 # RunX
+<<<<<<< HEAD
 
 An AI-powered code execution, DSA, and complexity visualizer for students.
 
@@ -86,3 +87,6 @@ src/lib/
   supabase/            DB/auth client (later)
 src/types/             Shared snapshot/value types
 ```
+=======
+AI-Powered Code Execution, DSA &amp; Complexity Visualizer
+>>>>>>> 1d17345acd56dcaf39ed035e1b23fa79a22f1164
