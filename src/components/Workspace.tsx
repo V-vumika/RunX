@@ -2,6 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { ScanSearch } from "lucide-react";
+import { ExamplePicker } from "@/components/editor/ExamplePicker";
 
 import {
   ResizableHandle,
@@ -52,7 +53,10 @@ export function Workspace() {
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel defaultSize={55} minSize={30}>
             <div className="flex h-full flex-col">
-              <PanelHeader>main.py</PanelHeader>
+              <PanelHeader>
+                  <span>main.py</span>
+                  <ExamplePicker />
+              </PanelHeader>
               <div className="min-h-0 flex-1">
                 <CodeEditor />
               </div>
