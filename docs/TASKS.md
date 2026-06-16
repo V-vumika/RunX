@@ -9,6 +9,8 @@ Live status. Update as we go. Assignees: 🟣 **Vumi** (owner) · 🔵 **Shiv** 
 - _(nothing yet)_
 
 ## ⏭️ Up next
+- 🟣 **Vumi — Local setup** (git pull → `npm install` → `npm run dev` → verify Run/step works)
+- 🟣 **Vumi — Example code buttons** (`src/components/editor/ExamplePicker.tsx` + wire into `src/components/Workspace.tsx`)
 - **Phase 3 — Memory boxes** (see `docs/ROADMAP.md`)
   - 🟣 `MemoryView` component
   - 🔵 reference/aliasing arrows via `ValueNode.id`
