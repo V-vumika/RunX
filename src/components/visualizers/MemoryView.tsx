@@ -56,7 +56,7 @@ export function MemoryView() {
           return (
             <div
               key={v.name}
-              className="min-w-[180px] rounded-xl border-2 bg-card p-4 shadow-sm transition-all hover:shadow-md"
+              className="min-w-45 rounded-xl border-2 bg-card p-4 shadow-sm transition-all hover:shadow-md"
               style={alias ? { borderColor: alias.color } : undefined}
             >
               <div className="flex items-center gap-2">
