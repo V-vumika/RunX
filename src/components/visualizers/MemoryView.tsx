@@ -56,7 +56,7 @@ export function MemoryView() {
           return (
             <div
               key={v.name}
-              className="rounded-md border bg-card px-3 py-2"
+              className="min-w-[180px] rounded-xl border-2 bg-card p-4 shadow-sm transition-all hover:shadow-md"
               style={alias ? { borderColor: alias.color } : undefined}
             >
               <div className="flex items-center gap-2">
@@ -65,7 +65,7 @@ export function MemoryView() {
                 </span>
                 {alias && (
                   <span
-                    className="rounded-sm px-1 text-[10px] font-medium text-black"
+                    className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-black"
                     style={{ backgroundColor: alias.color }}
                     title="This object is shared by multiple variables"
                   >
