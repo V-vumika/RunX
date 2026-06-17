@@ -20,8 +20,8 @@ who-does-what split.
 
 ### Phase 3 — Memory boxes (Day 1–4)
 - [ ] 🟣 `MemoryView` — draw each variable as a box (name + value)
-- [ ] 🔵 use `ValueNode.id` to show shared references / aliasing (arrows)
-- [ ] 🔵 wire into the workspace layout
+- [x] 🔵 use `ValueNode.id` to show shared references / aliasing — `src/lib/visualizers/aliasing.ts` (`buildAliasMap`)
+- [x] 🔵 wire into the workspace layout — Memory tab + `MemoryView` scaffold
 
 ### Phase 4 — Call-stack visual polish (Day 5–7)
 - [ ] 🟣 nicer nested frame cards, clear recursion display

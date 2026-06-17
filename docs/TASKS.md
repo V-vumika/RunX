@@ -4,14 +4,22 @@ Live status. Update as we go. Assignees: 🟣 **Vumi** (owner) · 🔵 **Shiv** 
 
 ## ✅ Done
 - **Phase 1** — editor → exec → snapshots → store → inspector + step controls 🔵
+- 🟣 **Vumi — Local setup** (git pull → `npm install` → `npm run dev` → verified)
+- 🟣 **Vumi — Example code buttons** (`src/components/editor/ExamplePicker.tsx` + wired into `src/components/Workspace.tsx`) — build/tsc/lint clean
 
 ## 🚧 In progress
-- _(nothing yet)_
+- **Phase 3 — Memory boxes**
+  - 🔵 DONE — aliasing detection + MemoryView scaffold + Memory tab wired
+  - 🟣 **Vumi (Day 1)** — build out `MemoryView` real boxes + shared-ref color highlights (`src/components/visualizers/MemoryView.tsx`)
+- **Phase 4 — Call-stack polish**
+  - 🔵 DONE — `src/lib/visualizers/stack-analysis.ts` (`enrichFrames`, `frameLabel`, `EnrichedFrame`)
+  - 🟣 **Vumi (Day 2)** — redesign `CallStackPanel` using `enrichFrames` (`src/components/execution/CallStackPanel.tsx`)
+- **Phase 5 — Linear DSA visualizers**
+  - 🔵 DONE — structure detection (`structure-detect.ts`), step diff (`step-diff.ts`), all 4 view scaffolds + `DsaPanel` dispatcher wired into layout
+  - 🟣 **Vumi (Day 3)** — flesh out `ArrayView`, `StackView`, `QueueView`, `LinkedListView` in `src/components/visualizers/`
 
 ## ⏭️ Up next
-- 🟣 **Vumi — Local setup** (git pull → `npm install` → `npm run dev` → verify Run/step works)
-- 🟣 **Vumi — Example code buttons** (`src/components/editor/ExamplePicker.tsx` + wire into `src/components/Workspace.tsx`)
-- **Phase 3 — Memory boxes** (see `docs/ROADMAP.md`)
+- **Phase 6 — Algorithm animations** (sorting + searching with Framer Motion)
   - 🟣 `MemoryView` component
   - 🔵 reference/aliasing arrows via `ValueNode.id`
 
