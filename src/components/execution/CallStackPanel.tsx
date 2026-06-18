@@ -6,6 +6,7 @@ import {
   selectCurrentSnapshot,
   useExecutionStore,
 } from "@/lib/store/execution-store";
+import { enrichFrames, frameLabel } from "@/lib/visualizers/stack-analysis";
 
 export function CallStackPanel() {
   const snapshot = useExecutionStore(selectCurrentSnapshot);
@@ -19,38 +20,65 @@ export function CallStackPanel() {
     );
   }
 
-  // stack is outermost-first; show innermost (current) frame on top.
-  const frames = [...snapshot.stack].reverse();
+  // snapshot.stack is outermost-first; show innermost (current) frame on top.
+  const enriched = enrichFrames(snapshot.stack).slice().reverse();
 
   return (
     <ScrollArea className="h-full">
-      <ul className="p-2">
-        {frames.map((frame, i) => {
-          const isCurrent = i === 0;
-          const depth = frames.length - 1 - i;
-          const label =
-            frame.functionName === "<module>"
-              ? "<module>"
-              : `${frame.functionName}()`;
+      <ul className="flex flex-col gap-1.5 p-3">
+        {enriched.map((ef, i) => {
+          // outermost frame = least indent, innermost (active) frame = most indent
+          const depth = enriched.length - 1 - i;
+          const label = frameLabel(ef.frame);
+
           return (
             <li
-              key={`${frame.functionName}-${depth}-${i}`}
-              className={`flex items-center justify-between rounded-md px-2 py-1.5 ${
-                isCurrent ? "bg-muted" : ""
-              }`}
-              style={{ marginLeft: `${Math.min(depth, 8) * 12}px` }}
+              key={`${ef.frame.functionName}-${depth}-${i}`}
+              style={{ marginLeft: `${Math.min(depth, 8) * 16}px` }}
             >
-              <span className="flex items-center gap-2">
-                {isCurrent && (
-                  <span className="size-1.5 rounded-full bg-amber-400" />
-                )}
-                <span className="font-mono text-[13px] text-foreground">
-                  {label}
+              <div
+                className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors ${
+                  ef.isActive
+                    ? "border-amber-400/60 bg-muted shadow-sm"
+                    : "border-border/60 bg-background/40"
+                }`}
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span
+                    className={`size-1.5 shrink-0 rounded-full ${
+                      ef.isActive ? "bg-amber-400" : "bg-transparent"
+                    }`}
+                  />
+                  <span
+                    className={`truncate font-mono text-[13px] ${
+                      ef.isActive
+                        ? "font-semibold text-foreground"
+                        : "text-foreground/80"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                  {ef.isRecursive && (
+                    <Badge
+                      variant="secondary"
+                      className="shrink-0 font-mono text-[10px]"
+                    >
+                      call #{ef.recursionIndex}
+                    </Badge>
+                  )}
                 </span>
-              </span>
-              <Badge variant="outline" className="font-mono text-[10px]">
-                line {frame.line}
-              </Badge>
+
+                <span className="flex shrink-0 items-center gap-1.5">
+                  {ef.localCount > 0 && (
+                    <Badge variant="outline" className="font-mono text-[10px]">
+                      {ef.localCount} {ef.localCount === 1 ? "var" : "vars"}
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="font-mono text-[10px]">
+                    line {ef.frame.line}
+                  </Badge>
+                </span>
+              </div>
             </li>
           );
         })}
