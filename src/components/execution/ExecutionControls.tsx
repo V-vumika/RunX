@@ -45,14 +45,18 @@ export function ExecutionControls() {
       }
       if (e.key === "ArrowRight") {
         e.preventDefault();
+        e.stopPropagation();
         stepForward();
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
+        e.stopPropagation();
         stepBackward();
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // Capture phase: must run before Radix Tabs' own roving-tabindex arrow
+    // handling on a focused tab trigger, or stepping also flips the active tab.
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [stepForward, stepBackward]);
 
   return (
@@ -105,7 +109,7 @@ export function ExecutionControls() {
         </Button>
       </div>
 
-      <div className="flex min-w-[200px] flex-1 items-center gap-3">
+      <div className="flex min-w-50 flex-1 items-center gap-3">
         <Slider
           value={[hasTrace ? currentStep : 0]}
           min={0}
