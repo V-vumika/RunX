@@ -33,38 +33,45 @@ export function QueueView({ name, node, diffState = "unknown" }: Props) {
   const items = node.items ?? [];
   const ring = diffRingClass(diffState);
 
-  // ── SCAFFOLD — replace with your styled queue row. ──
   return (
-    <div className={`rounded-md border bg-card p-3 ${ring}`}>
-      <div className="mb-2 flex items-center justify-between">
-        <span className="font-mono text-[12px] font-medium text-sky-300">{name}</span>
-        <span className="text-[10px] text-muted-foreground">FIFO queue</span>
+    <div className={`rounded-xl border-2 bg-card p-4 shadow-sm transition-all ${ring}`}>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="font-mono text-[13px] font-medium text-sky-300">{name}</span>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+          FIFO queue
+        </span>
       </div>
-      <div className="flex items-center gap-1">
-        <span className="text-[10px] text-emerald-400">FRONT →</span>
-        <div className="flex flex-wrap gap-1">
+      <div className="flex items-center gap-2">
+        <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+          FRONT
+        </span>
+        <div className="flex flex-1 flex-wrap items-center gap-1.5">
           {items.map((item, i) => (
             <div
               key={i}
-              className={`flex min-w-[2.5rem] items-center justify-center rounded border px-2 py-1 font-mono text-[12px] ${
-                i === 0 ? "border-emerald-400/50 bg-emerald-400/10" : "bg-muted"
+              className={`flex min-w-10 items-center justify-center rounded-lg border px-2.5 py-1.5 font-mono text-[13px] ${
+                i === 0
+                  ? "border-emerald-400 bg-emerald-400/10 shadow-[0_0_0_1px_rgba(52,211,153,0.3)]"
+                  : "border-border/60 bg-muted/40"
               }`}
             >
               <ValueView node={item} />
             </div>
           ))}
           {items.length === 0 && (
-            <div className="rounded border border-dashed px-3 py-1.5 text-[12px] text-muted-foreground">
+            <div className="rounded-lg border border-dashed px-3 py-1.5 text-[12px] text-muted-foreground">
               (empty)
             </div>
           )}
           {node.truncated && (
-            <div className="flex min-w-[2rem] items-center justify-center rounded border border-dashed px-2 py-1 font-mono text-[12px] text-muted-foreground">
+            <div className="flex min-w-8 items-center justify-center rounded-lg border border-dashed px-2 py-1.5 font-mono text-[12px] text-muted-foreground">
               …
             </div>
           )}
         </div>
-        <span className="text-[10px] text-violet-400">← BACK</span>
+        <span className="rounded-full bg-violet-400/15 px-2 py-0.5 text-[10px] font-semibold text-violet-400">
+          BACK
+        </span>
       </div>
     </div>
   );

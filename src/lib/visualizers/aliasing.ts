@@ -23,6 +23,7 @@ const REFERENCE_KINDS: ReadonlySet<ValueKind> = new Set<ValueKind>([
   "list",
   "tuple",
   "set",
+  "deque",
   "dict",
   "object",
 ]);

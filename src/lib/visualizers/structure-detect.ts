@@ -10,12 +10,16 @@
  *
  * Name hints take priority over shape hints when both are present, because a
  * programmer naming something "stack" almost certainly means a stack even if
- * it currently has 0 items.
+ * it currently has 0 items. Name hints only ever apply to container-like
+ * kinds (list/tuple/set/deque/dict/object) — a function or class whose name
+ * happens to match (e.g. `class Node:`) is never reclassified, since it has
+ * no items/entries/attributes for the chosen view to render.
  *
  * Rules (in priority order):
  *   linked-list  — dict/object with a "next" attribute OR name includes
  *                  "node","linked","head","tail"
- *   queue        — name includes "queue" OR name starts with "q_"/"dq_"/"deq"
+ *   queue        — collections.deque (any name) OR name includes "queue"
+ *                  OR name starts with "q_"/"dq_"/"deq"
  *   stack        — name includes "stack" OR name starts with "stk"/"st_"
  *   array        — list/tuple whose items are all scalars (int/float/str/bool)
  *   generic-list — any other list/tuple/set
@@ -60,11 +64,22 @@ const LINKED_LIST_NAME = /node|linked|head|tail/i;
 const QUEUE_NAME = /queue|^q_|^dq_|^deq/i;
 const STACK_NAME = /stack|^stk|^st_/i;
 
+/** Kinds a name hint is allowed to reclassify — anything with items/entries/attributes. */
+const CONTAINER_KINDS: ReadonlySet<ValueKind> = new Set([
+  "list", "tuple", "set", "deque", "dict", "object",
+]);
+
 export function detectStructure(name: string, node: ValueNode): StructureKind {
-  // Name-hint fast paths (highest priority).
-  if (LINKED_LIST_NAME.test(name) || hasNextAttr(node)) return "linked-list";
-  if (QUEUE_NAME.test(name)) return "queue";
-  if (STACK_NAME.test(name)) return "stack";
+  // A deque is unambiguously a queue regardless of variable name.
+  if (node.kind === "deque") return "queue";
+
+  // Name-hint fast paths (highest priority, but only for container-like
+  // values — a class/function whose name matches isn't a real container).
+  if (CONTAINER_KINDS.has(node.kind)) {
+    if (LINKED_LIST_NAME.test(name) || hasNextAttr(node)) return "linked-list";
+    if (QUEUE_NAME.test(name)) return "queue";
+    if (STACK_NAME.test(name)) return "stack";
+  }
 
   // Shape-based detection.
   switch (node.kind) {

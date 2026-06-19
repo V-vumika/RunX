@@ -18,6 +18,7 @@ import { CallStackPanel } from "@/components/execution/CallStackPanel";
 import { VariableInspector } from "@/components/inspector/VariableInspector";
 import { MemoryView } from "@/components/visualizers/MemoryView";
 import { DsaPanel } from "@/components/visualizers/DsaPanel";
+import { AlgorithmPanel } from "@/components/visualizers/AlgorithmPanel";
 import { useExecutionStore } from "@/lib/store/execution-store";
 
 export function Workspace() {
@@ -93,6 +94,9 @@ export function Workspace() {
                       <TabsTrigger value="dsa" className="text-xs">
                         DSA
                       </TabsTrigger>
+                      <TabsTrigger value="algorithms" className="text-xs">
+                        Algorithms
+                      </TabsTrigger>
                       <TabsTrigger value="memory" className="text-xs">
                         Memory
                       </TabsTrigger>
@@ -106,6 +110,9 @@ export function Workspace() {
                   </TabsContent>
                   <TabsContent value="dsa" className="min-h-0">
                     <DsaPanel />
+                  </TabsContent>
+                  <TabsContent value="algorithms" className="min-h-0">
+                    <AlgorithmPanel />
                   </TabsContent>
                   <TabsContent value="memory" className="min-h-0">
                     <MemoryView />

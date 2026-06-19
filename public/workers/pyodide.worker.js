@@ -33,7 +33,7 @@ importScripts(PYODIDE_BASE + "pyodide.js");
  * `${` sequence in the Python below.
  */
 const TRACE_PROGRAM = `
-import sys, io, json, math, types, traceback
+import sys, io, json, math, types, traceback, collections
 
 _RUNX_FILENAME = "<runx>"
 
@@ -90,6 +90,16 @@ def __runx_run(source, max_steps, max_items, max_depth, max_string):
                     break
                 items.append(serialize(el, depth + 1, seen2))
             return {"kind": kind, "pyType": type(v).__name__, "repr": short_repr(v),
+                    "id": oid, "items": items, "length": len(v), "truncated": len(v) > max_items}
+
+        if isinstance(v, collections.deque):
+            seen2 = seen | {oid}
+            items = []
+            for i, el in enumerate(v):
+                if i >= max_items:
+                    break
+                items.append(serialize(el, depth + 1, seen2))
+            return {"kind": "deque", "pyType": "deque", "repr": short_repr(v),
                     "id": oid, "items": items, "length": len(v), "truncated": len(v) > max_items}
 
         if isinstance(v, (set, frozenset)):

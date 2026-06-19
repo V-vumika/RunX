@@ -92,18 +92,22 @@ export function LinkedListView({ name, node, diffState = "unknown" }: Props) {
   const truncated = chain.length >= MAX_NODES;
   const ring = diffRingClass(diffState);
 
-  // ── SCAFFOLD — replace with your styled node-box chain + arrows. ──
   return (
-    <div className={`rounded-md border bg-card p-3 ${ring}`}>
-      <div className="mb-2 font-mono text-[12px] font-medium text-sky-300">{name}</div>
-      <div className="flex flex-wrap items-center gap-1">
+    <div className={`rounded-xl border-2 bg-card p-4 shadow-sm transition-all ${ring}`}>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="font-mono text-[13px] font-medium text-sky-300">{name}</span>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+          linked list
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
         {chain.map((llNode, i) => {
           const data = nodeDataEntries(llNode);
           return (
-            <div key={i} className="flex items-center gap-1">
-              <div className="rounded border bg-muted px-2 py-1 font-mono text-[12px]">
+            <div key={i} className="flex items-center gap-1.5">
+              <div className="rounded-lg border-2 border-sky-400/40 bg-muted/40 px-3 py-1.5 font-mono text-[13px]">
                 {data.map((d) => (
-                  <div key={d.label} className="flex items-center gap-1">
+                  <div key={d.label} className="flex items-center gap-1.5">
                     <span className="text-zinc-400">{d.label}:</span>
                     <ValueView node={d.val} />
                   </div>
@@ -115,11 +119,11 @@ export function LinkedListView({ name, node, diffState = "unknown" }: Props) {
             </div>
           );
         })}
-        {truncated && (
-          <span className="text-muted-foreground">→ …</span>
-        )}
+        {truncated && <span className="text-muted-foreground">→ …</span>}
         {chain.length > 0 && !truncated && (
-          <span className="text-muted-foreground">→ null</span>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+            → null
+          </span>
         )}
         {chain.length === 0 && (
           <span className="text-[12px] text-muted-foreground">(empty / null)</span>

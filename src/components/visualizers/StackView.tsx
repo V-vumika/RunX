@@ -39,29 +39,34 @@ export function StackView({ name, node, diffState = "unknown" }: Props) {
   const items = [...(node.items ?? [])].reverse(); // top first
   const ring = diffRingClass(diffState);
 
-  // ── SCAFFOLD — replace with your styled vertical stack. ──
   return (
-    <div className={`rounded-md border bg-card p-3 ${ring}`}>
-      <div className="mb-2 flex items-center justify-between">
-        <span className="font-mono text-[12px] font-medium text-sky-300">{name}</span>
-        <span className="text-[10px] text-muted-foreground">LIFO stack</span>
+    <div className={`rounded-xl border-2 bg-card p-4 shadow-sm transition-all ${ring}`}>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="font-mono text-[13px] font-medium text-sky-300">{name}</span>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+          LIFO stack
+        </span>
       </div>
-      <div className="flex flex-col gap-0.5">
+      <div className="flex flex-col items-center gap-1">
         {items.map((item, i) => (
           <div
             key={i}
-            className={`flex items-center justify-between rounded border px-3 py-1 font-mono text-[12px] ${
-              i === 0 ? "border-amber-400/50 bg-amber-400/10" : "bg-muted"
+            className={`flex w-full max-w-56 items-center justify-between gap-2 rounded-lg border px-3 py-1.5 font-mono text-[13px] ${
+              i === 0
+                ? "border-amber-400 bg-amber-400/10 shadow-[0_0_0_1px_rgba(251,191,36,0.3)]"
+                : "border-border/60 bg-muted/40"
             }`}
           >
             <ValueView node={item} />
             {i === 0 && (
-              <span className="text-[10px] text-amber-400">← top</span>
+              <span className="rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-semibold text-black">
+                top
+              </span>
             )}
           </div>
         ))}
         {items.length === 0 && (
-          <div className="rounded border border-dashed px-3 py-2 text-center text-[12px] text-muted-foreground">
+          <div className="w-full max-w-56 rounded-lg border border-dashed px-3 py-2 text-center text-[12px] text-muted-foreground">
             (empty)
           </div>
         )}

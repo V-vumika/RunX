@@ -39,22 +39,26 @@ export function ArrayView({ name, node, diffState = "unknown" }: Props) {
   const items = node.items ?? [];
   const ring = diffRingClass(diffState);
 
-  // ── SCAFFOLD — replace with your styled cells. ──
   return (
-    <div className={`rounded-md border bg-card p-3 ${ring}`}>
-      <div className="mb-2 font-mono text-[12px] font-medium text-sky-300">{name}</div>
-      <div className="flex flex-wrap gap-1">
+    <div className={`rounded-xl border-2 bg-card p-4 shadow-sm transition-all ${ring}`}>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="font-mono text-[13px] font-medium text-sky-300">{name}</span>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+          array
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
         {items.map((item, i) => (
-          <div key={i} className="flex flex-col items-center">
-            <div className="flex min-w-8 items-center justify-center rounded border bg-muted px-2 py-1 font-mono text-[12px]">
+          <div key={i} className="flex flex-col items-center gap-0.5">
+            <div className="flex min-w-10 items-center justify-center rounded-lg border-2 border-border/60 bg-muted/40 px-2.5 py-1.5 font-mono text-[13px]">
               <ValueView node={item} />
             </div>
-            <span className="mt-0.5 font-mono text-[10px] text-muted-foreground">{i}</span>
+            <span className="font-mono text-[10px] text-muted-foreground">{i}</span>
           </div>
         ))}
         {node.truncated && (
-          <div className="flex flex-col items-center">
-            <div className="flex min-w-8 items-center justify-center rounded border border-dashed bg-muted px-2 py-1 font-mono text-[12px] text-muted-foreground">
+          <div className="flex flex-col items-center gap-0.5">
+            <div className="flex min-w-10 items-center justify-center rounded-lg border-2 border-dashed bg-muted/40 px-2.5 py-1.5 font-mono text-[13px] text-muted-foreground">
               …
             </div>
           </div>

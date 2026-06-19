@@ -19,6 +19,7 @@ export type ValueKind =
   | "list"
   | "tuple"
   | "set"
+  | "deque"
   | "dict"
   | "object"
   | "function"
@@ -38,7 +39,7 @@ export interface ValueNode {
   id?: number;
   /** JSON-safe scalar value for primitive kinds (int/float/str/bool/none). */
   value?: string | number | boolean | null;
-  /** Child items for list/tuple/set. */
+  /** Child items for list/tuple/set/deque. */
   items?: ValueNode[];
   /** Key/value pairs for dict. */
   entries?: { key: ValueNode; value: ValueNode }[];
