@@ -46,7 +46,7 @@ export function ArrayView({ name, node, diffState = "unknown" }: Props) {
       <div className="flex flex-wrap gap-1">
         {items.map((item, i) => (
           <div key={i} className="flex flex-col items-center">
-            <div className="flex min-w-[2rem] items-center justify-center rounded border bg-muted px-2 py-1 font-mono text-[12px]">
+            <div className="flex min-w-8 items-center justify-center rounded border bg-muted px-2 py-1 font-mono text-[12px]">
               <ValueView node={item} />
             </div>
             <span className="mt-0.5 font-mono text-[10px] text-muted-foreground">{i}</span>
@@ -54,7 +54,7 @@ export function ArrayView({ name, node, diffState = "unknown" }: Props) {
         ))}
         {node.truncated && (
           <div className="flex flex-col items-center">
-            <div className="flex min-w-[2rem] items-center justify-center rounded border border-dashed bg-muted px-2 py-1 font-mono text-[12px] text-muted-foreground">
+            <div className="flex min-w-8 items-center justify-center rounded border border-dashed bg-muted px-2 py-1 font-mono text-[12px] text-muted-foreground">
               …
             </div>
           </div>
