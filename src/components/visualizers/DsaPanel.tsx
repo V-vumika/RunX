@@ -22,13 +22,12 @@ import {
 } from "@/lib/store/execution-store";
 import { detectStructure } from "@/lib/visualizers/structure-detect";
 import { diffFrames } from "@/lib/visualizers/step-diff";
-import { computeSortHighlight } from "@/lib/visualizers/sort-trace";
 import { ValueView } from "@/components/inspector/ValueView";
 import { ArrayView } from "./ArrayView";
-import { SortBarsView } from "./SortBarsView";
 import { StackView } from "./StackView";
 import { QueueView } from "./QueueView";
 import { LinkedListView } from "./LinkedListView";
+import { TreeView } from "./TreeView";
 
 export function DsaPanel() {
   const snapshot = useExecutionStore(selectCurrentSnapshot);
@@ -48,9 +47,6 @@ export function DsaPanel() {
 
   const diff = diffFrames(prevFrame, currFrame ?? null);
 
-  // ── NEW: previous locals for sort highlight diff ──
-  const prevLocals = prevFrame?.locals ?? [];
-
   if (variables.length === 0) {
     return <EmptyState>No variables in scope at this step.</EmptyState>;
   }
@@ -63,39 +59,7 @@ export function DsaPanel() {
           const state = diff.stateOf(v.name);
 
           if (kind === "array") {
-            // ── NEW: compute sort highlight for this array variable ──
-            const highlight = computeSortHighlight(
-              v.name,
-              v.value,
-              prevLocals.find((p) => p.name === v.name)?.value ?? null,
-              String(snapshot.line ?? ""),
-              currFrame?.locals ?? []
-            );
-            const isSorting =
-              highlight.compared.length > 0 || highlight.swapped.length > 0;
-
-            // ── NEW: if sorting detected → animated bar chart ──
-            if (isSorting) {
-              return (
-                <SortBarsView
-                  key={v.name}
-                  name={v.name}
-                  node={v.value}
-                  compared={highlight.compared}
-                  swapped={highlight.swapped}
-                />
-              );
-            }
-
-            // fallback → flat cell view for non-sorting arrays
-            return (
-              <ArrayView
-                key={v.name}
-                name={v.name}
-                node={v.value}
-                diffState={state}
-              />
-            );
+            return <ArrayView key={v.name} name={v.name} node={v.value} diffState={state} />;
           }
 
           if (kind === "stack") {
@@ -106,6 +70,9 @@ export function DsaPanel() {
           }
           if (kind === "linked-list") {
             return <LinkedListView key={v.name} name={v.name} node={v.value} diffState={state} />;
+          }
+          if (kind === "tree") {
+            return <TreeView key={v.name} name={v.name} node={v.value} />;
           }
 
           // Fallback for primitives / dicts / generics.

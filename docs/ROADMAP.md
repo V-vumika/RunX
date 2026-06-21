@@ -18,26 +18,28 @@ who-does-what split.
 - [x] Monaco editor, Pyodide worker + `sys.settrace`, snapshot contract
 - [x] Zustand store + step controls, Variable Inspector / Call Stack / Output
 
-### Phase 3 — Memory boxes (Day 1–4)
-- [ ] 🟣 `MemoryView` — draw each variable as a box (name + value)
+### Phase 3 — Memory boxes (Day 1–4) ✅ DONE
+- [x] 🟣 `MemoryView` — draw each variable as a box (name + value)
 - [x] 🔵 use `ValueNode.id` to show shared references / aliasing — `src/lib/visualizers/aliasing.ts` (`buildAliasMap`)
 - [x] 🔵 wire into the workspace layout — Memory tab + `MemoryView` scaffold
 
-### Phase 4 — Call-stack visual polish (Day 5–7)
-- [ ] 🟣 nicer nested frame cards, clear recursion display
-- [ ] 🔵 highlight active frame as you step
+### Phase 4 — Call-stack visual polish (Day 5–7) ✅ DONE
+- [x] 🟣 nicer nested frame cards, clear recursion display
+- [x] 🔵 highlight active frame as you step
 
-### Phase 5 — Linear DSA visualizers (Day 8–15)
-- [ ] 🟣 `ArrayView`, `StackView`, `QueueView`, `LinkedListView`
-- [ ] 🔵 structure detection from `ValueNode` + per-step diff/animation hooks
+### Phase 5 — Linear DSA visualizers (Day 8–15) ✅ DONE
+- [x] 🟣 `ArrayView`, `StackView`, `QueueView`, `LinkedListView`
+- [x] 🔵 structure detection from `ValueNode` + per-step diff/animation hooks
 
-### Phase 6 — Algorithm animations (Day 16–21)
-- [ ] 🟣 sorting views: bubble / selection / merge / quick (Framer Motion)
-- [ ] 🟣 searching views: linear / binary
-- [ ] 🔵 step-to-animation mapping helpers
+### Phase 6 — Algorithm animations (Day 16–21) ✅ DONE
+- [x] 🟣 sorting views: bubble / selection / merge / quick (Framer Motion)
+- [x] 🟣 searching views: linear / binary
+- [x] 🔵 step-to-animation mapping helpers
 
-### Phase — Trees & graphs (Day 22–26)
-- [ ] 🟣 `TreeView`, `GraphView` with React Flow + D3
+### Phase — Trees & graphs (Day 22–26) 🚧 IN PROGRESS
+- [x] 🔵 structure detection for tree/graph shapes + baseline `TreeView` (React Flow + D3)
+- [ ] 🟣 polish `TreeView` (visual language, animation, null-child indicator)
+- [ ] 🟣 `GraphView` with React Flow + D3
 - [ ] 🔵 BFS / DFS / Dijkstra step animations (after views work)
 
 ### Phase 7 — Complexity analyzer (Day 27–31)
