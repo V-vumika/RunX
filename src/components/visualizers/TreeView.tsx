@@ -1,29 +1,19 @@
 "use client";
 
-/**
- * TreeView — baseline binary-tree visualizer (Phase 7).
- *
- * Walks the ValueNode's .left/.right attribute chain into a plain tree,
- * lays it out with d3-hierarchy's tree() (so it's a real top-down layout,
- * not just guessed coordinates), and renders it with React Flow.
- *
- * 🟣 Vumi: this is the baseline to build on — same role SortBarsView had for
- * Phase 6. Data layer (structure detection + the tree walk below) is done
- * and verified; what's missing is polish:
- *   - Match the visual language of ArrayView/StackView (card border, the
- *     same sky-300 name label style, etc.) instead of the plain circles below.
- *   - Animate node position changes with Framer Motion when the tree
- *     reshapes (insert a node, rotate, etc.) — React Flow nodes accept a
- *     `style`/`position` per render, so this is the same kind of
- *     animate-on-change as SortBarsView's bars.
- *   - A null-child indicator (small dashed leaf) instead of just omitting
- *     None children entirely, so an empty tree / leaf nodes don't look broken.
- */
-
 import { useMemo } from "react";
-import { ReactFlow, Background, type Node as RFNode, type Edge as RFEdge } from "@xyflow/react";
+import { motion } from "framer-motion";
+import {
+  ReactFlow,
+  Background,
+  type Node as RFNode,
+  type Edge as RFEdge,
+} from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { hierarchy, tree as d3tree, type HierarchyPointNode } from "d3-hierarchy";
+import {
+  hierarchy,
+  tree as d3tree,
+  type HierarchyPointNode,
+} from "d3-hierarchy";
 
 import type { ValueNode } from "@/types/snapshot";
 
@@ -35,6 +25,7 @@ interface Props {
 interface TreeDatum {
   id: string;
   label: string;
+  isNull?: boolean;
   children: TreeDatum[];
 }
 
@@ -42,7 +33,6 @@ function findAttr(node: ValueNode, attrName: string): ValueNode | null {
   return (node.attributes ?? []).find((a) => a.name === attrName)?.value ?? null;
 }
 
-/** Best-effort label for a tree node's payload — falls back to its repr. */
 function dataLabel(node: ValueNode): string {
   for (const key of ["val", "value", "data", "key"]) {
     const v = findAttr(node, key);
@@ -51,13 +41,31 @@ function dataLabel(node: ValueNode): string {
   return node.repr;
 }
 
-function buildTreeDatum(node: ValueNode, path: string, seen: ReadonlySet<number>): TreeDatum {
+function buildTreeDatum(
+  node: ValueNode,
+  path: string,
+  seen: ReadonlySet<number>
+): TreeDatum {
   const nextSeen = node.id != null ? new Set(seen).add(node.id) : seen;
   const children: TreeDatum[] = [];
 
-  for (const [attrName, suffix] of [["left", "L"], ["right", "R"]] as const) {
+  for (const [attrName, suffix] of [
+    ["left", "L"],
+    ["right", "R"],
+  ] as const) {
     const child = findAttr(node, attrName);
-    if (!child || child.kind === "none") continue;
+
+    // None child → show dashed null indicator
+    if (!child || child.kind === "none") {
+      children.push({
+        id: `${path}.${suffix}_null`,
+        label: "∅",
+        isNull: true,
+        children: [],
+      });
+      continue;
+    }
+
     if (child.id != null && seen.has(child.id)) continue; // cycle guard
     children.push(buildTreeDatum(child, `${path}.${suffix}`, nextSeen));
   }
@@ -65,43 +73,71 @@ function buildTreeDatum(node: ValueNode, path: string, seen: ReadonlySet<number>
   return { id: path, label: dataLabel(node), children };
 }
 
-const NODE_SIZE = 48;
+const NODE_SIZE = 44;
 
 export function TreeView({ name, node }: Props) {
   const { nodes, edges } = useMemo(() => {
     const root = buildTreeDatum(node, "root", new Set());
-    const layout = d3tree<TreeDatum>().nodeSize([NODE_SIZE + 16, NODE_SIZE + 36]);
+    const layout = d3tree<TreeDatum>().nodeSize([NODE_SIZE + 20, NODE_SIZE + 44]);
     const positioned = layout(hierarchy(root, (d) => d.children));
 
     const rfNodes: RFNode[] = [];
     const rfEdges: RFEdge[] = [];
 
     positioned.each((d: HierarchyPointNode<TreeDatum>) => {
+      const isNull = d.data.isNull;
+
       rfNodes.push({
         id: d.data.id,
         data: { label: d.data.label },
         position: { x: d.x, y: d.y },
         draggable: false,
-        style: {
-          width: NODE_SIZE,
-          height: NODE_SIZE,
-          borderRadius: 999,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "rgba(56,189,248,0.12)",
-          border: "2px solid rgb(56,189,248)",
-          color: "white",
-          fontFamily: "var(--font-mono, monospace)",
-          fontSize: 12,
-        },
+        style: isNull
+          ? {
+              // dashed null leaf
+              width: NODE_SIZE - 8,
+              height: NODE_SIZE - 8,
+              borderRadius: 6,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "transparent",
+              border: "1.5px dashed rgba(100,116,139,0.4)",
+              color: "rgba(100,116,139,0.5)",
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize: 11,
+            }
+          : {
+              // real node — matches ArrayView card style
+              width: NODE_SIZE,
+              height: NODE_SIZE,
+              borderRadius: 10,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "rgba(56,189,248,0.10)",
+              border: "2px solid rgba(56,189,248,0.7)",
+              color: "rgb(125,211,252)",
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize: 13,
+              fontWeight: 600,
+              boxShadow: "0 0 0 3px rgba(56,189,248,0.08)",
+            },
       });
+
       if (d.parent) {
+        const isNullEdge = d.data.isNull;
         rfEdges.push({
           id: `${d.parent.data.id}->${d.data.id}`,
           source: d.parent.data.id,
           target: d.data.id,
-          style: { stroke: "rgba(148,163,184,0.6)" },
+          style: {
+            stroke: isNullEdge
+              ? "rgba(100,116,139,0.25)"
+              : "rgba(148,163,184,0.55)",
+            strokeDasharray: isNullEdge ? "4 3" : undefined,
+            strokeWidth: isNullEdge ? 1 : 1.5,
+          },
         });
       }
     });
@@ -110,20 +146,51 @@ export function TreeView({ name, node }: Props) {
   }, [node]);
 
   return (
-    <div className="rounded-xl border-2 bg-card p-2 shadow-sm">
-      <div className="mb-1 px-2 pt-1 font-mono text-[13px] font-medium text-sky-300">{name}</div>
-      <div style={{ height: 260 }}>
+    <div className="rounded-xl border-2 border-border/60 bg-card p-3 shadow-sm">
+      {/* header — matches ArrayView/StackView style */}
+      <div className="mb-2 flex items-center justify-between px-1">
+        <span className="font-mono text-[13px] font-medium text-sky-300">
+          {name}
+        </span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <div className="h-2.5 w-2.5 rounded-sm border-2 border-sky-400 bg-sky-400/10" />
+            <span className="text-[10px] text-muted-foreground">node</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="h-2.5 w-2.5 rounded-sm border border-dashed border-slate-500/50" />
+            <span className="text-[10px] text-muted-foreground">null</span>
+          </div>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+            binary tree
+          </span>
+        </div>
+      </div>
+
+      {/* React Flow canvas */}
+      <motion.div
+        layout
+        initial={{ opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+        style={{ height: 280 }}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
           fitView
+          fitViewOptions={{ padding: 0.3 }}
           nodesConnectable={false}
           elementsSelectable={false}
+          nodesDraggable={false}
           proOptions={{ hideAttribution: true }}
         >
-          <Background />
+          <Background
+            gap={16}
+            color="rgba(148,163,184,0.06)"
+          />
         </ReactFlow>
-      </div>
+      </motion.div>
     </div>
   );
 }
