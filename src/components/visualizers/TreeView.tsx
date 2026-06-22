@@ -173,6 +173,7 @@ export function TreeView({ name, node }: Props) {
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
+        className="runx-animated-flow"
         style={{ height: 280 }}
       >
         <ReactFlow

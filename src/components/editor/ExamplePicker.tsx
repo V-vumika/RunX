@@ -156,7 +156,6 @@ print("found at index:", index)
 
 export function ExamplePicker() {
   const setCode = useExecutionStore((s) => s.setCode);
-  const reset = useExecutionStore((s) => s.reset);
 
   return (
     <div className="flex items-center gap-1">
@@ -166,10 +165,7 @@ export function ExamplePicker() {
           variant="ghost"
           size="sm"
           className="h-6 px-2 text-xs"
-          onClick={() => {
-            setCode(ex.code);
-            reset();
-          }}
+          onClick={() => setCode(ex.code)}
         >
           {ex.label}
         </Button>

@@ -2,6 +2,7 @@
 
 import type { ValueNode } from "@/types/snapshot";
 import { motion } from "framer-motion";
+import { ArrowLeftRight, GitCompareArrows } from "lucide-react";
 
 interface Props {
   name: string;
@@ -29,12 +30,12 @@ export function SortBarsView({ name, node, compared, swapped }: Props) {
         <span className="font-mono text-[13px] font-medium text-sky-300">{name}</span>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
-            <div className="h-2.5 w-2.5 rounded-sm bg-amber-400" />
-            <span className="text-[10px] text-muted-foreground">comparing</span>
+            <GitCompareArrows className="size-3 text-amber-400" />
+            <span className="text-[10px] text-muted-foreground">comparing (dashed)</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="h-2.5 w-2.5 rounded-sm bg-rose-400" />
-            <span className="text-[10px] text-muted-foreground">swapped</span>
+            <ArrowLeftRight className="size-3 text-rose-400" />
+            <span className="text-[10px] text-muted-foreground">swapped (solid)</span>
           </div>
           <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
             sort trace
@@ -47,6 +48,12 @@ export function SortBarsView({ name, node, compared, swapped }: Props) {
           const isCompared = !isSwapped && compared.includes(i);
           return (
             <motion.div layout key={i} className="flex flex-col items-center gap-1">
+              {/* Color alone isn't reliable for colorblind users, so comparing/swapped
+                  also get a distinct icon + border style, not just a different hue. */}
+              <div className="flex h-3 items-center justify-center">
+                {isSwapped && <ArrowLeftRight className="size-3 text-rose-400" />}
+                {isCompared && <GitCompareArrows className="size-3 text-amber-400" />}
+              </div>
               <motion.div
                 layout
                 animate={{
@@ -63,7 +70,11 @@ export function SortBarsView({ name, node, compared, swapped }: Props) {
                       : "rgba(63,63,70,0.6)",
                 }}
                 transition={{ duration: 0.25, ease: "easeInOut" }}
-                className="flex w-8 items-end justify-center rounded-t-md border-2 font-mono text-[11px]"
+                className="flex w-8 items-end justify-center rounded-t-md font-mono text-[11px]"
+                style={{
+                  borderWidth: 2,
+                  borderStyle: isCompared ? "dashed" : "solid",
+                }}
               >
                 <span className="pb-0.5">{item.repr}</span>
               </motion.div>

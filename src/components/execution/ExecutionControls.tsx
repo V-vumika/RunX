@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { motion } from "framer-motion";
 import {
   ChevronLeft,
   ChevronRight,
@@ -34,6 +35,9 @@ export function ExecutionControls() {
   const hasTrace = stepCount > 0;
   const atStart = currentStep <= 0;
   const atEnd = currentStep >= stepCount - 1;
+  const engineReady = engineStatus === "ready";
+  // First-run nudge: pulse the Run button until the student has run anything at all.
+  const showFirstRunNudge = engineReady && !hasTrace && !isRunning;
 
   // Arrow-key stepping (ignored while typing in the editor / inputs).
   useEffect(() => {
@@ -61,14 +65,29 @@ export function ExecutionControls() {
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Button onClick={() => run()} disabled={isRunning} size="sm" className="gap-2">
-        {isRunning ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <Play className="size-4" />
+      <div className="relative">
+        {showFirstRunNudge && (
+          <motion.span
+            className="pointer-events-none absolute inset-0 -z-10 rounded-md bg-primary/50"
+            animate={{ opacity: [0.6, 0], scale: [1, 1.4] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: "easeOut" }}
+          />
         )}
-        {isRunning ? "Running…" : "Run"}
-      </Button>
+        <Button
+          onClick={() => run()}
+          disabled={isRunning || !engineReady}
+          size="sm"
+          className="gap-2"
+          title={!engineReady ? "Waiting for the Python runtime to finish loading" : undefined}
+        >
+          {isRunning || !engineReady ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Play className="size-4" />
+          )}
+          {isRunning ? "Running…" : !engineReady ? "Loading runtime…" : "Run"}
+        </Button>
+      </div>
 
       <div className="flex items-center gap-1">
         <Button

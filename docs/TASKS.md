@@ -2,6 +2,8 @@
 
 Live status. Update as we go. Assignees: 🟣 **Vumi** (owner) · 🔵 **Shiv** (Collabrator)
 
+> **2026-06-22 — scope replanned:** RunX now targets Python + JavaScript + Java + C++ (was Python-only), plus a presentation/execution polish pass. Phase numbers below are unchanged for already-done work; new phases (8 onward) follow the replanned sequence in `docs/ROADMAP.md`.
+
 ## ✅ Done
 - **Phase 1** — editor → exec → snapshots → store → inspector + step controls 🔵
 - 🟣 **Vumi — Local setup** (git pull → `npm install` → `npm run dev` → verified)
@@ -28,6 +30,8 @@ Live status. Update as we go. Assignees: 🟣 **Vumi** (owner) · 🔵 **Shiv** 
   - 🔵 added a "Binary Search Tree" example (`ExamplePicker.tsx`) to exercise tree detection — recursive `insert(root, val)` building a BST from 8 values.
   - 🔵 verified live: BST grows correctly across steps, root/children render as a real top-down tree with correct parent→child edges; non-tree scopes (e.g. `self`/`val` mid-`__init__`, before `left`/`right` are set) correctly fall back to the plain value row instead of crashing or misrendering.
   - GraphView not started yet — `"graph"` detection exists but `DsaPanel` has no dispatch branch for it, falls through to the generic fallback row safely.
+  - 🟣 **Vumi** — `TreeView` polish: card style matching `ArrayView`/`StackView` (sky-300 label, legend swatches, "binary tree" badge), dashed "∅" null-leaf indicator for missing children. Done well.
+  - 🔵 **Bugfix** — Vumi's polish added a Framer Motion fade/scale on the canvas, but it's a `motion.div` with no key tied to tree shape, so `initial`→`animate` only plays once on mount, not on each insert — the actual ask ("animate node position changes when the tree reshapes") wasn't covered, since React Flow doesn't transition a node's position by itself. Added a CSS rule (`globals.css`, `.runx-animated-flow .react-flow__node { transition: transform 300ms ease }`, applied via a class on the canvas wrapper) — React Flow moves nodes with a CSS `transform`, so this is what actually produces the slide when siblings shift on insert. Verified live: `getComputedStyle` on a rendered node now reports `transitionProperty: transform`, `0.3s`.
 
 ## How tasks flow
 1. Shiv writes the task (for 🟣 or 🔵).

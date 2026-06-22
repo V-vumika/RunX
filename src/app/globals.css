@@ -130,3 +130,13 @@
   width: 3px !important;
   margin-left: 3px;
 }
+
+/* TreeView (and any other tree/graph React Flow canvas): animate a node's
+   position when the layout reshapes (e.g. a new BST insert shifts siblings),
+   instead of snapping instantly. React Flow positions nodes via a CSS
+   `transform`, so a plain transition on that property is what actually
+   produces the per-node slide — Framer Motion can't reach into React Flow's
+   internal node positioning from outside. */
+.runx-animated-flow .react-flow__node {
+  transition: transform 300ms ease;
+}
