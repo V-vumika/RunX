@@ -25,34 +25,35 @@ print("4! =", result)
 `;
 
 interface ExecutionState {
-  /** Current editor contents. */
   code: string;
-  /** Captured execution trace from the most recent run. */
   snapshots: Snapshot[];
-  /** Index of the snapshot currently being inspected. */
   currentStep: number;
-  /** True while a run is in flight. */
   isRunning: boolean;
-  /** Full result metadata (stdout, error, truncated, timing). */
   result: RunResult | null;
-  /** Worker/engine-level failure (distinct from a Python error in `result`). */
   runError: string | null;
 
-  /** Status of the Pyodide runtime itself. */
   engineStatus: EngineStatus;
   engineError?: string;
   engineSubscribed: boolean;
 
+  /** Auto-play state */
+  isPlaying: boolean;
+  playSpeed: number; // steps per second: 0.5 | 1 | 2 | 4
+  _playTimer: ReturnType<typeof setInterval> | null;
+
   setCode: (code: string) => void;
-  /** Wire the store up to the execution engine and start loading Pyodide. */
   initEngine: () => void;
-  /** Execute the current code and load its snapshots. */
   run: () => Promise<void>;
   stepForward: () => void;
   stepBackward: () => void;
   goToStep: (step: number) => void;
-  /** Clear the current trace (keeps the code). */
   reset: () => void;
+
+  /** Auto-play controls */
+  play: () => void;
+  pause: () => void;
+  togglePlay: () => void;
+  setPlaySpeed: (speed: number) => void;
 }
 
 export const useExecutionStore = create<ExecutionState>((set, get) => ({
@@ -67,14 +68,11 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   engineError: undefined,
   engineSubscribed: false,
 
-  // If a trace already exists, an edit means the displayed line/variables no
-  // longer match the code on screen — clear it rather than show stale state.
-  setCode: (code) =>
-    set((state) =>
-      state.snapshots.length > 0
-        ? { code, snapshots: [], currentStep: 0, result: null, runError: null }
-        : { code }
-    ),
+  isPlaying: false,
+  playSpeed: 1,
+  _playTimer: null,
+
+  setCode: (code) => set({ code }),
 
   initEngine: () => {
     if (get().engineSubscribed || typeof window === "undefined") return;
@@ -88,6 +86,8 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
 
   run: async () => {
     if (get().isRunning) return;
+    // stop auto-play if running new code
+    get().pause();
     set({ isRunning: true, runError: null });
     try {
       const result = await getPyodideClient().run(get().code);
@@ -111,7 +111,10 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   stepForward: () => {
     const { currentStep, snapshots } = get();
     if (snapshots.length === 0) return;
-    set({ currentStep: Math.min(currentStep + 1, snapshots.length - 1) });
+    const next = Math.min(currentStep + 1, snapshots.length - 1);
+    set({ currentStep: next });
+    // stop at end
+    if (next >= snapshots.length - 1) get().pause();
   },
 
   stepBackward: () => {
@@ -122,15 +125,48 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   goToStep: (step) => {
     const { snapshots } = get();
     if (snapshots.length === 0) return;
-    const clamped = Math.max(0, Math.min(step, snapshots.length - 1));
-    set({ currentStep: clamped });
+    set({ currentStep: Math.max(0, Math.min(step, snapshots.length - 1)) });
   },
 
-  reset: () =>
-    set({ snapshots: [], currentStep: 0, result: null, runError: null }),
+  reset: () => {
+    get().pause();
+    set({ snapshots: [], currentStep: 0, result: null, runError: null });
+  },
+
+  play: () => {
+    const { isPlaying, playSpeed, _playTimer } = get();
+    if (isPlaying) return;
+    if (_playTimer) clearInterval(_playTimer);
+    const interval = Math.round(1000 / playSpeed);
+    const timer = setInterval(() => {
+      get().stepForward(); // stepForward calls pause() at end automatically
+    }, interval);
+    set({ isPlaying: true, _playTimer: timer });
+  },
+
+  pause: () => {
+    const { _playTimer } = get();
+    if (_playTimer) clearInterval(_playTimer);
+    set({ isPlaying: false, _playTimer: null });
+  },
+
+  togglePlay: () => {
+    const { isPlaying } = get();
+    if (isPlaying) get().pause();
+    else get().play();
+  },
+
+  setPlaySpeed: (speed) => {
+    const { isPlaying } = get();
+    set({ playSpeed: speed });
+    // restart timer with new speed if currently playing
+    if (isPlaying) {
+      get().pause();
+      get().play();
+    }
+  },
 }));
 
-/** Selector: the snapshot currently being inspected, or null. */
 export function selectCurrentSnapshot(state: ExecutionState): Snapshot | null {
   return state.snapshots[state.currentStep] ?? null;
 }
