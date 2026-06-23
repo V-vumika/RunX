@@ -152,6 +152,34 @@ index = binary_search(nums, 23)
 print("found at index:", index)
 `,
   },
+  {
+    label: "Graph BFS",
+    code: `from collections import deque
+
+def bfs(graph, start):
+    visited = {start}
+    order = []
+    queue = deque([start])
+    while queue:
+        node = queue.popleft()
+        order.append(node)
+        for neighbor in graph[node]:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)
+    return order
+
+graph = {
+    0: [1, 2],
+    1: [0, 3],
+    2: [0, 3],
+    3: [1, 2, 4],
+    4: [3],
+}
+
+print("BFS order:", bfs(graph, 0))
+`,
+  },
 ];
 
 export function ExamplePicker() {

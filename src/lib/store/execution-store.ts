@@ -72,7 +72,14 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   playSpeed: 1,
   _playTimer: null,
 
-  setCode: (code) => set({ code }),
+  // If a trace already exists, an edit means the displayed line/variables no
+  // longer match the code on screen — clear it rather than show stale state.
+  setCode: (code) =>
+    set((state) =>
+      state.snapshots.length > 0
+        ? { code, snapshots: [], currentStep: 0, result: null, runError: null }
+        : { code }
+    ),
 
   initEngine: () => {
     if (get().engineSubscribed || typeof window === "undefined") return;

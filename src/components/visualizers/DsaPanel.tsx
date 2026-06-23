@@ -28,6 +28,7 @@ import { StackView } from "./StackView";
 import { QueueView } from "./QueueView";
 import { LinkedListView } from "./LinkedListView";
 import { TreeView } from "./TreeView";
+import { GraphView } from "./GraphView";
 
 export function DsaPanel() {
   const snapshot = useExecutionStore(selectCurrentSnapshot);
@@ -73,6 +74,9 @@ export function DsaPanel() {
           }
           if (kind === "tree") {
             return <TreeView key={v.name} name={v.name} node={v.value} />;
+          }
+          if (kind === "graph") {
+            return <GraphView key={v.name} name={v.name} node={v.value} />;
           }
 
           // Fallback for primitives / dicts / generics.
