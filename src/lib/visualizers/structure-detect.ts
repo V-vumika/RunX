@@ -42,6 +42,7 @@ import type { ValueNode, ValueKind } from "@/types/snapshot";
 
 export type StructureKind =
   | "array"        // flat list of scalars → ArrayView
+  | "matrix"       // List of Lists of scalars → MatrixView
   | "stack"        // list used as a stack → StackView
   | "queue"        // list/deque used as a queue → QueueView
   | "linked-list"  // dict/object with .next → LinkedListView
@@ -159,6 +160,7 @@ export function detectStructure(name: string, node: ValueNode): StructureKind {
 export function hasDedicatedView(kind: StructureKind): boolean {
   return (
     kind === "array" ||
+    kind === "matrix" ||
     kind === "stack" ||
     kind === "queue" ||
     kind === "linked-list"
