@@ -45,6 +45,8 @@ export interface StepExplanation {
   kind: StepKind;
   /** Variable names this step touched (lets the panel cross-highlight). */
   touched: string[];
+  /** Call-stack depth at this step (1 = module scope); set by narrateAll. */
+  depth?: number;
 }
 
 const MAX = 44;
@@ -227,29 +229,36 @@ export function narrateStep(
 
   const prevTop = topFrame(prev);
   const currTop = topFrame(curr);
-  const sameFrame =
+  const sameFrame = !!(
     prevTop &&
     currTop &&
     prevTop.functionName === currTop.functionName &&
-    prev.stack.length === curr.stack.length;
+    prev.stack.length === curr.stack.length
+  );
 
-  // The just-executed line is prev.line; we attribute effects to it.
-  const ranLine = prev.line;
-  const ranSrc = srcAt(ranLine);
-
-  if (!sameFrame) {
-    return {
-      text: `Continue in ${currTop?.functionName === "<module>" ? "module scope" : `\`${currTop?.functionName}()\``}`,
-      line: curr.line,
-      detail: srcAt(curr.line),
-      kind: "step",
-      touched: [],
-    };
+  // Pick the earlier version of *this* frame to diff against. Normally that's
+  // the previous snapshot's top frame; but right after returning up into a
+  // caller, the previous snapshot's top is the callee — the caller as it was
+  // during the call sits one level down in prev.stack, and diffing against it
+  // correctly surfaces the assigned return value (e.g. `result = 24`).
+  let comparePrev: StackFrame | null = sameFrame ? prevTop : null;
+  if (!comparePrev && prevTop && currTop && prev.stack.length > curr.stack.length) {
+    const caller = prev.stack[curr.stack.length - 1];
+    if (caller && caller.functionName === currTop.functionName) comparePrev = caller;
   }
 
-  // Same frame → describe variable changes (the effect of `ranLine`).
-  const diff = diffFrames(prevTop, currTop);
-  const pMap = varMap(prevTop);
+  if (!comparePrev) {
+    const where = currTop?.functionName === "<module>" ? "module scope" : `\`${currTop?.functionName}()\``;
+    return { text: `Continue in ${where}`, line: curr.line, detail: srcAt(curr.line), kind: "step", touched: [] };
+  }
+
+  // Effects are attributed to the line that produced them: the just-run line
+  // in the same frame, or the caller's call line when returning up.
+  const ranLine = sameFrame ? prev.line : curr.line;
+  const ranSrc = srcAt(ranLine);
+
+  const diff = diffFrames(comparePrev, currTop);
+  const pMap = varMap(comparePrev);
   const cMap = varMap(currTop);
 
   const parts: { text: string; kind: StepKind; name: string }[] = [];
@@ -267,12 +276,12 @@ export function narrateStep(
     if ((curr.stdout?.length ?? 0) > (prev.stdout?.length ?? 0)) {
       return { text: "Printed to output", line: ranLine, detail: ranSrc, kind: "print", touched: [] };
     }
-    const kind = lineKeyword(ranSrc);
+    const k = lineKeyword(ranSrc);
     const text =
-      kind === "branch" ? "Checked a condition"
-      : kind === "loop" ? "Loop check"
+      k === "branch" ? "Checked a condition"
+      : k === "loop" ? "Loop check"
       : `Ran line ${ranLine}`;
-    return { text, line: ranLine, detail: ranSrc, kind, touched: [] };
+    return { text, line: ranLine, detail: ranSrc, kind: k, touched: [] };
   }
 
   const shown = parts.slice(0, 2).map((p) => p.text).join("; ");
@@ -287,8 +296,39 @@ export function narrateStep(
   };
 }
 
+const VALUE_NOISE = new Set(["self", "True", "False", "None"]);
+
+/**
+ * First step toward Thonny-style sub-expression view: the live values of the
+ * variables named on a source line. Pure name lookup against the frame's
+ * locals (so keywords/builtins/functions are naturally excluded) — not a real
+ * expression evaluator, but it lets a learner see what fed the line.
+ */
+export function valuesOnLine(
+  src: string | undefined,
+  frame: StackFrame | null
+): { name: string; repr: string }[] {
+  if (!src || !frame) return [];
+  const locals = varMap(frame);
+  const out: { name: string; repr: string }[] = [];
+  const seen = new Set<string>();
+  for (const m of src.matchAll(/[A-Za-z_]\w*/g)) {
+    const name = m[0];
+    if (seen.has(name) || VALUE_NOISE.has(name)) continue;
+    const node = locals.get(name);
+    if (node) {
+      out.push({ name, repr: shortRepr(node, 28) });
+      seen.add(name);
+    }
+  }
+  return out;
+}
+
 /** Narrate every step once (memoize on snapshots + code in the panel). */
 export function narrateAll(snapshots: Snapshot[], code: string, kind?: string): StepExplanation[] {
   const lines = code.split("\n");
-  return snapshots.map((s, i) => narrateStep(i > 0 ? snapshots[i - 1] : null, s, lines, kind));
+  return snapshots.map((s, i) => {
+    const e = narrateStep(i > 0 ? snapshots[i - 1] : null, s, lines, kind);
+    return { ...e, depth: s.stack.length };
+  });
 }

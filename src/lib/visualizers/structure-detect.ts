@@ -65,6 +65,20 @@ function allScalars(node: ValueNode): boolean {
   return (node.items ?? []).every((item) => SCALAR_KINDS.has(item.kind));
 }
 
+/**
+ * A 2-D grid: a non-empty list/tuple whose every item is itself a list/tuple of
+ * scalars (DP tables, grids, adjacency matrices). Requires ≥2 rows so a single
+ * nested list still reads as a plain array. Rows need not be equal length.
+ */
+function isMatrix(node: ValueNode): boolean {
+  if (node.kind !== "list" && node.kind !== "tuple") return false;
+  const rows = node.items ?? [];
+  if (rows.length < 2) return false;
+  return rows.every(
+    (r) => (r.kind === "list" || r.kind === "tuple") && (r.items?.length ?? 0) > 0 && allScalars(r)
+  );
+}
+
 function hasNextAttr(node: ValueNode): boolean {
   if (node.kind === "dict") {
     return (node.entries ?? []).some(
@@ -133,7 +147,9 @@ export function detectStructure(name: string, node: ValueNode): StructureKind {
   switch (node.kind) {
     case "list":
     case "tuple":
-      return allScalars(node) ? "array" : "generic-list";
+      if (allScalars(node)) return "array";
+      if (isMatrix(node)) return "matrix";
+      return "generic-list";
 
     case "set":
       return "generic-list";

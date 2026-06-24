@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import {
   ArrowRightLeft,
   CornerDownLeft,
@@ -20,7 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useExecutionStore } from "@/lib/store/execution-store";
-import { narrateAll, type StepExplanation, type StepKind } from "@/lib/explain/narrate";
+import { narrateAll, valuesOnLine, type StepExplanation, type StepKind } from "@/lib/explain/narrate";
 import { classifyProgram } from "@/lib/explain/classify";
 import { explainException } from "@/lib/explain/exceptions";
 
@@ -35,6 +36,22 @@ function richText(text: string) {
       <span key={i}>{seg}</span>
     )
   );
+}
+
+/** Meaningful colour per step kind — read at a glance in the walkthrough. */
+function kindColor(kind: StepKind): string {
+  switch (kind) {
+    case "call":   return "text-violet-400";
+    case "return": return "text-emerald-400";
+    case "mutate": return "text-amber-400";
+    case "assign": return "text-sky-400";
+    case "branch": return "text-fuchsia-400";
+    case "loop":   return "text-cyan-400";
+    case "print":  return "text-teal-400";
+    case "error":  return "text-destructive";
+    case "start":  return "text-primary";
+    default:       return "text-muted-foreground";
+  }
 }
 
 function KindIcon({ kind, className }: { kind: StepKind; className?: string }) {
@@ -72,6 +89,12 @@ export function ExplainPanel() {
     [snapshots, code, hasTrace, summary?.kind]
   );
 
+  // Keep the active walkthrough row in view as you step.
+  const activeRef = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: "nearest" });
+  }, [currentStep]);
+
   if (!hasTrace && !error) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-center">
@@ -88,6 +111,9 @@ export function ExplainPanel() {
 
   const current = explanations[currentStep];
   const transcript = explanations.slice(0, currentStep + 1);
+  const onLineValues = current
+    ? valuesOnLine(current.detail, snapshots[currentStep]?.stack.at(-1) ?? null)
+    : [];
 
   return (
     <ScrollArea className="h-full">
@@ -98,9 +124,15 @@ export function ExplainPanel() {
 
         {/* Current step — the big "what just happened" line. */}
         {current && (
-          <div className="rounded-md border bg-card p-3">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.16, ease: "easeOut" }}
+            className="rounded-md border bg-card p-3 shadow-sm"
+          >
             <div className="mb-1 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              <KindIcon kind={current.kind} className="size-3.5" />
+              <KindIcon kind={current.kind} className={`size-3.5 ${kindColor(current.kind)}`} />
               Step {currentStep + 1} / {explanations.length} · line {current.line}
             </div>
             <p className="text-sm leading-relaxed text-foreground">{richText(current.text)}</p>
@@ -109,7 +141,20 @@ export function ExplainPanel() {
                 {current.detail}
               </pre>
             )}
-          </div>
+            {onLineValues.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">values now</span>
+                {onLineValues.map((v) => (
+                  <span
+                    key={v.name}
+                    className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground"
+                  >
+                    {v.name} = <span className="text-muted-foreground">{v.repr}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </motion.div>
         )}
 
         {/* Running transcript — click any line to jump there. */}
@@ -121,18 +166,22 @@ export function ExplainPanel() {
           <ol className="space-y-0.5">
             {transcript.map((ex, i) => {
               const active = i === currentStep;
+              const indent = Math.min((ex.depth ?? 1) - 1, 6) * 14;
               return (
-                <li key={i}>
+                <li key={i} ref={active ? activeRef : undefined}>
                   <button
                     onClick={() => goToStep(i)}
-                    className={`flex w-full items-start gap-2 rounded px-2 py-1 text-left text-xs transition-colors ${
-                      active ? "bg-primary/10 text-foreground" : "text-muted-foreground hover:bg-muted/60"
+                    style={{ marginLeft: indent }}
+                    className={`flex w-full items-start gap-2 rounded border-l-2 px-2 py-1 text-left text-xs transition-colors ${
+                      active
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/60"
                     }`}
                   >
-                    <span className="mt-0.5 w-8 shrink-0 text-right font-mono text-[10px] opacity-60">
+                    <span className="mt-0.5 w-8 shrink-0 text-right font-mono text-[10px] opacity-50">
                       L{ex.line}
                     </span>
-                    <KindIcon kind={ex.kind} className="mt-0.5 size-3 shrink-0 opacity-70" />
+                    <KindIcon kind={ex.kind} className={`mt-0.5 size-3 shrink-0 ${kindColor(ex.kind)}`} />
                     <span className="min-w-0">{richText(ex.text)}</span>
                   </button>
                 </li>
