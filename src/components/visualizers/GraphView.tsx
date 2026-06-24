@@ -65,22 +65,23 @@ function buildGraphData(node: ValueNode): GraphData {
 }
 
 /**
- * Vumi: this is the plain functional baseline (same role TreeView's
- * pre-polish version played) — card style / legend / edge styling should
- * match ArrayView/TreeView. Layout is a simple deterministic circle so it's
- * stable across steps; a force-directed layout would be a nice follow-up.
- * Visited/current-node highlighting for BFS/DFS step animations is a
- * separate trace-signal piece (mirrors sort-trace.ts) that isn't wired up
- * yet — this component only renders the graph's current shape.
+ * Polish pass: card header + legend (node/edge colour swatch), refined node
+ * and edge styling, and a CSS fade+scale entrance animation via the
+ * .runx-animated-flow class (defined in globals.css). Visited/current-node
+ * highlighting for BFS/DFS step animation is out of scope here — it needs a
+ * separate trace-signal layer (mirrors sort-trace.ts) that the engine hasn't
+ * wired up yet.
  */
 export function GraphView({ name, node }: Props) {
   const { nodes, edges } = useMemo(() => {
     const { nodeIds, edges: graphEdges } = buildGraphData(node);
 
-    const radius = Math.max(90, nodeIds.length * 22);
-    const center = radius + 30;
+    const count = nodeIds.length;
+    const radius = Math.max(100, count * 24);
+    const center = radius + 40;
+
     const rfNodes: RFNode[] = nodeIds.map((id, i) => {
-      const angle = (2 * Math.PI * i) / nodeIds.length;
+      const angle = (2 * Math.PI * i) / count - Math.PI / 2; // start from top
       return {
         id,
         data: { label: id },
@@ -90,18 +91,20 @@ export function GraphView({ name, node }: Props) {
         },
         draggable: false,
         style: {
-          width: 40,
-          height: 40,
+          width: 44,
+          height: 44,
           borderRadius: 999,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           background: "rgba(56,189,248,0.10)",
-          border: "2px solid rgba(56,189,248,0.7)",
+          border: "1.8px solid rgba(56,189,248,0.70)",
           color: "rgb(125,211,252)",
           fontFamily: "var(--font-mono, monospace)",
           fontSize: 12,
-          fontWeight: 600,
+          fontWeight: 700,
+          boxShadow: "0 0 0 3px rgba(56,189,248,0.08)",
+          transition: "box-shadow 0.15s ease, border-color 0.15s ease",
         },
       };
     });
@@ -110,34 +113,80 @@ export function GraphView({ name, node }: Props) {
       id: `${source}->${target}`,
       source,
       target,
-      style: { stroke: "rgba(148,163,184,0.55)", strokeWidth: 1.5 },
+      style: {
+        stroke: "rgba(148,163,184,0.45)",
+        strokeWidth: 1.5,
+      },
     }));
 
     return { nodes: rfNodes, edges: rfEdges };
   }, [node]);
 
   return (
-    <div className="rounded-xl border-2 border-border/60 bg-card p-3 shadow-sm">
+    <div
+      className="runx-animated-flow rounded-xl border border-border/60 bg-card p-3 shadow-sm"
+      style={{
+        animation: "graphEntrance 0.25s ease both",
+      }}
+    >
+      {/* Card header */}
       <div className="mb-2 flex items-center justify-between px-1">
-        <span className="font-mono text-[13px] font-medium text-sky-300">{name}</span>
-        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <span className="font-mono text-[13px] font-semibold text-sky-300">{name}</span>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
           graph
         </span>
       </div>
-      <div style={{ height: 280 }}>
+
+      {/* Legend */}
+      <div className="mb-2 flex items-center gap-3 px-1">
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-3 w-3 rounded-full"
+            style={{
+              background: "rgba(56,189,248,0.12)",
+              border: "1.5px solid rgba(56,189,248,0.65)",
+            }}
+          />
+          <span className="text-[10px] text-muted-foreground">node</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-px w-5"
+            style={{ background: "rgba(148,163,184,0.55)" }}
+          />
+          <span className="text-[10px] text-muted-foreground">edge</span>
+        </span>
+        <span className="ml-auto text-[10px] text-muted-foreground tabular-nums">
+          {nodes.length}v · {edges.length}e
+        </span>
+      </div>
+
+      {/* Flow canvas */}
+      <div
+        style={{ height: 280 }}
+        className="overflow-hidden rounded-lg"
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
           fitView
-          fitViewOptions={{ padding: 0.3 }}
+          fitViewOptions={{ padding: 0.28 }}
           nodesConnectable={false}
           elementsSelectable={false}
           nodesDraggable={false}
           proOptions={{ hideAttribution: true }}
         >
-          <Background gap={16} color="rgba(148,163,184,0.06)" />
+          <Background gap={18} color="rgba(148,163,184,0.05)" />
         </ReactFlow>
       </div>
+
+      {/* Entrance animation keyframes — scoped inline so no globals dependency */}
+      <style>{`
+        @keyframes graphEntrance {
+          from { opacity: 0; transform: scale(0.97) translateY(4px); }
+          to   { opacity: 1; transform: scale(1)    translateY(0);   }
+        }
+      `}</style>
     </div>
   );
 }
