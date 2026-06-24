@@ -2,7 +2,6 @@
 
 import { useEffect, type ReactNode } from "react";
 import { ScanSearch } from "lucide-react";
-import { ExamplePicker } from "@/components/editor/ExamplePicker";
 
 import {
   ResizableHandle,
@@ -18,6 +17,7 @@ import { VariableInspector } from "@/components/inspector/VariableInspector";
 import { MemoryView } from "@/components/visualizers/MemoryView";
 import { DsaPanel } from "@/components/visualizers/DsaPanel";
 import { AlgorithmPanel } from "@/components/visualizers/AlgorithmPanel";
+import { ExplainPanel } from "@/components/explain/ExplainPanel";
 import { useExecutionStore } from "@/lib/store/execution-store";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
@@ -57,7 +57,7 @@ export function Workspace() {
               <div className="flex h-full flex-col">
                 <PanelHeader>
                   <span>main.py</span>
-                  <ExamplePicker />
+                  <span className="font-normal text-muted-foreground/70">paste any Python code</span>
                 </PanelHeader>
                 <div className="min-h-0 flex-1">
                   <CodeEditor />
@@ -100,7 +100,7 @@ function MobileLayout() {
       <div className="flex h-[45vh] shrink-0 flex-col border-b">
         <PanelHeader>
           <span>main.py</span>
-          <ExamplePicker />
+          <span className="font-normal text-muted-foreground/70">paste any Python code</span>
         </PanelHeader>
         <div className="min-h-0 flex-1">
           <CodeEditor />
@@ -123,9 +123,12 @@ function MobileLayout() {
 
 function ResultTabs() {
   return (
-    <Tabs defaultValue="output" className="flex h-full flex-col gap-0">
+    <Tabs defaultValue="explain" className="flex h-full flex-col gap-0">
       <div className="border-b px-3 py-1.5">
         <TabsList className="h-8 w-full justify-start overflow-x-auto">
+          <TabsTrigger value="explain" className="text-xs">
+            Explain
+          </TabsTrigger>
           <TabsTrigger value="output" className="text-xs">
             Output
           </TabsTrigger>
@@ -143,6 +146,9 @@ function ResultTabs() {
           </TabsTrigger>
         </TabsList>
       </div>
+      <TabsContent value="explain" className="min-h-0">
+        <ExplainPanel />
+      </TabsContent>
       <TabsContent value="output" className="min-h-0">
         <OutputPanel />
       </TabsContent>

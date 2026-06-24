@@ -98,6 +98,29 @@ export interface ExecutionError {
   traceback: string;
 }
 
+/** One self-recursive function found by static (AST) analysis. */
+export interface RecursionInfo {
+  /** Function name. */
+  name: string;
+  /** How many times it calls itself in its own body (≥2 ⇒ branching). */
+  selfCalls: number;
+  /** Rough shape of how the argument shrinks toward the base case. */
+  shrink: "half" | "decrement" | "other";
+}
+
+/**
+ * Static-analysis facts about the program, computed in the worker via Python's
+ * `ast` module. These DECIDE the complexity class (rules-based, never the LLM —
+ * project rule); the classifier maps them to a Big-O string. Null when the
+ * source failed to parse.
+ */
+export interface ComplexityInfo {
+  /** Max nesting depth of for/while loops anywhere in the module. */
+  maxLoopDepth: number;
+  /** Self-recursive functions and their call shape. */
+  recursion: RecursionInfo[];
+}
+
 /** Full result of running a program through the tracer. */
 export interface RunResult {
   snapshots: Snapshot[];
@@ -109,4 +132,6 @@ export interface RunResult {
   truncated: boolean;
   /** Wall-clock execution time on the worker, in milliseconds. */
   durationMs: number;
+  /** Static loop/recursion facts for complexity analysis; null if unparsable. */
+  complexity?: ComplexityInfo | null;
 }

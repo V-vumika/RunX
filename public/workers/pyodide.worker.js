@@ -33,7 +33,7 @@ importScripts(PYODIDE_BASE + "pyodide.js");
  * `${` sequence in the Python below.
  */
 const TRACE_PROGRAM = `
-import sys, io, json, math, types, traceback, collections
+import sys, io, json, math, types, traceback, collections, ast
 
 _RUNX_FILENAME = "<runx>"
 
@@ -41,6 +41,55 @@ _RUNX_SKIP_NAMES = {
     "__name__", "__doc__", "__package__", "__loader__", "__spec__",
     "__builtins__", "__file__", "__cached__", "__annotations__",
 }
+
+
+def __runx_analyze_complexity(source):
+    # Static rules-based facts for the complexity classifier: max loop nesting
+    # and per-function recursion shape. Decides nothing on its own; the JS-side
+    # classifier maps these to a Big-O string. Returns None if unparsable.
+    try:
+        tree = ast.parse(source)
+    except Exception:
+        return None
+
+    loop_types = (ast.For, ast.While, ast.AsyncFor)
+
+    def max_loop_depth(node, cur):
+        best = cur
+        for child in ast.iter_child_nodes(node):
+            nxt = cur + (1 if isinstance(child, loop_types) else 0)
+            d = max_loop_depth(child, nxt)
+            if d > best:
+                best = d
+        return best
+
+    def callee_name(call):
+        f = call.func
+        if isinstance(f, ast.Name):
+            return f.id
+        if isinstance(f, ast.Attribute):
+            return f.attr
+        return None
+
+    recursion = []
+    for fn in ast.walk(tree):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        self_calls = 0
+        shrink = "other"
+        for sub in ast.walk(fn):
+            if isinstance(sub, ast.Call) and callee_name(sub) == fn.name:
+                self_calls += 1
+                dump = " ".join(ast.dump(a) for a in sub.args)
+                low = dump.lower()
+                if "FloorDiv" in dump or "Div" in dump or "mid" in low or "half" in low:
+                    shrink = "half"
+                elif shrink != "half" and "Sub" in dump:
+                    shrink = "decrement"
+        if self_calls > 0:
+            recursion.append({"name": fn.name, "selfCalls": self_calls, "shrink": shrink})
+
+    return {"maxLoopDepth": max_loop_depth(tree, 0), "recursion": recursion}
 
 
 def __runx_run(source, max_steps, max_items, max_depth, max_string):
@@ -237,6 +286,7 @@ def __runx_run(source, max_steps, max_items, max_depth, max_string):
         "stdout": out.getvalue(),
         "error": state["error"],
         "truncated": state["truncated"],
+        "complexity": __runx_analyze_complexity(source),
     })
 
 

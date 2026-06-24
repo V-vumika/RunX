@@ -7,7 +7,7 @@ Live status. Update as we go. Assignees: 🟣 **Vumi** (owner) · 🔵 **Shiv** 
 ## ✅ Done
 - **Phase 1** — editor → exec → snapshots → store → inspector + step controls 🔵
 - 🟣 **Vumi — Local setup** (git pull → `npm install` → `npm run dev` → verified)
-- 🟣 **Vumi — Example code buttons** (`src/components/editor/ExamplePicker.tsx` + wired into `src/components/Workspace.tsx`) — build/tsc/lint clean
+- 🟣 **Vumi — Example code buttons** (`src/components/editor/ExamplePicker.tsx` + wired into `src/components/Workspace.tsx`) — build/tsc/lint clean — _removed 2026-06-24 in the Explain-mode pivot (see below); the app no longer steers users toward pre-picked examples._
 - **Phase 3 — Memory boxes** — 🔵 aliasing detection + 🟣 `MemoryView` boxes with shared-ref color borders (verified in browser: `a`/`b` aliasing highlights correctly, `c` correctly unhighlighted)
 - **Phase 4 — Call-stack polish** — 🔵 `stack-analysis.ts` + 🟣 redesigned `CallStackPanel` (indentation, active-frame highlight, recursion "call #N" badges) — verified in browser with `factorial(4)`
 - 🔵 **Bugfix** — arrow-key stepping was leaking into Radix Tabs' own keyboard nav (clicking a tab then pressing ←/→ silently flipped the active tab). Fixed via capture-phase + `stopPropagation` in `ExecutionControls.tsx`. Caught during Day 1/2 verification.
@@ -32,6 +32,14 @@ Live status. Update as we go. Assignees: 🟣 **Vumi** (owner) · 🔵 **Shiv** 
   - GraphView not started yet — `"graph"` detection exists but `DsaPanel` has no dispatch branch for it, falls through to the generic fallback row safely.
   - 🟣 **Vumi** — `TreeView` polish: card style matching `ArrayView`/`StackView` (sky-300 label, legend swatches, "binary tree" badge), dashed "∅" null-leaf indicator for missing children. Done well.
   - 🔵 **Bugfix** — Vumi's polish added a Framer Motion fade/scale on the canvas, but it's a `motion.div` with no key tied to tree shape, so `initial`→`animate` only plays once on mount, not on each insert — the actual ask ("animate node position changes when the tree reshapes") wasn't covered, since React Flow doesn't transition a node's position by itself. Added a CSS rule (`globals.css`, `.runx-animated-flow .react-flow__node { transition: transform 300ms ease }`, applied via a class on the canvas wrapper) — React Flow moves nodes with a CSS `transform`, so this is what actually produces the slide when siblings shift on insert. Verified live: `getComputedStyle` on a rendered node now reports `transitionProperty: transform`, `0.3s`.
+
+- **Explain mode — Thonny-style "paste any code → walk through it"** (product pivot, 2026-06-24)
+  - 🔵 Removed the demo `ExamplePicker` (9 labelled examples) + its `Workspace.tsx` usages, deleted the file. Entry point is now "paste any Python code" — auto-detection already drives the visualizers, so nothing relied on labelled examples to select a view.
+  - 🔵 `src/lib/explain/narrate.ts` — rules-based per-step narrator: diffs consecutive snapshots (reuses `step-diff.ts` + `stack-analysis.ts`) into plain English ("appended 5 to `result`", "swapped `arr[1]` ↔ `arr[2]`", "Call `fib(3)` — recursive call #3", "`fact()` returns 24"). No LLM, no key, offline.
+  - 🔵 `src/lib/explain/classify.ts` — rules-based program classifier: sort / binary-search / linear-search / BFS / DFS / tree / linked-list / recursion / nested-loop / iterative / script, from source (indentation loop-nesting + name hints) + trace (recursion depth, swaps, detected structures), plus a heuristic Big-O class. **Class is rules-decided, never the LLM** (project rule). Honestly heuristic — Phase 8 formalizes with a real AST walker.
+  - 🔵 LLM scaffold, no provider wired yet: `src/lib/ai/explain.ts` (server-side, provider-agnostic, returns `{text:null, configured:false}` until a key is set) + `POST /api/explain` route. Rules narrator is the live path; LLM is purely additive.
+  - 🔵 `src/components/explain/ExplainPanel.tsx` + new **Explain** tab (now the default): summary card (title + Big-O + signals), current-step explanation, clickable running walkthrough, "Explain with AI" button that degrades gracefully with no provider. Baseline built — **visual polish is Vumi's next task.**
+  - 🔵 `npm run build` clean.
 
 ## How tasks flow
 1. Shiv writes the task (for 🟣 or 🔵).
