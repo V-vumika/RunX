@@ -120,8 +120,6 @@ export function ExplainPanel() {
       <div className="space-y-3 p-3">
         {error && <ExceptionCard type={error.type} message={error.message} line={error.line} />}
 
-        {hasTrace && summary && <SummaryCard summary={summary} code={code} current={current} />}
-
         {/* Current step — the big "what just happened" line. */}
         {current && (
           <motion.div
@@ -195,7 +193,7 @@ export function ExplainPanel() {
   );
 }
 
-function SummaryCard({
+export function SummaryCard({
   summary,
   code,
   current,

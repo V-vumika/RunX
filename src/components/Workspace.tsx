@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeEditor } from "@/components/editor/CodeEditor";
 import { ExecutionControls } from "@/components/execution/ExecutionControls";
 import { OutputPanel } from "@/components/execution/OutputPanel";
-import { VariableInspector } from "@/components/inspector/VariableInspector";
 import { ExplainPanel } from "@/components/explain/ExplainPanel";
 import { ComplexityPanel } from "@/components/explain/ComplexityPanel";
 import { useExecutionStore } from "@/lib/store/execution-store";
@@ -65,22 +64,7 @@ export function Workspace() {
             <ResizableHandle withHandle />
 
             <ResizablePanel defaultSize={45} minSize={25}>
-              <ResizablePanelGroup direction="vertical">
-                <ResizablePanel defaultSize={55} minSize={20}>
-                  <div className="flex h-full flex-col">
-                    <PanelHeader>Variables</PanelHeader>
-                    <div className="min-h-0 flex-1">
-                      <VariableInspector />
-                    </div>
-                  </div>
-                </ResizablePanel>
-
-                <ResizableHandle withHandle />
-
-                <ResizablePanel defaultSize={45} minSize={20}>
-                  <ResultTabs />
-                </ResizablePanel>
-              </ResizablePanelGroup>
+              <ResultTabs />
             </ResizablePanel>
           </ResizablePanelGroup>
         )}
@@ -94,7 +78,7 @@ export function Workspace() {
 function MobileLayout() {
   return (
     <div className="flex h-full flex-col overflow-y-auto">
-      <div className="flex h-[45vh] shrink-0 flex-col border-b">
+      <div className="flex h-[50vh] shrink-0 flex-col border-b">
         <PanelHeader>
           <span>main.py</span>
           <span className="font-normal text-muted-foreground/70">paste any Python code</span>
@@ -104,14 +88,7 @@ function MobileLayout() {
         </div>
       </div>
 
-      <div className="flex h-[35vh] shrink-0 flex-col border-b">
-        <PanelHeader>Variables</PanelHeader>
-        <div className="min-h-0 flex-1">
-          <VariableInspector />
-        </div>
-      </div>
-
-      <div className="h-[45vh] shrink-0">
+      <div className="h-[50vh] shrink-0">
         <ResultTabs />
       </div>
     </div>
