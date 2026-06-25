@@ -6,7 +6,7 @@ import { Activity, Lightbulb, TrendingUp } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useExecutionStore } from "@/lib/store/execution-store";
-import { classifyProgram } from "@/lib/explain/classify";
+import { classifyProgram, deriveSpaceComplexity } from "@/lib/explain/classify";
 
 export function ComplexityPanel() {
   const snapshots = useExecutionStore((s) => s.snapshots);
@@ -19,6 +19,10 @@ export function ComplexityPanel() {
   const summary = useMemo(
     () => (hasTrace ? classifyProgram(code, snapshots, complexity) : null),
     [snapshots, code, hasTrace, complexity]
+  );
+  const space = useMemo(
+    () => (summary ? deriveSpaceComplexity(summary, complexity) : null),
+    [summary, complexity]
   );
 
   if (!hasTrace || !summary) {
@@ -65,7 +69,7 @@ export function ComplexityPanel() {
           />
           <MetricCard
             label="Space complexity"
-            value={spaceFromSummary(summary.kind)}
+            value={space?.value ?? "—"}
             sub="auxiliary"
           />
           <MetricCard
@@ -168,18 +172,4 @@ function MetricCard({
       <div className="text-[10px] text-muted-foreground/70">{sub}</div>
     </div>
   );
-}
-
-/** Rough space complexity from algo kind — rules-based, never LLM. */
-function spaceFromSummary(kind: string): string {
-  switch (kind) {
-    case "recursion":     return "O(n)";
-    case "nested-loop":   return "O(1)";
-    case "sort":          return "O(n)";
-    case "binary-search": return "O(1)";
-    case "bfs":
-    case "dfs":           return "O(n)";
-    case "iterative":     return "O(1)";
-    default:              return "O(n)";
-  }
 }

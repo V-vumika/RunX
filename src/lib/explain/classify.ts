@@ -364,3 +364,51 @@ export function classifyProgram(
     signals: signals.length ? signals : ["straight-line statements"],
   };
 }
+
+/**
+ * Rules-based auxiliary space complexity, decided in the engine (never the UI).
+ * Derived from the algorithm kind + AST recursion shape — the recursion call
+ * stack and the extra data structures an algorithm allocates are what dominate
+ * auxiliary space. Heuristic but consistent; pairs with `classifyProgram`.
+ */
+export function deriveSpaceComplexity(
+  summary: ProgramSummary,
+  astInfo?: ComplexityInfo | null
+): { value: string; reason: string } {
+  const rec = primaryRecursion(astInfo?.recursion ?? []);
+
+  switch (summary.kind) {
+    case "bfs":
+    case "dfs":
+      return { value: "O(V)", reason: "stores visited nodes plus the frontier (queue/stack)" };
+
+    case "binary-search":
+      return rec
+        ? { value: "O(log n)", reason: "recursion stack proportional to the halving depth" }
+        : { value: "O(1)", reason: "iterative — only a few index variables" };
+
+    case "linear-search":
+    case "iterative":
+    case "nested-loop":
+      return { value: "O(1)", reason: "works in place — no input-sized extra storage" };
+
+    case "sort":
+      if (/merge/i.test(summary.title))
+        return { value: "O(n)", reason: "merge buffers the size of the input" };
+      if (/quick/i.test(summary.title))
+        return { value: "O(log n)", reason: "sorts in place; recursion stack ~log n deep" };
+      return { value: "O(1)", reason: "sorts in place by swapping elements" };
+
+    case "tree":
+    case "linked-list":
+      return { value: "O(n)", reason: "one node object per element" };
+
+    case "recursion":
+      if (rec?.shrink === "half")
+        return { value: "O(log n)", reason: "recursion depth shrinks by half each call" };
+      return { value: "O(n)", reason: "recursion stack grows with the input depth" };
+
+    default:
+      return { value: "O(1)", reason: "no input-sized extra storage" };
+  }
+}
