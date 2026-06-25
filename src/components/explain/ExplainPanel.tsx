@@ -213,24 +213,6 @@ function SummaryCard({
         </Badge>
       </div>
       <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{summary.description}</p>
-      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground/80">
-        <span className="font-medium">Complexity:</span> {summary.complexityReason}.
-      </p>
-      {summary.keyIdea && (
-        <p className="mt-2 flex items-start gap-1.5 rounded bg-amber-500/10 px-2 py-1.5 text-xs leading-relaxed text-amber-200/90">
-          <Lightbulb className="mt-0.5 size-3.5 shrink-0" />
-          <span>{summary.keyIdea}</span>
-        </p>
-      )}
-      {summary.signals.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {summary.signals.map((s) => (
-            <span key={s} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-              {s}
-            </span>
-          ))}
-        </div>
-      )}
       <AiExplain summary={summary} code={code} current={current} />
     </div>
   );
