@@ -12,12 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeEditor } from "@/components/editor/CodeEditor";
 import { ExecutionControls } from "@/components/execution/ExecutionControls";
 import { OutputPanel } from "@/components/execution/OutputPanel";
-import { CallStackPanel } from "@/components/execution/CallStackPanel";
 import { VariableInspector } from "@/components/inspector/VariableInspector";
-import { MemoryView } from "@/components/visualizers/MemoryView";
-import { DsaPanel } from "@/components/visualizers/DsaPanel";
-import { AlgorithmPanel } from "@/components/visualizers/AlgorithmPanel";
 import { ExplainPanel } from "@/components/explain/ExplainPanel";
+import { ComplexityPanel } from "@/components/explain/ComplexityPanel";
 import { useExecutionStore } from "@/lib/store/execution-store";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
@@ -125,44 +122,26 @@ function ResultTabs() {
   return (
     <Tabs defaultValue="explain" className="flex h-full flex-col gap-0">
       <div className="border-b px-3 py-1.5">
-        <TabsList className="h-8 w-full justify-start overflow-x-auto">
+        <TabsList className="h-8 w-full justify-start">
           <TabsTrigger value="explain" className="text-xs">
             Explain
+          </TabsTrigger>
+          <TabsTrigger value="complexity" className="text-xs">
+            Complexity
           </TabsTrigger>
           <TabsTrigger value="output" className="text-xs">
             Output
           </TabsTrigger>
-          <TabsTrigger value="dsa" className="text-xs">
-            DSA
-          </TabsTrigger>
-          <TabsTrigger value="algorithms" className="text-xs">
-            Algorithms
-          </TabsTrigger>
-          <TabsTrigger value="memory" className="text-xs">
-            Memory
-          </TabsTrigger>
-          <TabsTrigger value="stack" className="text-xs">
-            Call Stack
-          </TabsTrigger>
         </TabsList>
       </div>
-      <TabsContent value="explain" className="min-h-0">
+      <TabsContent value="explain" className="min-h-0 flex-1 overflow-hidden">
         <ExplainPanel />
       </TabsContent>
-      <TabsContent value="output" className="min-h-0">
+      <TabsContent value="complexity" className="min-h-0 flex-1 overflow-hidden">
+        <ComplexityPanel />
+      </TabsContent>
+      <TabsContent value="output" className="min-h-0 flex-1 overflow-hidden">
         <OutputPanel />
-      </TabsContent>
-      <TabsContent value="dsa" className="min-h-0">
-        <DsaPanel />
-      </TabsContent>
-      <TabsContent value="algorithms" className="min-h-0">
-        <AlgorithmPanel />
-      </TabsContent>
-      <TabsContent value="memory" className="min-h-0">
-        <MemoryView />
-      </TabsContent>
-      <TabsContent value="stack" className="min-h-0">
-        <CallStackPanel />
       </TabsContent>
     </Tabs>
   );
