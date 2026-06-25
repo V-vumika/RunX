@@ -52,12 +52,42 @@ def __runx_analyze_complexity(source):
     except Exception:
         return None
 
-    loop_types = (ast.For, ast.While, ast.AsyncFor)
+    def _is_int_literal(a):
+        # range() bound that is a compile-time integer, incl. negative literals.
+        if isinstance(a, ast.Constant) and type(a.value) is int:
+            return True
+        if (isinstance(a, ast.UnaryOp) and isinstance(a.op, ast.USub)
+                and isinstance(a.operand, ast.Constant) and type(a.operand.value) is int):
+            return True
+        return False
+
+    def _is_constant_for(node):
+        # A for-loop whose iteration count is fixed at author time, so it adds
+        # only O(1) and must NOT inflate the complexity class: range() over int
+        # literals, or iterating a literal list/tuple/set/string.
+        it = node.iter
+        if (isinstance(it, ast.Call) and isinstance(it.func, ast.Name)
+                and it.func.id == "range"):
+            return len(it.args) > 0 and all(_is_int_literal(a) for a in it.args)
+        if isinstance(it, (ast.List, ast.Tuple, ast.Set)):
+            return True
+        if isinstance(it, ast.Constant) and isinstance(it.value, str):
+            return True
+        return False
+
+    def _is_scaling_loop(node):
+        # Counts toward nesting depth only if it can grow with the input.
+        # while-loops are treated as scaling (can't prove a constant bound).
+        if isinstance(node, ast.While):
+            return True
+        if isinstance(node, (ast.For, ast.AsyncFor)):
+            return not _is_constant_for(node)
+        return False
 
     def max_loop_depth(node, cur):
         best = cur
         for child in ast.iter_child_nodes(node):
-            nxt = cur + (1 if isinstance(child, loop_types) else 0)
+            nxt = cur + (1 if _is_scaling_loop(child) else 0)
             d = max_loop_depth(child, nxt)
             if d > best:
                 best = d
