@@ -89,10 +89,7 @@ export function CodeEditor() {
     setTimeout(() => setCopyState("idle"), 1400);
   }
 
-  // Paste clipboard text at the cursor (replacing any selection), like Ctrl+V.
-  // executeEdits fires the model change → onChange → store stays in sync.
-  // Programmatic read isn't available everywhere (Firefox / insecure context),
-  // so fall back to nudging the user to press Ctrl+V instead of failing silently.
+ 
   async function handlePaste() {
     const editor = editorRef.current;
     const insert = (text: string) => {
