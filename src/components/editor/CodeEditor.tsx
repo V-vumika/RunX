@@ -37,6 +37,11 @@ export function CodeEditor() {
     editorRef.current = editor;
     monacoRef.current = monaco;
     decorationsRef.current = editor.createDecorationsCollection();
+
+    // Ensure paste always works — explicitly bind Ctrl+V / Cmd+V
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {
+      editor.trigger("keyboard", "editor.action.clipboardPasteAction", null);
+    });
   };
 
   // Highlight (and scroll to) the line about to execute for the current step.
@@ -85,6 +90,8 @@ export function CodeEditor() {
         tabSize: 4,
         renderLineHighlight: "none",
         padding: { top: 12, bottom: 12 },
+        readOnly: false,
+        domReadOnly: false,
       }}
     />
   );
