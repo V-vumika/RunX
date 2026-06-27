@@ -68,6 +68,11 @@ export function CodeEditor() {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {
       editor.trigger("keyboard", "editor.action.clipboardPasteAction", null);
     });
+
+    // Ctrl/Cmd+Enter runs the code, even while typing in the editor.
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+      useExecutionStore.getState().run();
+    });
   };
 
   // Copy the whole program to the clipboard, with a fallback for insecure

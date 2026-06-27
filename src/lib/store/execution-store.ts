@@ -104,6 +104,9 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
         currentStep: 0,
         isRunning: false,
       });
+      // Play the trace step-by-step at the chosen speed instead of jumping to
+      // the final state — watching it run line by line is the whole point.
+      if (result.snapshots.length > 1) get().play();
     } catch (err) {
       set({
         isRunning: false,
