@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { TriangleAlert, Lightbulb } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useExecutionStore } from "@/lib/store/execution-store";
-import { narrateAll, shortRepr, type StepKind } from "@/lib/explain/narrate";
+import { narrateAll, shortRepr, type StepChange, type StepKind } from "@/lib/explain/narrate";
 import { classifyProgram, type AlgoKind } from "@/lib/explain/classify";
 import { explainException } from "@/lib/explain/exceptions";
 import type { Snapshot, Variable, ValueNode } from "@/types/snapshot";
@@ -29,6 +29,64 @@ function KindPill({ kind }: { kind: StepKind }) {
     <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${KIND_CLASS[kind] ?? KIND_CLASS.step}`}>
       {kind}
     </span>
+  );
+}
+
+/** Live values of the variables on the running line — Thonny-style chips. */
+function StepValues({ values }: { values?: { name: string; repr: string }[] }) {
+  if (!values || values.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      <span className="text-[10px] uppercase tracking-widest text-muted-foreground/50">values</span>
+      {values.map((v) => (
+        <span
+          key={v.name}
+          className="rounded-md border border-border/50 bg-muted/40 px-1.5 py-0.5 font-mono text-[11px]"
+        >
+          <span className="text-muted-foreground">{v.name}</span>
+          <span className="text-muted-foreground/40"> = </span>
+          <span className="text-foreground/90">{v.repr}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** What this step changed — animated before→new badges. */
+function StepChanges({ changes }: { changes?: StepChange[] }) {
+  if (!changes || changes.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-col gap-1.5">
+      {changes.slice(0, 4).map((c, i) => (
+        <div
+          key={i}
+          className="flex animate-in fade-in slide-in-from-bottom-1 items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 font-mono text-xs"
+        >
+          {c.after === null ? (
+            // Standalone phrase (swap / append / multi-change).
+            <span className="text-emerald-200/90">{c.label}</span>
+          ) : c.before === null ? (
+            // Newly created.
+            <>
+              <span className="font-medium text-emerald-300">{c.label}</span>
+              <span className="text-muted-foreground/50">=</span>
+              <span className="font-medium text-emerald-300">{c.after}</span>
+              <span className="ml-auto rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-emerald-300/80">
+                new
+              </span>
+            </>
+          ) : (
+            // Reassigned: before → after.
+            <>
+              <span className="font-medium text-foreground/90">{c.label}</span>
+              <span className="text-muted-foreground/40 line-through">{c.before}</span>
+              <span className="text-emerald-400">→</span>
+              <span className="font-medium text-emerald-300">{c.after}</span>
+            </>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -859,6 +917,8 @@ export function ExplainPanel() {
                 {current.detail}
               </pre>
             )}
+            <StepValues values={current.values} />
+            <StepChanges key={currentStep} changes={current.changes} />
           </div>
         )}
 

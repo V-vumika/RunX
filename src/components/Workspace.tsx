@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeEditor } from "@/components/editor/CodeEditor";
 import { ExecutionControls } from "@/components/execution/ExecutionControls";
 import { OutputPanel } from "@/components/execution/OutputPanel";
+import { InputsPanel } from "@/components/execution/InputsPanel";
 import { ExplainPanel } from "@/components/explain/ExplainPanel";
 import { ComplexityPanel } from "@/components/explain/ComplexityPanel";
 import { useExecutionStore } from "@/lib/store/execution-store";
@@ -58,6 +59,7 @@ export function Workspace() {
                 <div className="min-h-0 flex-1">
                   <CodeEditor />
                 </div>
+                <InputsPanel />
               </div>
             </ResizablePanel>
 
@@ -86,6 +88,7 @@ function MobileLayout() {
         <div className="min-h-0 flex-1">
           <CodeEditor />
         </div>
+        <InputsPanel />
       </div>
 
       <div className="h-[50vh] shrink-0">

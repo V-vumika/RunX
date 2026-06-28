@@ -34,8 +34,23 @@ export type StepKind =
   | "error"
   | "step";
 
+/**
+ * A single visual change this step made — rendered as a badge, not prose.
+ *  - scalar reassign → `{ label:"total", before:"5", after:"12" }`
+ *  - newly created   → `{ label:"total", before:null, after:"0" }`
+ *  - index/key set   → `{ label:"arr[2]", before:"1", after:"2" }`
+ *  - complex mutate  → `{ label:"Swapped positions 0 and 1 of arr", before:null, after:null }`
+ *    (when both before and after are null, `label` is a standalone phrase).
+ */
+export interface StepChange {
+  label: string;
+  before: string | null;
+  after: string | null;
+  kind: StepKind;
+}
+
 export interface StepExplanation {
-  /** One-line, plain-English description of what this step did. */
+  /** One-line, plain-English description (kept for the AI layer; panel shows the visual instead). */
   text: string;
   /** Source line that produced this step (for the editor-style "Now running" row). */
   line: number;
@@ -45,6 +60,10 @@ export interface StepExplanation {
   kind: StepKind;
   /** Variable names this step touched (lets the panel cross-highlight). */
   touched: string[];
+  /** Structured changes this step made — rendered as before→after badges. */
+  changes?: StepChange[];
+  /** Live values of the variables appearing on the running line (Thonny-style). */
+  values?: { name: string; repr: string }[];
   /** Call-stack depth at this step (1 = module scope); set by narrateAll. */
   depth?: number;
 }
@@ -81,11 +100,16 @@ function reprs(node: ValueNode): string[] {
  * Describe how a sequence (list/tuple/deque) changed: append, pop, swap, set,
  * etc. Returns null when nothing recognizable changed (caller falls back).
  */
+/** A standalone-phrase change (no simple before/after — e.g. a swap or append). */
+function phrase(label: string): StepChange {
+  return { label, before: null, after: null, kind: "mutate" };
+}
+
 export function describeSeqChange(
   name: string,
   prev: ValueNode,
   curr: ValueNode
-): string | null {
+): StepChange | null {
   if (!SEQ_KINDS.has(prev.kind) || !SEQ_KINDS.has(curr.kind)) return null;
   const p = reprs(prev);
   const c = reprs(curr);
@@ -97,36 +121,37 @@ export function describeSeqChange(
     if (diffIdx.length === 2) {
       const [i, j] = diffIdx;
       if (p[i] === c[j] && p[j] === c[i]) {
-        return `swapped \`${name}[${i}]\` ↔ \`${name}[${j}]\``;
+        // Keep the word "swap" — the classifier looks for it to detect sorts.
+        return phrase(`Swapped positions ${i} and ${j} of ${name}`);
       }
     }
     if (diffIdx.length === 1) {
       const i = diffIdx[0];
-      return `set \`${name}[${i}]\` = ${shortRepr(curr.items?.[i])}`;
+      return { label: `${name}[${i}]`, before: p[i], after: c[i], kind: "mutate" };
     }
-    return `updated ${diffIdx.length} items in \`${name}\``;
+    return phrase(`Updated ${diffIdx.length} values in ${name}`);
   }
 
   if (c.length === p.length + 1) {
     const prefixEqual = p.every((v, i) => v === c[i]);
-    if (prefixEqual) return `appended ${shortRepr(curr.items?.[c.length - 1])} to \`${name}\``;
+    if (prefixEqual) return phrase(`Added ${shortRepr(curr.items?.[c.length - 1])} to the end of ${name}`);
     const suffixEqual = p.every((v, i) => v === c[i + 1]);
-    if (suffixEqual) return `pushed ${shortRepr(curr.items?.[0])} to the front of \`${name}\``;
-    return `added an item to \`${name}\` (now ${c.length})`;
+    if (suffixEqual) return phrase(`Added ${shortRepr(curr.items?.[0])} to the front of ${name}`);
+    return phrase(`Added an item to ${name} (now ${c.length})`);
   }
 
   if (c.length === p.length - 1) {
     const prefixEqual = c.every((v, i) => v === p[i]);
-    if (prefixEqual) return `removed ${shortRepr(prev.items?.[p.length - 1])} from the end of \`${name}\``;
+    if (prefixEqual) return phrase(`Removed ${shortRepr(prev.items?.[p.length - 1])} from the end of ${name}`);
     const suffixEqual = c.every((v, i) => v === p[i + 1]);
-    if (suffixEqual) return `removed ${shortRepr(prev.items?.[0])} from the front of \`${name}\``;
-    return `removed an item from \`${name}\` (now ${c.length})`;
+    if (suffixEqual) return phrase(`Removed ${shortRepr(prev.items?.[0])} from the front of ${name}`);
+    return phrase(`Removed an item from ${name} (now ${c.length})`);
   }
 
-  return `\`${name}\` changed (${p.length} → ${c.length} items)`;
+  return phrase(`${name} changed (${p.length} → ${c.length} items)`);
 }
 
-function describeDictChange(name: string, prev: ValueNode, curr: ValueNode): string | null {
+function describeDictChange(name: string, prev: ValueNode, curr: ValueNode): StepChange | null {
   if (prev.kind !== "dict" || curr.kind !== "dict") return null;
   const pEntries = new Map((prev.entries ?? []).map((e) => [e.key.repr, e.value.repr]));
   const cEntries = curr.entries ?? [];
@@ -134,9 +159,17 @@ function describeDictChange(name: string, prev: ValueNode, curr: ValueNode): str
   for (const e of cEntries) {
     if (pEntries.get(e.key.repr) !== e.value.repr) changed.push({ key: e.key.repr, val: e.value });
   }
-  if (changed.length === 1) return `set \`${name}[${changed[0].key}]\` = ${shortRepr(changed[0].val)}`;
-  if (changed.length > 1) return `updated ${changed.length} keys in \`${name}\``;
-  if (cEntries.length !== pEntries.size) return `\`${name}\` now has ${cEntries.length} keys`;
+  if (changed.length === 1) {
+    const { key, val } = changed[0];
+    return {
+      label: `${name}[${key}]`,
+      before: pEntries.get(key) ?? null,
+      after: shortRepr(val),
+      kind: "mutate",
+    };
+  }
+  if (changed.length > 1) return phrase(`Updated ${changed.length} entries in ${name}`);
+  if (cEntries.length !== pEntries.size) return phrase(`${name} now has ${cEntries.length} keys`);
   return null;
 }
 
@@ -145,16 +178,23 @@ function describeVarChange(
   name: string,
   prev: ValueNode | undefined,
   curr: ValueNode
-): { text: string; kind: StepKind } {
+): StepChange {
   if (!prev) {
-    return { text: `set \`${name}\` = ${shortRepr(curr)}`, kind: "assign" };
+    return { label: name, before: null, after: shortRepr(curr), kind: "assign" };
   }
   const seq = describeSeqChange(name, prev, curr);
-  if (seq) return { text: seq, kind: "mutate" };
+  if (seq) return seq;
   const dict = describeDictChange(name, prev, curr);
-  if (dict) return { text: dict, kind: "mutate" };
-  // Scalars and everything else: show old → new.
-  return { text: `\`${name}\`: ${shortRepr(prev)} → ${shortRepr(curr)}`, kind: "assign" };
+  if (dict) return dict;
+  // Scalars and everything else: show the value before and after.
+  return { label: name, before: shortRepr(prev), after: shortRepr(curr), kind: "assign" };
+}
+
+/** Plain-English phrase for a change — kept for the AI layer / text field. */
+function changePhrase(c: StepChange): string {
+  if (c.after === null) return c.label;
+  if (c.before === null) return `${c.label} = ${c.after}`;
+  return `${c.label}: ${c.before} → ${c.after}`;
 }
 
 function lineKeyword(src: string | undefined): StepKind {
@@ -172,9 +212,12 @@ function lineKeyword(src: string | undefined): StepKind {
  */
 function intentSuffix(kind: string | undefined, text: string): string {
   if (!kind) return "";
-  if (kind === "sort" && text.includes("swapped")) return " — a step toward sorted order";
-  if (kind === "binary-search" && /`(mid|lo|hi|low|high)`/.test(text)) {
-    return " — narrowing the search range";
+  const t = text.toLowerCase();
+  if (kind === "sort" && t.includes("swap")) {
+    return " — this moves the list closer to being sorted";
+  }
+  if (kind === "binary-search" && /\b(mid|lo|hi|low|high)\b/.test(text)) {
+    return " — this narrows down where to look next";
   }
   return "";
 }
@@ -198,23 +241,30 @@ export function narrateStep(
     const enriched = enrichFrames(curr.stack);
     const me = enriched[enriched.length - 1];
     const args = top ? varMap(top) : new Map<string, ValueNode>();
-    const argStr = [...args].map(([n, v]) => `${n}=${shortRepr(v, 18)}`).join(", ");
-    let text = `Call \`${top?.functionName ?? "?"}(${argStr})\``;
-    if (me?.isRecursive) text += ` — recursive call #${me.recursionIndex}`;
-    return { text, line: curr.line, detail: srcAt(curr.line), kind: "call", touched: [...args.keys()] };
+    // self/cls aren't inputs the learner provided — leave them out.
+    const argEntries = [...args].filter(([n]) => n !== "self" && n !== "cls");
+    const argStr = argEntries.map(([n, v]) => `${n} = ${shortRepr(v, 18)}`).join(", ");
+    const fn = top?.functionName ?? "the function";
+    let text = argStr
+      ? `Start running the function ${fn} with ${argStr}`
+      : `Start running the function ${fn}`;
+    if (me?.isRecursive) text += ` (this is the function calling itself — call #${me.recursionIndex})`;
+    return { text, line: curr.line, detail: srcAt(curr.line), kind: "call", touched: argEntries.map(([n]) => n) };
   }
 
   // ── Frame pop: a function returned ──
   if (curr.event === "return") {
-    const name = topFrame(curr)?.functionName ?? "function";
+    const name = topFrame(curr)?.functionName ?? "the function";
     const rv = curr.returnValue;
-    const text = rv ? `\`${name}()\` returns ${shortRepr(rv)}` : `\`${name}()\` returns`;
+    const text = rv
+      ? `The function ${name} is finished and sends back the value ${shortRepr(rv)}`
+      : `The function ${name} is finished`;
     return { text, line: curr.line, detail: srcAt(curr.line), kind: "return", touched: [] };
   }
 
   if (curr.event === "exception") {
     return {
-      text: `Exception raised at line ${curr.line}`,
+      text: `The program ran into an error on this line and had to stop`,
       line: curr.line,
       detail: srcAt(curr.line),
       kind: "error",
@@ -224,7 +274,7 @@ export function narrateStep(
 
   // ── First step ──
   if (!prev) {
-    return { text: "Program starts.", line: curr.line, detail: srcAt(curr.line), kind: "start", touched: [] };
+    return { text: "The program starts running here, from the top.", line: curr.line, detail: srcAt(curr.line), kind: "start", touched: [] };
   }
 
   const prevTop = topFrame(prev);
@@ -248,8 +298,11 @@ export function narrateStep(
   }
 
   if (!comparePrev) {
-    const where = currTop?.functionName === "<module>" ? "module scope" : `\`${currTop?.functionName}()\``;
-    return { text: `Continue in ${where}`, line: curr.line, detail: srcAt(curr.line), kind: "step", touched: [] };
+    const where =
+      currTop?.functionName === "<module>"
+        ? "the main program"
+        : `the function ${currTop?.functionName}`;
+    return { text: `Carry on running inside ${where}`, line: curr.line, detail: srcAt(curr.line), kind: "step", touched: [] };
   }
 
   // Effects are attributed to the line that produced them: the just-run line
@@ -261,38 +314,39 @@ export function narrateStep(
   const pMap = varMap(comparePrev);
   const cMap = varMap(currTop);
 
-  const parts: { text: string; kind: StepKind; name: string }[] = [];
+  const changes: StepChange[] = [];
+  const names: string[] = [];
   for (const name of diff.added) {
     const node = cMap.get(name);
-    if (node) parts.push({ ...describeVarChange(name, undefined, node), name });
+    if (node) { changes.push(describeVarChange(name, undefined, node)); names.push(name); }
   }
   for (const name of diff.changed) {
     const node = cMap.get(name);
-    if (node) parts.push({ ...describeVarChange(name, pMap.get(name), node), name });
+    if (node) { changes.push(describeVarChange(name, pMap.get(name), node)); names.push(name); }
   }
 
-  if (parts.length === 0) {
+  // Live values feeding this line (Thonny-style), minus the ones it just changed.
+  const lineValues = valuesOnLine(ranSrc, currTop).filter((v) => !names.includes(v.name));
+
+  if (changes.length === 0) {
     // Nothing visible changed: a condition check, a loop header, or a print.
     if ((curr.stdout?.length ?? 0) > (prev.stdout?.length ?? 0)) {
-      return { text: "Printed to output", line: ranLine, detail: ranSrc, kind: "print", touched: [] };
+      return { text: "Printed output", line: ranLine, detail: ranSrc, kind: "print", touched: [], values: lineValues };
     }
     const k = lineKeyword(ranSrc);
-    const text =
-      k === "branch" ? "Checked a condition"
-      : k === "loop" ? "Loop check"
-      : `Ran line ${ranLine}`;
-    return { text, line: ranLine, detail: ranSrc, kind: k, touched: [] };
+    const text = k === "branch" ? "Checked a condition" : k === "loop" ? "Loop check" : "Ran a line";
+    return { text, line: ranLine, detail: ranSrc, kind: k, touched: [], values: lineValues };
   }
 
-  const shown = parts.slice(0, 2).map((p) => p.text).join("; ");
-  const extra = parts.length > 2 ? ` (+${parts.length - 2} more)` : "";
-  const base = shown + extra;
+  const base = changes.slice(0, 3).map(changePhrase).join("; ");
   return {
     text: base + intentSuffix(kind, base),
     line: ranLine,
     detail: ranSrc,
-    kind: parts.some((p) => p.kind === "mutate") ? "mutate" : "assign",
-    touched: parts.map((p) => p.name),
+    kind: changes.some((c) => c.kind === "mutate") ? "mutate" : "assign",
+    touched: names,
+    changes,
+    values: lineValues,
   };
 }
 

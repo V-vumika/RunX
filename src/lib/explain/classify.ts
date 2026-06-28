@@ -123,7 +123,7 @@ function analyzeTrace(snapshots: Snapshot[]): RuntimeSignals {
       const curr = seqVarsAt(s);
       for (const [name, currNode] of curr) {
         const prevNode = prev.get(name);
-        if (prevNode && describeSeqChange(name, prevNode, currNode)?.includes("swapped")) {
+        if (prevNode && describeSeqChange(name, prevNode, currNode)?.label.toLowerCase().includes("swap")) {
           sawSwap = true;
           break;
         }

@@ -5,6 +5,12 @@ import {
   getPyodideClient,
   type EngineStatus,
 } from "@/lib/execution/pyodide-client";
+import {
+  getEntryRunner,
+  type EntryPoint,
+  type Inputs,
+  type Language,
+} from "@/lib/execution/entry";
 
 /** Starter program: a loop accumulator + recursion, to exercise the visualizer. */
 export const DEFAULT_CODE = `def factorial(n):
@@ -24,8 +30,43 @@ print("sum:", total)
 print("4! =", result)
 `;
 
+/** Detected entry point + free-form driver for the current code. */
+const NO_ENTRY: EntryPoint = { kind: "has-driver", params: [] };
+
+/** Whether an entry kind needs a synthesized driver to actually run. */
+function needsDriver(entry: EntryPoint): boolean {
+  return entry.kind === "class-method" || entry.kind === "free-function";
+}
+
+/**
+ * Re-detect the entry point for `code`, carrying over any input values whose
+ * parameter names still exist. Falls back to a no-op entry for languages
+ * without a runner yet.
+ */
+function deriveEntry(
+  language: Language,
+  code: string,
+  currentInputs: Inputs
+): { entry: EntryPoint; inputs: Inputs } {
+  const runner = getEntryRunner(language);
+  if (!runner) return { entry: NO_ENTRY, inputs: {} };
+
+  const entry = runner.detectEntry(code);
+  // Keep values for params that survived the edit; drop the rest.
+  const inputs: Inputs = {};
+  for (const p of entry.params) {
+    if (currentInputs[p] !== undefined) inputs[p] = currentInputs[p];
+  }
+  return { entry, inputs };
+}
+
 interface ExecutionState {
   code: string;
+  language: Language;
+  /** Callable entry point detected in the current code (LeetCode-style paste). */
+  entry: EntryPoint;
+  /** Input values per parameter name; we build the call, the user fills these. */
+  inputs: Inputs;
   snapshots: Snapshot[];
   currentStep: number;
   isRunning: boolean;
@@ -42,6 +83,7 @@ interface ExecutionState {
   _playTimer: ReturnType<typeof setInterval> | null;
 
   setCode: (code: string) => void;
+  setInput: (name: string, value: string) => void;
   initEngine: () => void;
   run: () => Promise<void>;
   stepForward: () => void;
@@ -58,6 +100,9 @@ interface ExecutionState {
 
 export const useExecutionStore = create<ExecutionState>((set, get) => ({
   code: DEFAULT_CODE,
+  language: "python",
+  // DEFAULT_CODE has top-level driver code, so this resolves to has-driver.
+  ...deriveEntry("python", DEFAULT_CODE, {}),
   snapshots: [],
   currentStep: 0,
   isRunning: false,
@@ -75,11 +120,17 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   // If a trace already exists, an edit means the displayed line/variables no
   // longer match the code on screen — clear it rather than show stale state.
   setCode: (code) =>
-    set((state) =>
-      state.snapshots.length > 0
-        ? { code, snapshots: [], currentStep: 0, result: null, runError: null }
-        : { code }
-    ),
+    set((state) => {
+      const derived = deriveEntry(state.language, code, state.inputs);
+      const cleared =
+        state.snapshots.length > 0
+          ? { snapshots: [], currentStep: 0, result: null, runError: null }
+          : {};
+      return { code, ...derived, ...cleared };
+    }),
+
+  setInput: (name, value) =>
+    set((state) => ({ inputs: { ...state.inputs, [name]: value } })),
 
   initEngine: () => {
     if (get().engineSubscribed || typeof window === "undefined") return;
@@ -95,9 +146,31 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
     if (get().isRunning) return;
     // stop auto-play if running new code
     get().pause();
+
+    const { code, language, entry, inputs } = get();
+    // For a bare solution (no top-level driver), we synthesize a call to the
+    // entry point so it actually executes and gets traced.
+    const runner = getEntryRunner(language);
+    const usesDriver = runner !== undefined && needsDriver(entry);
+
+    if (usesDriver) {
+      // Every parameter needs a value, else the synthesized call is a confusing
+      // SyntaxError / NameError. Catch it early with a clear message.
+      const missing = entry.params.filter((p) => !(inputs[p] ?? "").trim());
+      if (missing.length > 0) {
+        set({
+          runError: `Fill in ${missing.join(", ")} in the Inputs panel before running.`,
+        });
+        return;
+      }
+    }
+
     set({ isRunning: true, runError: null });
     try {
-      const result = await getPyodideClient().run(get().code);
+      const source = usesDriver
+        ? runner!.buildSource(code, entry, inputs)
+        : code;
+      const result = await getPyodideClient().run(source);
       set({
         snapshots: result.snapshots,
         result,
