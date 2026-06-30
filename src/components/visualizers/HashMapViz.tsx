@@ -1,6 +1,6 @@
 "use client";
 
-import type { Snapshot, ValueNode } from "@/types/snapshot";
+import type { Snapshot } from "@/types/snapshot";
 import { shortRepr } from "@/lib/explain/narrate";
 
 export function HashMapViz({ snapshots, step }: { snapshots: Snapshot[]; step: number }) {
@@ -23,7 +23,6 @@ export function HashMapViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
 
   const count = entries.length;
   const cols = Math.min(2, count);
-  const rowH = 28, gap = 6;
 
   return (
     <div className="overflow-hidden rounded-md border border-border/50">
