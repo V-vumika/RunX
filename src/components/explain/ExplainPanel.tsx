@@ -127,7 +127,7 @@ function VariableDiff({ prev, curr }: { prev: Snapshot | undefined; curr: Snapsh
 
 // ── auto viz picker ───────────────────────────────────────────────────────────
 
-function AutoViz({ kind, snapshots, step }: { kind: AlgoKind | "dp" | "trie"; snapshots: Snapshot[]; step: number }) {
+function AutoViz({ kind, snapshots, step }: { kind: AlgoKind | "dp" | "trie" | "hashmap" | "heap"; snapshots: Snapshot[]; step: number }) {
   switch (kind) {
     case "sort":           return <SortViz snapshots={snapshots} step={step} />;
     case "recursion":      return <RecursionViz snapshots={snapshots} step={step} />;
