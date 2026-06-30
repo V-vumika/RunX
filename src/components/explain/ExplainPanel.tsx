@@ -47,7 +47,7 @@ function KindPill({ kind }: { kind: StepKind }) {
 
 // ── algo badge ────────────────────────────────────────────────────────────────
 
-const ALGO_META: Record<AlgoKind, { label: string; color: string }> = {
+const ALGO_META: Record<string, { label: string; color: string }> = {
   sort:            { label: "Sort",          color: "bg-amber-500/15 text-amber-300 border-amber-500/30" },
   "binary-search": { label: "Binary Search", color: "bg-sky-500/15 text-sky-300 border-sky-500/30" },
   "linear-search": { label: "Linear Search", color: "bg-sky-500/10 text-sky-400 border-sky-500/20" },
