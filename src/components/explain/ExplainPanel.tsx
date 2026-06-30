@@ -7,7 +7,6 @@ import { useExecutionStore } from "@/lib/store/execution-store";
 import { narrateAll, shortRepr, type StepKind } from "@/lib/explain/narrate";
 import { classifyProgram, type AlgoKind } from "@/lib/explain/classify";
 import { explainException } from "@/lib/explain/exceptions";
-import { detectStructure } from "@/lib/visualizers/structure-detect";
 import type { Snapshot, Variable, ValueNode } from "@/types/snapshot";
 
 import { SortViz }         from "@/components/visualizers/SortViz";
