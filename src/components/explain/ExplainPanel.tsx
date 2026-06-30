@@ -21,9 +21,6 @@ import { DPTableViz }      from "@/components/visualizers/DPTableViz";
 import { TrieViz }         from "@/components/visualizers/TrieViz";
 import { HashMapViz }      from "@/components/visualizers/HashMapViz";
 import { HeapViz }         from "@/components/visualizers/HeapViz";
-import { ArrayView }       from "@/components/visualizers/ArrayView";
-import { StackView }       from "@/components/visualizers/StackView";
-import { QueueView }       from "@/components/visualizers/QueueView";
 
 // ── kind pill ────────────────────────────────────────────────────────────────
 
