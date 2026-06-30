@@ -65,7 +65,7 @@ const ALGO_META: Record<string, { label: string; color: string }> = {
   script:          { label: "Script",        color: "bg-muted text-muted-foreground border-border" },
 };
 
-function AlgoBadge({ kind, complexity }: { kind: AlgoKind; complexity: string }) {
+function AlgoBadge({ kind, complexity }: { kind: AlgoKind | "dp"; complexity: string }) {
   const m = ALGO_META[kind] ?? ALGO_META.script;
   return (
     <div className={`flex items-center gap-2 rounded-md border px-2.5 py-1.5 ${m.color}`}>
@@ -127,7 +127,7 @@ function VariableDiff({ prev, curr }: { prev: Snapshot | undefined; curr: Snapsh
 
 // ── auto viz picker ───────────────────────────────────────────────────────────
 
-function AutoViz({ kind, snapshots, step }: { kind: AlgoKind; snapshots: Snapshot[]; step: number }) {
+function AutoViz({ kind, snapshots, step }: { kind: AlgoKind | "dp" | "trie"; snapshots: Snapshot[]; step: number }) {
   switch (kind) {
     case "sort":           return <SortViz snapshots={snapshots} step={step} />;
     case "recursion":      return <RecursionViz snapshots={snapshots} step={step} />;
