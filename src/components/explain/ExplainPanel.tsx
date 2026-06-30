@@ -8,17 +8,22 @@ import { narrateAll, shortRepr, type StepKind } from "@/lib/explain/narrate";
 import { classifyProgram, type AlgoKind } from "@/lib/explain/classify";
 import { explainException } from "@/lib/explain/exceptions";
 import { detectStructure } from "@/lib/visualizers/structure-detect";
-import { computeSortHighlight } from "@/lib/visualizers/sort-trace";
 import type { Snapshot, Variable, ValueNode } from "@/types/snapshot";
 
-// existing visualizers
-import { GraphViz }      from "@/components/visualizers/GraphViz";
-import { TreeViz }       from "@/components/visualizers/TreeViz";
-import { LinkedListViz } from "@/components/visualizers/LinkedListViz";
-import { SortViz }   from "@/components/visualizers/SortViz";
-import { StackView }      from "@/components/visualizers/StackView";
-import { QueueView }      from "@/components/visualizers/QueueView";
-import { ArrayView }      from "@/components/visualizers/ArrayView";
+import { SortViz }         from "@/components/visualizers/SortViz";
+import { RecursionViz }    from "@/components/visualizers/RecursionViz";
+import { BinarySearchViz } from "@/components/visualizers/BinarySearchViz";
+import { GraphViz }        from "@/components/visualizers/GraphViz";
+import { TreeViz }         from "@/components/visualizers/TreeViz";
+import { LinkedListViz }   from "@/components/visualizers/LinkedListViz";
+import { IterativeViz }    from "@/components/visualizers/IterativeViz";
+import { DPTableViz }      from "@/components/visualizers/DPTableViz";
+import { TrieViz }         from "@/components/visualizers/TrieViz";
+import { HashMapViz }      from "@/components/visualizers/HashMapViz";
+import { HeapViz }         from "@/components/visualizers/HeapViz";
+import { ArrayView }       from "@/components/visualizers/ArrayView";
+import { StackView }       from "@/components/visualizers/StackView";
+import { QueueView }       from "@/components/visualizers/QueueView";
 
 // ── kind pill ────────────────────────────────────────────────────────────────
 
@@ -56,6 +61,10 @@ const ALGO_META: Record<AlgoKind, { label: string; color: string }> = {
   recursion:       { label: "Recursion",     color: "bg-violet-500/15 text-violet-300 border-violet-500/30" },
   "nested-loop":   { label: "Nested Loop",   color: "bg-orange-500/15 text-orange-300 border-orange-500/30" },
   iterative:       { label: "Iterative",     color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+  dp:              { label: "Dynamic Programming", color: "bg-pink-500/15 text-pink-300 border-pink-500/30" },
+  trie:            { label: "Trie",          color: "bg-teal-500/15 text-teal-300 border-teal-500/30" },
+  hashmap:         { label: "HashMap",       color: "bg-yellow-500/15 text-yellow-300 border-yellow-500/30" },
+  heap:            { label: "Heap",          color: "bg-indigo-500/15 text-indigo-300 border-indigo-500/30" },
   script:          { label: "Script",        color: "bg-muted text-muted-foreground border-border" },
 };
 
@@ -119,93 +128,25 @@ function VariableDiff({ prev, curr }: { prev: Snapshot | undefined; curr: Snapsh
   );
 }
 
-// ── auto viz — uses existing visualizer components ────────────────────────────
+// ── auto viz picker ───────────────────────────────────────────────────────────
 
-function AutoViz({
-  kind,
-  snapshots,
-  step,
-}: {
-  kind: AlgoKind;
-  snapshots: Snapshot[];
-  step: number;
-}) {
-  const snap     = snapshots[step];
-  const prevSnap = snapshots[step - 1];
-  const frame    = snap?.stack.at(-1);
-  if (!frame) return null;
-
-  // ── Sort ──────────────────────────────────────────────────────────────────
-  if (kind === "sort") {
-    const arrVar = frame.locals.find(
-      (v) =>
-        (v.value.kind === "list" || v.value.kind === "tuple") &&
-        v.value.items?.every((i) => i.kind === "int" || i.kind === "float")
-    );
-    if (arrVar) {
-      const prevArr = prevSnap?.stack.at(-1)?.locals.find((v) => v.name === arrVar.name)?.value ?? null;
-      const currentLine = snap.stack.at(-1)?.locals.find(() => true) ? (snap as unknown as { sourceLine?: string }).sourceLine ?? "" : "";
-      const highlight = computeSortHighlight(
-        arrVar.name,
-        arrVar.value,
-        prevArr,
-        currentLine,
-        frame.locals
-      );
-      return <SortViz snapshots={snapshots} step={step} />;
-    }
+function AutoViz({ kind, snapshots, step }: { kind: AlgoKind; snapshots: Snapshot[]; step: number }) {
+  switch (kind) {
+    case "sort":           return <SortViz snapshots={snapshots} step={step} />;
+    case "recursion":      return <RecursionViz snapshots={snapshots} step={step} />;
+    case "binary-search":  return <BinarySearchViz snapshots={snapshots} step={step} />;
+    case "bfs":
+    case "dfs":            return <GraphViz snapshots={snapshots} step={step} />;
+    case "tree":           return <TreeViz snapshots={snapshots} step={step} />;
+    case "linked-list":    return <LinkedListViz snapshots={snapshots} step={step} />;
+    case "nested-loop":
+    case "iterative":      return <IterativeViz snapshots={snapshots} step={step} />;
+    case "dp":             return <DPTableViz snapshots={snapshots} step={step} />;
+    case "trie":           return <TrieViz snapshots={snapshots} step={step} />;
+    case "hashmap":         return <HashMapViz snapshots={snapshots} step={step} />;
+    case "heap":            return <HeapViz snapshots={snapshots} step={step} />;
+    default:                return null;
   }
-
-  // ── BFS / DFS — graph ─────────────────────────────────────────────────────
-  if (kind === "bfs" || kind === "dfs") {
-    // look across all frames for the graph variable
-    const allLocals = snap.stack.flatMap((f) => f.locals);
-    const graphVar = allLocals.find((v) => {
-      const k = detectStructure(v.name, v.value);
-      return k === "graph";
-    });
-    if (graphVar) {
-      return <GraphViz snapshots={snapshots} step={step} />;
-    }
-  }
-
-  // ── Tree ──────────────────────────────────────────────────────────────────
-  if (kind === "tree") {
-    const allLocals = snap.stack.flatMap((f) => f.locals);
-    const treeVar = allLocals.find((v) => {
-      const k = detectStructure(v.name, v.value);
-      return k === "tree";
-    });
-    if (treeVar) {
-      return <TreeViz snapshots={snapshots} step={step} />;
-    }
-  }
-
-  // ── Linked list ───────────────────────────────────────────────────────────
-  if (kind === "linked-list") {
-    const allLocals = snap.stack.flatMap((f) => f.locals);
-    const llVar = allLocals.find((v) => {
-      const k = detectStructure(v.name, v.value);
-      return k === "linked-list";
-    });
-    if (llVar) {
-      return <LinkedListViz snapshots={snapshots} step={step} />;
-    }
-  }
-
-  // ── Generic: auto-detect each local variable and show best match ──────────
-  // Try all locals and pick the most interesting one to visualize
-  for (const v of frame.locals) {
-    const structKind = detectStructure(v.name, v.value);
-    if (structKind === "graph")       return <GraphViz      snapshots={snapshots} step={step} />;
-    if (structKind === "tree")        return <TreeViz      snapshots={snapshots} step={step} />;
-    if (structKind === "linked-list") return <LinkedListViz snapshots={snapshots} step={step} />;
-    if (structKind === "queue")       return <QueueView      name={v.name} node={v.value} />;
-    if (structKind === "stack")       return <StackView      name={v.name} node={v.value} />;
-    if (structKind === "array")       return <ArrayView      name={v.name} node={v.value} />;
-  }
-
-  return null;
 }
 
 // ── main panel ────────────────────────────────────────────────────────────────
@@ -272,9 +213,7 @@ export function ExplainPanel() {
         {summary && <AlgoBadge kind={summary.kind} complexity={summary.complexity} />}
 
         {/* visualization */}
-        {summary && (
-          <AutoViz kind={summary.kind} snapshots={snapshots} step={currentStep} />
-        )}
+        {summary && <AutoViz kind={summary.kind} snapshots={snapshots} step={currentStep} />}
 
         {/* current step card */}
         {current && (
