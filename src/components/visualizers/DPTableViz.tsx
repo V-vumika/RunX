@@ -75,19 +75,46 @@ function baselineRow(snapshots: Snapshot[], step: number, name: string): string[
 
 // ── color coding ──────────────────────────────────────────────────────────────
 
-const COLORS = {
-  current:    { bg: "rgba(245,185,66,0.16)",  border: "#F5B942",            text: "#FCD9A0" },
-  dependency: { bg: "rgba(59,130,246,0.16)",  border: "#60A5FA",            text: "#BFDBFE" },
-  computed:   { bg: "rgba(52,211,153,0.10)",  border: "rgba(52,211,153,0.5)", text: "#A7F3D0" },
-  pending:    { bg: "rgba(255,255,255,0.02)", border: "rgba(255,255,255,0.09)", text: "rgba(255,255,255,0.28)" },
-} as const;
+interface Palette {
+  bg: string;
+  border: string;
+  text: string;
+  shadow: string;
+}
+
+const COLORS: Record<string, Palette> = {
+  current: {
+    bg: "rgba(245,185,66,0.22)",
+    border: "#F5B942",
+    text: "#FDE7BE",
+    shadow: "0 6px 20px -4px rgba(245,185,66,0.5)",
+  },
+  dependency: {
+    bg: "rgba(96,165,250,0.20)",
+    border: "#60A5FA",
+    text: "#D6E7FF",
+    shadow: "0 6px 18px -6px rgba(96,165,250,0.55)",
+  },
+  computed: {
+    bg: "rgba(45,212,191,0.13)",
+    border: "rgba(45,212,191,0.5)",
+    text: "#BDF3E7",
+    shadow: "0 3px 10px -4px rgba(0,0,0,0.6)",
+  },
+  pending: {
+    bg: "rgba(255,255,255,0.025)",
+    border: "rgba(255,255,255,0.08)",
+    text: "rgba(255,255,255,0.32)",
+    shadow: "0 1px 4px rgba(0,0,0,0.35)",
+  },
+};
 
 type CellState = keyof typeof COLORS;
 
 const GLOW = [
-  "0 0 0px 0px rgba(245,185,66,0)",
-  "0 0 18px 3px rgba(245,185,66,0.55)",
-  "0 0 0px 0px rgba(245,185,66,0)",
+  "0 6px 20px -4px rgba(245,185,66,0.35)",
+  "0 8px 30px -2px rgba(245,185,66,0.7)",
+  "0 6px 20px -4px rgba(245,185,66,0.35)",
 ];
 
 // ── formula inference ─────────────────────────────────────────────────────────
@@ -142,38 +169,49 @@ function infer1D(cur: number, p1: number | null, p2: number | null): Formula {
     plain: `Computed from earlier cells${parts ? ` (${parts})` : ""}.` };
 }
 
-// ── small pieces ──────────────────────────────────────────────────────────────
+// ── cell ──────────────────────────────────────────────────────────────────────
 
 function Cell({ val, state, size }: { val: string; state: CellState; size: number }) {
   const c = COLORS[state];
   const current = state === "current";
   return (
     <motion.div
-      className="relative flex items-center justify-center rounded-xl border font-mono"
-      style={{ width: size, height: size, fontSize: size < 40 ? 11 : 13, borderWidth: 1.5 }}
+      className="relative flex items-center justify-center overflow-hidden rounded-2xl border"
+      style={{ width: size, height: size, borderWidth: 1.5 }}
       animate={{
         backgroundColor: c.bg,
         borderColor: c.border,
         borderStyle: state === "pending" ? "dashed" : "solid",
-        scale: current ? 1.08 : 1,
-        zIndex: current ? 3 : 1,
-        boxShadow: current ? GLOW : "0 1px 3px rgba(0,0,0,0.35)",
+        scale: current ? 1.1 : 1,
+        zIndex: current ? 5 : 1,
+        boxShadow: current ? GLOW : c.shadow,
       }}
       transition={{
-        default: { duration: 0.28, ease: "easeOut" },
+        default: { type: "spring", stiffness: 260, damping: 22 },
         boxShadow: current
-          ? { repeat: Infinity, duration: 1.4, ease: "easeInOut" }
-          : { duration: 0.28 },
+          ? { repeat: Infinity, duration: 1.6, ease: "easeInOut" }
+          : { duration: 0.3 },
       }}
     >
+      {/* glossy top highlight for depth */}
+      <span
+        className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-2xl"
+        style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.08), transparent)" }}
+      />
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.span
           key={val}
-          style={{ color: c.text, fontWeight: current ? 700 : 500 }}
-          initial={{ opacity: 0, y: -6, scale: 0.6 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 6, scale: 0.6 }}
-          transition={{ duration: 0.2 }}
+          className="relative font-mono tabular-nums"
+          style={{
+            color: c.text,
+            fontSize: size < 42 ? 12 : 14,
+            fontWeight: current ? 700 : 500,
+            textShadow: current ? "0 0 12px rgba(245,185,66,0.6)" : "none",
+          }}
+          initial={{ opacity: 0, y: -8, scale: 0.5, filter: "blur(4px)" }}
+          animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+          exit={{ opacity: 0, y: 8, scale: 0.5, filter: "blur(4px)" }}
+          transition={{ type: "spring", stiffness: 320, damping: 24 }}
         >
           {val}
         </motion.span>
@@ -182,15 +220,20 @@ function Cell({ val, state, size }: { val: string; state: CellState; size: numbe
   );
 }
 
-function Axis({ children, size, active }: { children: ReactNode; size: number; active?: boolean }) {
+function HeaderChip({ children, size, active }: { children: ReactNode; size: number; active?: boolean }) {
   return (
-    <div
-      className={`flex items-center justify-center font-mono text-[10px] ${
-        active ? "font-bold text-[#F5B942]" : "text-muted-foreground/50"
-      }`}
-      style={{ width: size, height: size }}
-    >
-      {children}
+    <div className="flex items-center justify-center" style={{ width: size, height: size }}>
+      <motion.span
+        className="flex items-center justify-center rounded-lg font-mono text-[11px] font-semibold"
+        style={{ minWidth: 22, height: 22, padding: "0 6px" }}
+        animate={{
+          backgroundColor: active ? "rgba(245,185,66,0.9)" : "rgba(255,255,255,0.05)",
+          color: active ? "#1a1205" : "rgba(255,255,255,0.45)",
+        }}
+        transition={{ duration: 0.25 }}
+      >
+        {children}
+      </motion.span>
     </div>
   );
 }
@@ -200,7 +243,7 @@ function Legend({ state, label }: { state: CellState; label: string }) {
   return (
     <span className="flex items-center gap-1.5">
       <span
-        className="h-2.5 w-2.5 rounded-lg border"
+        className="h-2.5 w-2.5 rounded-[4px] border"
         style={{ backgroundColor: c.bg, borderColor: c.border, borderStyle: state === "pending" ? "dashed" : "solid" }}
       />
       {label}
@@ -227,10 +270,10 @@ function ControlButton({
       disabled={disabled}
       title={label}
       aria-label={label}
-      className={`flex items-center justify-center rounded-lg border backdrop-blur transition-all disabled:cursor-not-allowed disabled:opacity-30 ${
+      className={`flex items-center justify-center rounded-xl border backdrop-blur transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 ${
         primary
-          ? "size-9 border-primary/40 bg-primary/20 text-primary hover:bg-primary/30"
-          : "size-8 border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          ? "size-10 border-primary/40 bg-primary/20 text-primary shadow-lg shadow-primary/20 hover:bg-primary/30"
+          : "size-9 border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground"
       }`}
     >
       {children}
@@ -252,7 +295,6 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
   const snap = snapshots[step];
   const found = findDp(snap?.stack.at(-1), snap?.stack);
 
-  // Plain-language narration for the current step (reuses the shared narrator).
   const narration = useMemo(() => {
     if (!snap) return null;
     return narrateStep(step > 0 ? snapshots[step - 1] : null, snap, code.split("\n"), "dp");
@@ -268,7 +310,7 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
   const row = as1DNodes(dpVar.value);
 
   const controls = (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex items-center justify-center gap-2.5">
       <ControlButton onClick={() => { pause(); goToStep(0); }} disabled={step <= 0} label="Reset to start">
         <RotateCcw className="size-4" />
       </ControlButton>
@@ -276,13 +318,13 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
         <SkipBack className="size-4" />
       </ControlButton>
       <ControlButton onClick={togglePlay} primary label={isPlaying ? "Pause" : "Play"}>
-        {isPlaying ? <Pause className="size-4" /> : <Play className="size-4 translate-x-px" />}
+        {isPlaying ? <Pause className="size-4" /> : <Play className="size-4 translate-x-[1px]" />}
       </ControlButton>
       <ControlButton onClick={stepForward} disabled={step >= snapshots.length - 1} label="Next step">
         <SkipForward className="size-4" />
       </ControlButton>
-      <span className="ml-1 font-mono text-[10px] text-muted-foreground/60">
-        {step + 1} / {snapshots.length}
+      <span className="ml-1.5 font-mono text-[11px] tabular-nums text-muted-foreground/60">
+        {step + 1} <span className="opacity-40">/ {snapshots.length}</span>
       </span>
     </div>
   );
@@ -297,18 +339,70 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
   );
 
   const stepPanel = narration && (
-    <div className="rounded-xl border border-white/10 bg-white/3 px-3 py-2.5 backdrop-blur">
-      <div className="mb-1 flex items-center gap-2">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-3 backdrop-blur">
+      <div className="mb-1.5 flex items-center gap-2">
         <span className="rounded-full border border-white/10 bg-background/60 px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
           line {narration.line}
         </span>
         {i >= 0 && (
-          <span className="rounded-full bg-[#F5B942]/15 px-2 py-0.5 font-mono text-[10px] text-[#FCD9A0]">
+          <span className="rounded-full bg-[#F5B942]/15 px-2 py-0.5 font-mono text-[10px] text-[#FDE7BE]">
             i = {i}{j >= 0 ? `, j = ${j}` : ""}
           </span>
         )}
       </div>
-      <p className="text-xs leading-relaxed text-foreground/80">{narration.text}</p>
+      <p className="text-xs leading-relaxed text-foreground/85">{narration.text}</p>
+    </div>
+  );
+
+  const formulaPanel = (formula: Formula | null) => (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 backdrop-blur">
+      <div className="mb-2 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#F5B942]" />
+        transition
+      </div>
+      {formula ? (
+        <>
+          <code className="block rounded-xl border border-[#F5B942]/20 bg-[#F5B942]/10 px-3 py-2.5 font-mono text-[11px] leading-relaxed text-[#FDE7BE]">
+            {formula.formula}
+          </code>
+          <div className="mt-2.5 font-mono text-[12px] font-medium text-blue-300/90">{formula.subst}</div>
+          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{formula.plain}</p>
+        </>
+      ) : (
+        <p className="text-[11px] leading-relaxed text-muted-foreground/70">
+          Step to a cell being computed to see its recurrence.
+        </p>
+      )}
+      <div className="mt-3.5 border-t border-white/10 pt-2.5">{legend}</div>
+    </div>
+  );
+
+  const shell = (title: string, meta: string, body: ReactNode, formula: Formula | null) => (
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.05] via-white/[0.02] to-transparent backdrop-blur-xl">
+      {/* ambient glow */}
+      <div className="pointer-events-none absolute -left-16 -top-16 h-48 w-48 rounded-full bg-[#F5B942]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 -right-10 h-52 w-52 rounded-full bg-blue-500/10 blur-3xl" />
+
+      <div className="relative flex items-center justify-between border-b border-white/10 px-4 py-2.5">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-[#F5B942] shadow-[0_0_8px_rgba(245,185,66,0.8)]" />
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-foreground/80">{title}</span>
+          <span className="font-mono text-[11px] text-muted-foreground/70">{dpVar.name}</span>
+        </div>
+        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 font-mono text-[10px] text-muted-foreground/60">
+          {meta}
+        </span>
+      </div>
+
+      <div className="relative flex flex-col gap-4 p-4 lg:flex-row">
+        <div className="min-w-0 flex-1 overflow-auto">{body}</div>
+        <div className="shrink-0 lg:w-60">{formulaPanel(formula)}</div>
+      </div>
+
+      <div className="relative flex flex-col gap-3 border-t border-white/10 px-4 py-3.5">
+        {stepPanel}
+        {controls}
+      </div>
     </div>
   );
 
@@ -316,16 +410,15 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
   if (grid) {
     const rows = grid.length;
     const cols = Math.max(...grid.map((r) => r.length));
-    const size = Math.max(38, Math.min(60, Math.floor(360 / Math.max(cols, 1))));
-    const head = Math.round(size * 0.5);
-    const gap = 8;
+    const size = Math.max(44, Math.min(62, Math.floor(420 / Math.max(cols, 1))));
+    const head = Math.round(size * 0.62);
+    const gap = 10;
     const totalW = head + cols * (size + gap);
     const totalH = head + rows * (size + gap);
 
     const base = baselineGrid(snapshots, step, dpVar.name);
     const hasCurrent = i >= 0 && j >= 0 && i < rows && j < (grid[i]?.length ?? 0);
 
-    // classic DP predecessors: up, left, diagonal.
     const depCoords = [[-1, 0], [0, -1], [-1, -1]] as const;
     const deps = new Set<string>();
     if (hasCurrent) {
@@ -342,7 +435,6 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
       return b === undefined || b !== val ? "computed" : "pending";
     };
 
-    // pixel centre of a data cell (r, c) within the overlay SVG.
     const cx = (c: number) => head + gap + c * (size + gap) + size / 2;
     const cy = (r: number) => head + gap + r * (size + gap) + size / 2;
 
@@ -352,116 +444,94 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
     const diag = hasCurrent ? num(grid[i - 1]?.[j - 1]) : null;
     const formula = curNum !== null ? infer2D(curNum, up, left, diag) : null;
 
-    return (
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-white/4 to-white/1 backdrop-blur-md">
-        <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
-          <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-            dp table · {dpVar.name}
-          </span>
-          <span className="font-mono text-[10px] text-muted-foreground/50">{rows} × {cols}</span>
-        </div>
+    const body = (
+      <div className="relative mx-auto" style={{ width: totalW, height: totalH }}>
+        {/* crosshair highlight bands over active row/column */}
+        {j >= 0 && j < cols && (
+          <motion.div
+            className="pointer-events-none absolute top-0 rounded-2xl bg-[#F5B942]/[0.06]"
+            style={{ width: size + gap, height: totalH }}
+            animate={{ left: head + gap + j * (size + gap) - gap / 2 }}
+            transition={{ type: "spring", stiffness: 260, damping: 26 }}
+          />
+        )}
+        {i >= 0 && i < rows && (
+          <motion.div
+            className="pointer-events-none absolute left-0 rounded-2xl bg-[#F5B942]/[0.06]"
+            style={{ width: totalW, height: size + gap }}
+            animate={{ top: head + gap + i * (size + gap) - gap / 2 }}
+            transition={{ type: "spring", stiffness: 260, damping: 26 }}
+          />
+        )}
 
-        <div className="flex flex-col gap-3 p-3 lg:flex-row">
-          {/* matrix + dependency arrows */}
-          <div className="min-w-0 flex-1 overflow-auto">
-            <div className="relative mx-auto" style={{ width: totalW, height: totalH }}>
-              {/* dependency arrows overlay */}
-              <svg className="pointer-events-none absolute inset-0" width={totalW} height={totalH}>
-                <defs>
-                  <marker id="dp-arrow" markerWidth="7" markerHeight="7" refX="5.5" refY="3"
-                    orient="auto" markerUnits="userSpaceOnUse">
-                    <path d="M0,0 L6,3 L0,6 Z" fill="#60A5FA" />
-                  </marker>
-                </defs>
-                {hasCurrent && [...deps].map((key) => {
-                  const [r, c] = key.split(",").map(Number);
-                  // shrink the endpoints so the line sits between cell edges.
-                  const x1 = cx(c), y1 = cy(r), x2 = cx(j), y2 = cy(i);
-                  const dx = x2 - x1, dy = y2 - y1;
-                  const len = Math.hypot(dx, dy) || 1;
-                  const pad = size * 0.42;
-                  return (
-                    <motion.line
-                      key={`${step}-${key}`}
-                      x1={x1 + (dx / len) * pad}
-                      y1={y1 + (dy / len) * pad}
-                      x2={x2 - (dx / len) * pad}
-                      y2={y2 - (dy / len) * pad}
-                      stroke="#60A5FA"
-                      strokeWidth={1.75}
-                      strokeLinecap="round"
-                      markerEnd="url(#dp-arrow)"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 0.9 }}
-                      transition={{ duration: 0.45, ease: "easeInOut" }}
-                    />
-                  );
-                })}
-              </svg>
+        {/* dependency arrows */}
+        <svg className="pointer-events-none absolute inset-0 z-20" width={totalW} height={totalH}>
+          <defs>
+            <marker id="dp-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3"
+              orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L6.5,3 L0,6 Z" fill="#60A5FA" />
+            </marker>
+          </defs>
+          {hasCurrent && [...deps].map((key) => {
+            const [r, c] = key.split(",").map(Number);
+            const x1 = cx(c), y1 = cy(r), x2 = cx(j), y2 = cy(i);
+            const dx = x2 - x1, dy = y2 - y1;
+            const len = Math.hypot(dx, dy) || 1;
+            const pad = size * 0.44;
+            return (
+              <motion.line
+                key={`${step}-${key}`}
+                x1={x1 + (dx / len) * pad}
+                y1={y1 + (dy / len) * pad}
+                x2={x2 - (dx / len) * pad}
+                y2={y2 - (dy / len) * pad}
+                stroke="#60A5FA"
+                strokeWidth={2}
+                strokeLinecap="round"
+                markerEnd="url(#dp-arrow)"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 0.95 }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+              />
+            );
+          })}
+        </svg>
 
-              {/* grid */}
-              <div
-                className="grid"
-                style={{
-                  gap,
-                  gridTemplateColumns: `${head}px repeat(${cols}, ${size}px)`,
-                  gridTemplateRows: `${head}px repeat(${rows}, ${size}px)`,
-                }}
-              >
-                <Axis size={head}><span className="opacity-40">i\j</span></Axis>
-                {Array.from({ length: cols }).map((_, c) => (
-                  <Axis key={`ch-${c}`} size={size} active={c === j}>{c}</Axis>
-                ))}
-                {grid.map((gr, r) => (
-                  <Fragment key={r}>
-                    <Axis size={head} active={r === i}>{r}</Axis>
-                    {Array.from({ length: cols }).map((_, c) => {
-                      const val = gr[c] ? shortRepr(gr[c], 5) : "";
-                      return <Cell key={`${r}-${c}`} val={val} size={size} state={stateOf(r, c, val)} />;
-                    })}
-                  </Fragment>
-                ))}
-              </div>
-            </div>
+        {/* grid */}
+        <div
+          className="relative z-10 grid"
+          style={{
+            gap,
+            gridTemplateColumns: `${head}px repeat(${cols}, ${size}px)`,
+            gridTemplateRows: `${head}px repeat(${rows}, ${size}px)`,
+          }}
+        >
+          <div className="flex items-center justify-center font-mono text-[10px] text-muted-foreground/30" style={{ width: head, height: head }}>
+            i\j
           </div>
-
-          {/* formula / transition panel */}
-          <div className="shrink-0 lg:w-56">
-            <div className="rounded-xl border border-white/10 bg-white/3 p-3 backdrop-blur">
-              <div className="mb-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
-                transition
-              </div>
-              {formula ? (
-                <>
-                  <code className="block rounded-lg bg-[#F5B942]/10 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-[#FCD9A0]">
-                    {formula.formula}
-                  </code>
-                  <div className="mt-2 font-mono text-[11px] text-blue-300/90">{formula.subst}</div>
-                  <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{formula.plain}</p>
-                </>
-              ) : (
-                <p className="text-[11px] leading-relaxed text-muted-foreground/70">
-                  Step to a cell being computed to see its recurrence.
-                </p>
-              )}
-              <div className="mt-3 border-t border-white/10 pt-2">{legend}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* step explanation + controls */}
-        <div className="flex flex-col gap-2.5 border-t border-white/10 px-3 py-3">
-          {stepPanel}
-          {controls}
+          {Array.from({ length: cols }).map((_, c) => (
+            <HeaderChip key={`ch-${c}`} size={size} active={c === j}>{c}</HeaderChip>
+          ))}
+          {grid.map((gr, r) => (
+            <Fragment key={r}>
+              <HeaderChip size={head} active={r === i}>{r}</HeaderChip>
+              {Array.from({ length: cols }).map((_, c) => {
+                const val = gr[c] ? shortRepr(gr[c], 5) : "";
+                return <Cell key={`${r}-${c}`} val={val} size={size} state={stateOf(r, c, val)} />;
+              })}
+            </Fragment>
+          ))}
         </div>
       </div>
     );
+
+    return shell("dp table", `${rows} × ${cols}`, body, formula);
   }
 
   // ── 1D array ────────────────────────────────────────────────────────────────
   if (row) {
     const count = row.length;
-    const size = Math.max(38, Math.min(56, Math.floor(360 / Math.max(count, 1))));
+    const size = Math.max(44, Math.min(60, Math.floor(440 / Math.max(count, 1))));
     const base = baselineRow(snapshots, step, dpVar.name);
     const hasCurrent = i >= 0 && i < count;
     const deps = new Set<number>();
@@ -479,58 +549,23 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
     const p2 = hasCurrent ? num(row[i - 2]) : null;
     const formula = curNum !== null ? infer1D(curNum, p1, p2) : null;
 
-    return (
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-white/4 to-white/1 backdrop-blur-md">
-        <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
-          <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-            dp array · {dpVar.name}
-          </span>
-          <span className="font-mono text-[10px] text-muted-foreground/50">{count} cells</span>
+    const body = (
+      <div className="mx-auto inline-flex flex-col gap-2">
+        <div className="flex gap-2.5">
+          {row.map((cell, idx) => {
+            const val = shortRepr(cell, 6);
+            return <Cell key={idx} val={val} size={size} state={stateOf(idx, val)} />;
+          })}
         </div>
-
-        <div className="flex flex-col gap-3 p-3 lg:flex-row lg:items-center">
-          <div className="min-w-0 flex-1 overflow-auto">
-            <div className="mx-auto inline-flex flex-col gap-1">
-              <div className="flex gap-2">
-                {row.map((cell, idx) => (
-                  <Cell key={idx} val={shortRepr(cell, 6)} size={size} state={stateOf(idx, shortRepr(cell, 6))} />
-                ))}
-              </div>
-              <div className="flex gap-2">
-                {row.map((_, idx) => <Axis key={idx} size={size} active={idx === i}>{idx}</Axis>)}
-              </div>
-            </div>
-          </div>
-
-          <div className="shrink-0 lg:w-56">
-            <div className="rounded-xl border border-white/10 bg-white/3 p-3 backdrop-blur">
-              <div className="mb-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
-                transition
-              </div>
-              {formula ? (
-                <>
-                  <code className="block rounded-lg bg-[#F5B942]/10 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-[#FCD9A0]">
-                    {formula.formula}
-                  </code>
-                  <div className="mt-2 font-mono text-[11px] text-blue-300/90">{formula.subst}</div>
-                  <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{formula.plain}</p>
-                </>
-              ) : (
-                <p className="text-[11px] leading-relaxed text-muted-foreground/70">
-                  Step to a cell being computed to see its recurrence.
-                </p>
-              )}
-              <div className="mt-3 border-t border-white/10 pt-2">{legend}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2.5 border-t border-white/10 px-3 py-3">
-          {stepPanel}
-          {controls}
+        <div className="flex gap-2.5">
+          {row.map((_, idx) => (
+            <HeaderChip key={idx} size={size} active={idx === i}>{idx}</HeaderChip>
+          ))}
         </div>
       </div>
     );
+
+    return shell("dp array", `${count} cells`, body, formula);
   }
 
   return null;
