@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Check, ClipboardPaste, Copy, X } from "lucide-react";
+import { Check, ClipboardPaste, Copy, Trash2, X } from "lucide-react";
 import type { OnMount, Monaco } from "@monaco-editor/react";
 import type { editor as MonacoEditorNS } from "monaco-editor";
 
@@ -125,6 +125,18 @@ export function CodeEditor() {
     }
   }
 
+  // Wipe the editor to an empty program. Clears the model directly so the
+  // change flows through onChange → setCode like any other edit.
+  function handleClear() {
+    const editor = editorRef.current;
+    if (editor) {
+      editor.setValue("");
+      editor.focus();
+    } else {
+      setCode("");
+    }
+  }
+
   // Highlight (and scroll to) the line about to execute for the current step.
   useEffect(() => {
     const editor = editorRef.current;
@@ -177,6 +189,14 @@ export function CodeEditor() {
         >
           <ClipboardPaste className="size-3" />
           {pasteHint ? "Press Ctrl+V" : "Paste"}
+        </button>
+        <button
+          onClick={handleClear}
+          title="Clear all code"
+          className="flex items-center gap-1 rounded bg-muted/70 px-2 py-1 text-[11px] text-muted-foreground backdrop-blur transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <Trash2 className="size-3" />
+          Clear
         </button>
       </div>
       <MonacoEditor
