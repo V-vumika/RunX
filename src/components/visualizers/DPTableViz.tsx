@@ -200,7 +200,7 @@ function Legend({ state, label }: { state: CellState; label: string }) {
   return (
     <span className="flex items-center gap-1.5">
       <span
-        className="h-2.5 w-2.5 rounded-[4px] border"
+        className="h-2.5 w-2.5 rounded-lg border"
         style={{ backgroundColor: c.bg, borderColor: c.border, borderStyle: state === "pending" ? "dashed" : "solid" }}
       />
       {label}
@@ -276,7 +276,7 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
         <SkipBack className="size-4" />
       </ControlButton>
       <ControlButton onClick={togglePlay} primary label={isPlaying ? "Pause" : "Play"}>
-        {isPlaying ? <Pause className="size-4" /> : <Play className="size-4 translate-x-[1px]" />}
+        {isPlaying ? <Pause className="size-4" /> : <Play className="size-4 translate-x-px" />}
       </ControlButton>
       <ControlButton onClick={stepForward} disabled={step >= snapshots.length - 1} label="Next step">
         <SkipForward className="size-4" />
@@ -297,7 +297,7 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
   );
 
   const stepPanel = narration && (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 backdrop-blur">
+    <div className="rounded-xl border border-white/10 bg-white/3 px-3 py-2.5 backdrop-blur">
       <div className="mb-1 flex items-center gap-2">
         <span className="rounded-full border border-white/10 bg-background/60 px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
           line {narration.line}
@@ -353,7 +353,7 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
     const formula = curNum !== null ? infer2D(curNum, up, left, diag) : null;
 
     return (
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] backdrop-blur-md">
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-white/4 to-white/1 backdrop-blur-md">
         <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
           <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
             dp table · {dpVar.name}
@@ -427,7 +427,7 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
 
           {/* formula / transition panel */}
           <div className="shrink-0 lg:w-56">
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 backdrop-blur">
+            <div className="rounded-xl border border-white/10 bg-white/3 p-3 backdrop-blur">
               <div className="mb-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
                 transition
               </div>
@@ -480,7 +480,7 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
     const formula = curNum !== null ? infer1D(curNum, p1, p2) : null;
 
     return (
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] backdrop-blur-md">
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-white/4 to-white/1 backdrop-blur-md">
         <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
           <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
             dp array · {dpVar.name}
@@ -503,7 +503,7 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
           </div>
 
           <div className="shrink-0 lg:w-56">
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 backdrop-blur">
+            <div className="rounded-xl border border-white/10 bg-white/3 p-3 backdrop-blur">
               <div className="mb-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
                 transition
               </div>
