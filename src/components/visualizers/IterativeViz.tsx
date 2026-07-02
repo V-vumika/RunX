@@ -29,7 +29,7 @@ export function IterativeViz({ snapshots, step }: { snapshots: Snapshot[]; step:
         {loopVars.length > 0 && (
           <div className="flex gap-2 flex-wrap">
             {loopVars.map((v) => (
-              <div key={v.name} className="rounded border border-cyan-500/30 bg-cyan-500/8 px-4 py-2 text-center min-w-[48px]">
+              <div key={v.name} className="rounded border border-cyan-500/30 bg-cyan-500/8 px-4 py-2 text-center min-w-12">
                 <div className="text-[9px] text-muted-foreground mb-0.5">{v.name}</div>
                 <div className="font-mono text-lg font-bold text-cyan-300">{shortRepr(v.value, 6)}</div>
               </div>
