@@ -243,7 +243,7 @@ function Legend({ state, label }: { state: CellState; label: string }) {
   return (
     <span className="flex items-center gap-1.5">
       <span
-        className="h-2.5 w-2.5 rounded-[4px] border"
+        className="h-2.5 w-2.5 rounded-lg border"
         style={{ backgroundColor: c.bg, borderColor: c.border, borderStyle: state === "pending" ? "dashed" : "solid" }}
       />
       {label}
@@ -318,7 +318,7 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
         <SkipBack className="size-4" />
       </ControlButton>
       <ControlButton onClick={togglePlay} primary label={isPlaying ? "Pause" : "Play"}>
-        {isPlaying ? <Pause className="size-4" /> : <Play className="size-4 translate-x-[1px]" />}
+        {isPlaying ? <Pause className="size-4" /> : <Play className="size-4 translate-x-px" />}
       </ControlButton>
       <ControlButton onClick={stepForward} disabled={step >= snapshots.length - 1} label="Next step">
         <SkipForward className="size-4" />
@@ -339,7 +339,7 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
   );
 
   const stepPanel = narration && (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-3 backdrop-blur">
+    <div className="rounded-2xl border border-white/10 bg-white/3 px-3.5 py-3 backdrop-blur">
       <div className="mb-1.5 flex items-center gap-2">
         <span className="rounded-full border border-white/10 bg-background/60 px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
           line {narration.line}
@@ -355,7 +355,7 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
   );
 
   const formulaPanel = (formula: Formula | null) => (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 backdrop-blur">
+    <div className="rounded-2xl border border-white/10 bg-white/3 p-3.5 backdrop-blur">
       <div className="mb-2 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
         <span className="h-1.5 w-1.5 rounded-full bg-[#F5B942]" />
         transition
@@ -378,7 +378,7 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
   );
 
   const shell = (title: string, meta: string, body: ReactNode, formula: Formula | null) => (
-    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.05] via-white/[0.02] to-transparent backdrop-blur-xl">
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-linear-to-br from-white/5 via-white/2 to-transparent backdrop-blur-xl">
       {/* ambient glow */}
       <div className="pointer-events-none absolute -left-16 -top-16 h-48 w-48 rounded-full bg-[#F5B942]/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-20 -right-10 h-52 w-52 rounded-full bg-blue-500/10 blur-3xl" />
@@ -449,7 +449,7 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
         {/* crosshair highlight bands over active row/column */}
         {j >= 0 && j < cols && (
           <motion.div
-            className="pointer-events-none absolute top-0 rounded-2xl bg-[#F5B942]/[0.06]"
+            className="pointer-events-none absolute top-0 rounded-2xl bg-[#F5B942]/6"
             style={{ width: size + gap, height: totalH }}
             animate={{ left: head + gap + j * (size + gap) - gap / 2 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
@@ -457,7 +457,7 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
         )}
         {i >= 0 && i < rows && (
           <motion.div
-            className="pointer-events-none absolute left-0 rounded-2xl bg-[#F5B942]/[0.06]"
+            className="pointer-events-none absolute left-0 rounded-2xl bg-[#F5B942]/6"
             style={{ width: totalW, height: size + gap }}
             animate={{ top: head + gap + i * (size + gap) - gap / 2 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
