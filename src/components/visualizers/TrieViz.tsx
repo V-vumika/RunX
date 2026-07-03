@@ -1,9 +1,17 @@
 "use client";
 
+import { motion } from "framer-motion";
+
 import type { Snapshot, ValueNode } from "@/types/snapshot";
 
-interface TrieNode { id: number; ch: string; isEnd: boolean; children: TrieNode[] }
-interface Pos { x: number; y: number; node: TrieNode }
+interface TrieNode {
+  id: number;
+  /** Python object id of the backing node — lets us mark the node being visited. */
+  pyId?: number;
+  ch: string;
+  isEnd: boolean;
+  children: TrieNode[];
+}
 
 /** Parse a trie node — supports class-based (self.children dict) and dict-based tries */
 function parseTrie(
@@ -38,34 +46,49 @@ function parseTrie(
     }
   }
 
-  return { id, ch, isEnd, children };
+  return { id, pyId: node.id, ch, isEnd, children };
 }
 
-function layout(node: TrieNode, x: number, y: number, spread: number, out: Pos[] = []): Pos[] {
-  out.push({ x, y, node });
-  const n = node.children.length;
-  if (n === 0) return out;
-  const totalWidth = (n - 1) * spread;
-  node.children.forEach((child, i) => {
-    const cx = x - totalWidth / 2 + i * spread;
-    layout(child, cx, y + 44, Math.max(spread * 0.6, 30), out);
-  });
-  return out;
+// ── tidy layout ────────────────────────────────────────────────────────────────
+// Each leaf gets a fixed horizontal slot; a parent centres over its children's
+// span. Subtrees can never overlap, no matter how bushy the trie gets.
+
+const UNIT = 46;   // px per leaf slot
+const LEVEL = 58;  // px per depth level
+const R = 15;      // node radius
+
+interface Placed { x: number; y: number; node: TrieNode; parent?: Placed }
+
+function countLeaves(n: TrieNode): number {
+  return n.children.length === 0 ? 1 : n.children.reduce((s, c) => s + countLeaves(c), 0);
 }
 
-function edges(node: TrieNode, x: number, y: number, spread: number,
-  out: { px: number; py: number; cx: number; cy: number; id: string }[] = []) {
-  const n = node.children.length;
-  if (n === 0) return out;
-  const totalWidth = (n - 1) * spread;
-  node.children.forEach((child, i) => {
-    const cx = x - totalWidth / 2 + i * spread;
-    const cy = y + 44;
-    out.push({ px: x, py: y, cx, cy, id: `${node.id}-${child.id}` });
-    edges(child, cx, cy, Math.max(spread * 0.6, 30), out);
-  });
-  return out;
+function place(
+  node: TrieNode,
+  x0: number,
+  depth: number,
+  out: Placed[],
+  parent?: Placed
+): Placed {
+  const width = countLeaves(node) * UNIT;
+  const self: Placed = { x: x0 + width / 2, y: depth * LEVEL + 30, node, parent };
+  out.push(self);
+  let cursor = x0;
+  for (const child of node.children) {
+    place(child, cursor, depth + 1, out, self);
+    cursor += countLeaves(child) * UNIT;
+  }
+  return self;
 }
+
+/** Smooth vertical cubic Bézier from parent rim to child rim. */
+function edgePath(p: Placed, c: Placed): string {
+  const y1 = p.y + R, y2 = c.y - R;
+  const mid = (y1 + y2) / 2;
+  return `M ${p.x} ${y1} C ${p.x} ${mid}, ${c.x} ${mid}, ${c.x} ${y2}`;
+}
+
+const spring = { type: "spring", stiffness: 260, damping: 26 } as const;
 
 export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: number }) {
   const snap = snapshots[step];
@@ -78,54 +101,129 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
   // current node being visited (e.g. "node" or "curr" in insert/search)
   const currFrame = snap.stack.at(-1);
   const currVar = currFrame?.locals.find((v) => ["node", "curr", "cur"].includes(v.name));
+  const currPyId = currVar?.value.id;
 
   const counter = { n: 0 };
-  const root = parseTrie(rootVar.value, "•", counter);
+  const root = parseTrie(rootVar.value, "", counter);
   if (!root) return null;
 
-  const W = 300, startX = 150, startY = 22, initSpread = 56;
-  const positions = layout(root, startX, startY, initSpread);
-  const edgeList = edges(root, startX, startY, initSpread);
-  const maxY = Math.max(...positions.map((p) => p.y)) + 26;
-  const H = Math.max(110, maxY);
+  const positions: Placed[] = [];
+  place(root, 16, 0, positions);
+
+  const W = countLeaves(root) * UNIT + 32;
+  const H = (Math.max(...positions.map((p) => p.y)) + R + 20);
 
   return (
-    <div className="overflow-hidden rounded-md border border-border/50">
-      <div className="border-b border-border/40 bg-muted/40 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-        trie · {positions.length} nodes
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent">
+      {/* header */}
+      <div className="flex items-center justify-between border-b border-white/10 px-3.5 py-2">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-foreground/70">
+          trie · {rootVar.name}
+        </span>
+        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 font-mono text-[10px] text-muted-foreground/60">
+          {positions.length} nodes
+        </span>
       </div>
-      <div className="bg-[#0d0d1a] flex justify-center overflow-x-auto">
+
+      {/* canvas */}
+      <div className="flex justify-center overflow-x-auto bg-[#0b0b16] py-3">
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
-          {edgeList.map((e) => (
-            <line key={e.id} x1={e.px} y1={e.py} x2={e.cx} y2={e.cy}
-              stroke="#2a2a4a" strokeWidth={1.5} strokeOpacity={0.7} />
-          ))}
-          {positions.map(({ x, y, node }) => {
-            const isRoot = node === root;
-            const isEnd  = node.isEnd;
-            const fill   = isRoot ? "#1e1e2e" : isEnd ? "#0F5C3A" : "#12122a";
-            const stroke = isRoot ? "#555577" : isEnd ? "#1D9E75" : "#3a3a5a";
-            const tc     = isEnd ? "#fff" : "#8888aa";
+          <defs>
+            <radialGradient id="trie-end" cx="50%" cy="35%" r="80%">
+              <stop offset="0%" stopColor="#2AB98A" />
+              <stop offset="100%" stopColor="#0F5C3A" />
+            </radialGradient>
+            <radialGradient id="trie-node" cx="50%" cy="35%" r="80%">
+              <stop offset="0%" stopColor="#1c1c33" />
+              <stop offset="100%" stopColor="#101020" />
+            </radialGradient>
+          </defs>
+
+          {/* edges — smooth Béziers, drawn under nodes */}
+          {positions.filter((p) => p.parent).map((p) => {
+            const active = p.node.pyId !== undefined && p.node.pyId === currPyId;
             return (
-              <g key={node.id}>
-                {isEnd && <circle cx={x} cy={y} r={15} fill="#1D9E75" opacity={0.12} />}
-                <circle cx={x} cy={y} r={12} fill={fill} stroke={stroke} strokeWidth={1.5} />
-                <text x={x} y={y + 4} textAnchor="middle"
-                  fontSize={10} fontFamily="var(--font-mono)" fontWeight="700" fill={tc}>
-                  {node.ch}
-                </text>
-                {isEnd && (
-                  <circle cx={x + 9} cy={y - 9} r={3} fill="#1D9E75" stroke="#0d0d1a" strokeWidth={1} />
+              <motion.path
+                key={`e-${p.node.id}`}
+                animate={{ d: edgePath(p.parent!, p) }}
+                initial={false}
+                transition={spring}
+                fill="none"
+                stroke={active ? "#F5B942" : "#32325a"}
+                strokeWidth={active ? 2 : 1.5}
+                strokeLinecap="round"
+                strokeOpacity={active ? 0.95 : 0.75}
+              />
+            );
+          })}
+
+          {/* nodes */}
+          {positions.map((p) => {
+            const { node } = p;
+            const isRoot = node === root;
+            const isCurr = node.pyId !== undefined && node.pyId === currPyId;
+            const fill = node.isEnd ? "url(#trie-end)" : "url(#trie-node)";
+            const stroke = isCurr ? "#F5B942" : node.isEnd ? "#2AB98A" : isRoot ? "#555577" : "#3a3a5f";
+            const tc = isCurr ? "#FDE7BE" : node.isEnd ? "#EAFFF6" : "#9a9ac0";
+
+            return (
+              <motion.g
+                key={node.id}
+                animate={{ x: p.x, y: p.y }}
+                initial={false}
+                transition={spring}
+              >
+                {/* halo for current / end-of-word */}
+                {isCurr && (
+                  <motion.circle
+                    r={R + 6}
+                    fill="#F5B942"
+                    animate={{ opacity: [0.25, 0.08, 0.25] }}
+                    transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                  />
                 )}
-              </g>
+                {node.isEnd && !isCurr && <circle r={R + 5} fill="#2AB98A" opacity={0.1} />}
+
+                <circle r={R} fill={fill} stroke={stroke} strokeWidth={isCurr ? 2 : 1.5} />
+                <text
+                  y={4}
+                  textAnchor="middle"
+                  fontSize={isRoot ? 8 : 11}
+                  fontFamily="var(--font-mono)"
+                  fontWeight={700}
+                  fill={isRoot ? "#666688" : tc}
+                >
+                  {isRoot ? "root" : node.ch}
+                </text>
+
+                {/* end-of-word tick */}
+                {node.isEnd && (
+                  <g transform={`translate(${R - 4}, ${-R + 4})`}>
+                    <circle r={4.5} fill="#2AB98A" stroke="#0b0b16" strokeWidth={1.25} />
+                    <path d="M -1.8 0 L -0.4 1.5 L 2 -1.4" stroke="#04281a" strokeWidth={1.3}
+                      fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                  </g>
+                )}
+              </motion.g>
             );
           })}
         </svg>
       </div>
-      <div className="flex items-center gap-3 border-t border-border/40 px-3 py-1.5 text-[10px] text-muted-foreground">
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#1D9E75]" />end of word</span>
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full border border-[#3a3a5a] bg-[#12122a]" />character node</span>
-        {currVar && <span>current: <span className="font-mono text-violet-300">{currVar.name}</span></span>}
+
+      {/* legend */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-white/10 px-3.5 py-2 text-[10px] text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#2AB98A]" />end of word
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full border border-[#3a3a5f] bg-[#14142a]" />character
+        </span>
+        {currVar && (
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full border-2 border-[#F5B942]" />
+            visiting <span className="font-mono text-[#FDE7BE]">{currVar.name}</span>
+          </span>
+        )}
       </div>
     </div>
   );
