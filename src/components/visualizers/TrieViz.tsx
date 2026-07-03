@@ -114,7 +114,7 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
   const H = (Math.max(...positions.map((p) => p.y)) + R + 20);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-linear-to-b from-white/[0.04] to-transparent">
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-linear-to-b from-white/4 to-transparent">
       {/* header */}
       <div className="flex items-center justify-between border-b border-white/10 px-3.5 py-2">
         <span className="text-[10px] font-semibold uppercase tracking-widest text-foreground/70">
