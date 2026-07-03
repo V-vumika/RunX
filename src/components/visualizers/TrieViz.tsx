@@ -114,7 +114,7 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
   const H = (Math.max(...positions.map((p) => p.y)) + R + 20);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent">
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-linear-to-b from-white/[0.04] to-transparent">
       {/* header */}
       <div className="flex items-center justify-between border-b border-white/10 px-3.5 py-2">
         <span className="text-[10px] font-semibold uppercase tracking-widest text-foreground/70">
@@ -126,8 +126,8 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
       </div>
 
       {/* canvas */}
-      <div className="flex justify-center overflow-x-auto bg-[#0b0b16] py-3">
-        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+      <div className="overflow-x-auto bg-[#0b0b16] py-3">
+        <svg className="mx-auto block" width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
           <defs>
             <radialGradient id="trie-end" cx="50%" cy="35%" r="80%">
               <stop offset="0%" stopColor="#2AB98A" />
