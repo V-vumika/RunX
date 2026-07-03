@@ -4,7 +4,7 @@ import type { Snapshot, ValueNode } from "@/types/snapshot";
 import { shortRepr } from "@/lib/explain/narrate";
 
 function as1D(node: ValueNode | undefined): (string | null)[] | null {
-  if (!node || node.kind !== "list" || !node.items) return null;
+  if (!node || node.kind !== "list" || !node.items || node.items.length === 0) return null;
   if (node.items.some((i) => i.kind === "list")) return null;
   return node.items.map((i) =>
     i.kind === "none" || i.repr === "None" ? null : shortRepr(i, 6)
@@ -12,7 +12,7 @@ function as1D(node: ValueNode | undefined): (string | null)[] | null {
 }
 
 function as2D(node: ValueNode | undefined): (string | null)[][] | null {
-  if (!node || node.kind !== "list" || !node.items) return null;
+  if (!node || node.kind !== "list" || !node.items || node.items.length === 0) return null;
   if (!node.items.every((r) => r.kind === "list")) return null;
   return node.items.map((r) =>
     (r.items ?? []).map((c) =>
@@ -29,19 +29,18 @@ interface RecNode {
   isBase: boolean;
   val: string | null;
 }
-
-let _rid = 0;
 function buildRecTree(
   n: number,
   dp: (string | null)[],
   depth: number,
   maxDepth: number,
-  memo: Map<string, RecNode>
+  memo: Map<string, RecNode>,
+  ridRef: { v: number }
 ): RecNode {
   const key = `${n}-${depth}`;
   if (memo.has(key)) return memo.get(key)!;
-  _rid++;
-  const id = `n${_rid}`;
+  ridRef.v++;
+  const id = `n${ridRef.v}`;
   const computed = dp[n] !== null && dp[n] !== undefined;
   const isBase = n <= 1;
   const node: RecNode = {
@@ -55,8 +54,8 @@ function buildRecTree(
   memo.set(key, node);
   if (!isBase && depth < maxDepth) {
     node.children = [
-      buildRecTree(n - 1, dp, depth + 1, maxDepth, memo),
-      buildRecTree(n - 2, dp, depth + 1, maxDepth, memo),
+      buildRecTree(n - 1, dp, depth + 1, maxDepth, memo, ridRef),
+      buildRecTree(n - 2, dp, depth + 1, maxDepth, memo, ridRef),
     ];
   }
   return node;
@@ -122,10 +121,10 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
     const cellW = Math.max(28, Math.floor((W - 60) / count));
 
     // build recursion tree if n is small enough
-    _rid = 0;
     const showTree = iVal >= 0 && iVal <= 12 && arr1D.length <= 15;
+    const ridRef = { v: 0 };
     const treeRoot = showTree
-      ? buildRecTree(iVal, arr1D, 0, 4, new Map())
+      ? buildRecTree(iVal, arr1D, 0, 4, new Map(), ridRef)
       : null;
     const treePositions = treeRoot
       ? layoutTree(treeRoot, W / 2, 30, 120)
@@ -253,7 +252,9 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
                   <path d="M0,0 L0,6 L6,3 z" fill="#555577" />
                 </marker>
               </defs>
-              {treePositions.map(({ x, y, node }) => {
+              {/* key must include the position index: memoized subproblems are the
+                  same node object rendered at several spots in the tree */}
+              {treePositions.map(({ x, y, node }, pi) => {
                 const isActive   = node.n === iVal && node === treeRoot;
                 const isDep      = !isActive && (node.n === iVal - 1 || node.n === iVal - 2) && node.children.length > 0;
                 const isComputed = node.computed && !isActive && !isDep;
@@ -274,7 +275,7 @@ export function DPTableViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
                              : isComputed ? "#6EE7B7"
                              : "#555577";
                 return (
-                  <g key={node.id}>
+                  <g key={`${node.id}-${pi}`}>
                     {isActive && <circle cx={x} cy={y} r={19} fill="#9B96E8" opacity={0.12} />}
                     <rect x={x - 15} y={y - 15} width={30} height={30} rx={7}
                       fill={fill} stroke={stroke} strokeWidth={isActive ? 2 : 1.5} />
