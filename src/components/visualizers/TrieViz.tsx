@@ -8,7 +8,6 @@ import type { Snapshot, ValueNode } from "@/types/snapshot";
 interface TNode { id: number; ch: string; isEnd: boolean; children: Map<string, TNode> }
 
 let _nid = 0;
-function mk(ch: string): TNode { return { id: _nid++, ch, isEnd: false, children: new Map() }; }
 
 // ── parse ValueNode tree into TNode tree ──────────────────────────────────────
 
@@ -91,8 +90,6 @@ function drawTrie(
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d")!;
   ctx.clearRect(0, 0, W, H);
-
-  const posById = new Map(pos.map(p => [p.node.id, p]));
 
   edg.forEach(e => {
     const dx = e.x2 - e.x1, dy = (e.y2 - R) - (e.y1 + R);
@@ -218,11 +215,8 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
     ? String(wordVar.value.value ?? wordVar.value.repr ?? "").replace(/^['"]|['"]$/g, "")
     : "";
 
-  // current node pointer (inside insert/search)
-  const nodeVar = allLocals.find(v => v.name === "node" && v.value.kind === "object");
-
   // build path ids by walking the word so far
-  let pathIds = new Set<number>();
+  const pathIds = new Set<number>();
   let curId = -1;
   let failed = false;
 
@@ -283,9 +277,9 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
       {/* current word indicator */}
       {currentWord && (
         <div style={{ padding: "5px 14px", fontSize: 10, borderTop: "1px solid #1e1e35", background: failed ? "#3D000811" : "#0F3D2E11" }}>
-          <span style={{ color: "#555577" }}>word = "</span>
+          <span style={{ color: "#555577" }}>word = &quot;</span>
           <span style={{ color: "#EF9F27" }}>{currentWord}</span>
-          <span style={{ color: "#555577" }}>" — </span>
+          <span style={{ color: "#555577" }}>&quot; — </span>
           <span style={{ color: failed ? "#DC2626" : "#1D9E75" }}>
             {failed ? "not found in trie" : "path exists"}
           </span>
