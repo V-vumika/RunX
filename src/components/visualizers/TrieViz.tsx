@@ -1,28 +1,26 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import type { Snapshot, ValueNode } from "@/types/snapshot";
 
 // ── trie node (our internal representation) ───────────────────────────────────
 
 interface TNode { id: number; ch: string; isEnd: boolean; children: Map<string, TNode> }
 
-let _nid = 0;
-function mk(ch: string): TNode { return { id: _nid++, ch, isEnd: false, children: new Map() }; }
-
-// ── parse from dict (from _snapshot variable) ────────────────────────────────
+// ── parse from dict (from the _snapshot variable: {children:{}, is_end:bool}) ──
 
 function parseDictNode(vnode: ValueNode | undefined, counter: { n: number }, depth = 0): TNode | undefined {
-  if (!vnode || vnode.kind === "none" || depth > 20) return undefined;
-  const id = counter.n++;
-  const tnode: TNode = { id, ch: "•", isEnd: false, children: new Map() };
+  if (!vnode || vnode.kind === "none" || depth > 30) return undefined;
+  const tnode: TNode = { id: counter.n++, ch: "•", isEnd: false, children: new Map() };
 
   if (vnode.kind === "dict" && vnode.entries) {
-    // {"children": {...}, "is_end": True/False}
-    const isEndEntry = vnode.entries.find(e => ["is_end","isEnd","end_of_word"].includes(String(e.key.value ?? e.key.repr ?? "")));
+    const isEndEntry = vnode.entries.find((e) =>
+      ["is_end", "isEnd", "end_of_word"].includes(String(e.key.value ?? e.key.repr ?? "").replace(/^['"]|['"]$/g, ""))
+    );
     if (isEndEntry) tnode.isEnd = isEndEntry.value.value === true || isEndEntry.value.repr === "True";
 
-    const childrenEntry = vnode.entries.find(e => ["children","kids"].includes(String(e.key.value ?? e.key.repr ?? "")));
+    const childrenEntry = vnode.entries.find((e) =>
+      ["children", "kids"].includes(String(e.key.value ?? e.key.repr ?? "").replace(/^['"]|['"]$/g, ""))
+    );
     if (childrenEntry?.value.kind === "dict" && childrenEntry.value.entries) {
       for (const { key, value } of childrenEntry.value.entries) {
         const ch = String(key.value ?? key.repr ?? "").replace(/^['"]|['"]$/g, "");
@@ -35,22 +33,19 @@ function parseDictNode(vnode: ValueNode | undefined, counter: { n: number }, dep
   return tnode;
 }
 
-// ── parse from object attributes ──────────────────────────────────────────────
+// ── parse from object attributes (a real TrieNode instance) ───────────────────
 
 function getAttr(node: ValueNode, name: string): ValueNode | undefined {
-  return node.attributes?.find(a => a.name === name)?.value;
+  return node.attributes?.find((a) => a.name === name)?.value;
 }
 
 function parseTrieNode(vnode: ValueNode | undefined, counter: { n: number }, depth = 0): TNode | undefined {
-  if (!vnode || vnode.kind === "none" || depth > 20) return undefined;
-  const id = counter.n++;
-  const tnode: TNode = { id, ch: "•", isEnd: false, children: new Map() };
+  if (!vnode || vnode.kind === "none" || depth > 30) return undefined;
+  const tnode: TNode = { id: counter.n++, ch: "•", isEnd: false, children: new Map() };
 
-  // get is_end / isEnd
   const isEndAttr = getAttr(vnode, "is_end") ?? getAttr(vnode, "isEnd") ?? getAttr(vnode, "end_of_word");
   if (isEndAttr) tnode.isEnd = isEndAttr.value === true || isEndAttr.repr === "True";
 
-  // get children dict
   const childrenAttr = getAttr(vnode, "children") ?? getAttr(vnode, "kids");
   if (childrenAttr?.kind === "dict" && childrenAttr.entries) {
     for (const { key, value } of childrenAttr.entries) {
@@ -60,349 +55,257 @@ function parseTrieNode(vnode: ValueNode | undefined, counter: { n: number }, dep
       if (child) { child.ch = ch; tnode.children.set(ch, child); }
     }
   }
-
   return tnode;
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-function countNodes(n: TNode): number { let c = 1; n.children.forEach(ch => c += countNodes(ch)); return c; }
-function treeHeight(n: TNode): number { if (!n.children.size) return 1; let mx = 0; n.children.forEach(ch => { const h = treeHeight(ch); if (h > mx) mx = h; }); return mx + 1; }
-function countEnd(n: TNode): number { let c = n.isEnd ? 1 : 0; n.children.forEach(ch => c += countEnd(ch)); return c; }
-function avgBranch(n: TNode): string { let total = 0, cnt = 0; function dfs(x: TNode) { if (x.children.size) { total += x.children.size; cnt++; } x.children.forEach(dfs); } dfs(n); return cnt ? (total / cnt).toFixed(2) : "0"; }
+function countNodes(n: TNode): number { let c = 1; n.children.forEach((ch) => (c += countNodes(ch))); return c; }
+function treeDepth(n: TNode): number { if (!n.children.size) return 0; let mx = 0; n.children.forEach((ch) => { const h = treeDepth(ch); if (h > mx) mx = h; }); return mx + 1; }
 
-// ── layout ────────────────────────────────────────────────────────────────────
-
-interface Pos { x: number; y: number; node: TNode }
-interface Edge { x1: number; y1: number; x2: number; y2: number; ch: string; mx: number; my: number }
-
-function layout(node: TNode, x: number, y: number, spread: number, out: Pos[] = []): Pos[] {
-  out.push({ x, y, node });
-  const kids = [...node.children.entries()];
-  if (!kids.length) return out;
-  const tot = (kids.length - 1) * spread;
-  kids.forEach(([, child], i) => layout(child, x - tot / 2 + i * spread, y + 56, Math.max(spread * 0.6, 28), out));
-  return out;
+/** Every complete word stored in the trie (paths ending on an is_end node). */
+function collectWords(root: TNode): string[] {
+  const out: string[] = [];
+  const dfs = (n: TNode, prefix: string) => {
+    const cur = n.ch === "•" ? prefix : prefix + n.ch;
+    if (n.isEnd) out.push(cur);
+    n.children.forEach((c) => dfs(c, cur));
+  };
+  dfs(root, "");
+  return out.sort();
 }
 
-function getEdges(node: TNode, x: number, y: number, spread: number, out: Edge[] = []): Edge[] {
-  const kids = [...node.children.entries()];
-  if (!kids.length) return out;
-  const tot = (kids.length - 1) * spread;
-  kids.forEach(([ch, child], i) => {
-    const cx = x - tot / 2 + i * spread, cy = y + 56;
-    out.push({ x1: x, y1: y, x2: cx, y2: cy, ch, mx: (x + cx) / 2, my: (y + cy) / 2 });
-    getEdges(child, cx, cy, Math.max(spread * 0.6, 28), out);
-  });
-  return out;
-}
+// ── tidy tree layout (leaf-slot assignment → no overlap) ──────────────────────
 
-// ── canvas draw ───────────────────────────────────────────────────────────────
+interface Laid { node: TNode; x: number; y: number }
 
-const R = 15;
+function tidyLayout(root: TNode) {
+  const laidById = new Map<number, Laid>();
+  const all: Laid[] = [];
+  let leaf = 0;
 
-function drawTrie(
-  canvas: HTMLCanvasElement,
-  root: TNode,
-  pathIds: Set<number>,
-  curId: number,
-  failed: boolean
-) {
-  const W = canvas.parentElement?.clientWidth || 560;
-  const pos = layout(root, W / 2, 30, 110);
-  const edg = getEdges(root, W / 2, 30, 110);
-  const maxY = Math.max(...pos.map(p => p.y)) + 34;
-  const H = Math.max(180, maxY);
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext("2d")!;
-  ctx.clearRect(0, 0, W, H);
-
-  const posById = new Map(pos.map(p => [p.node.id, p]));
-
-  edg.forEach(e => {
-    const dx = e.x2 - e.x1, dy = (e.y2 - R) - (e.y1 + R);
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    const ux = dx / len, uy = dy / len;
-    const sx = e.x1 + ux * R, sy = e.y1 + R;
-    const ex = e.x2 - ux * R, ey = e.y2 - R;
-    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey);
-    ctx.strokeStyle = "#3a3a6a"; ctx.lineWidth = 1.5; ctx.stroke();
-    // arrowhead
-    ctx.beginPath();
-    ctx.moveTo(ex - uy * 3, ey + ux * 3);
-    ctx.lineTo(ex + ux * 5, ey + uy * 5);
-    ctx.lineTo(ex + uy * 3, ey - ux * 3);
-    ctx.fillStyle = "#555577"; ctx.fill();
-    // edge label
-    const lx = (e.x1 + e.x2) / 2 + (e.x2 > e.x1 ? 9 : -9);
-    ctx.fillStyle = "#888"; ctx.font = "10px 'Courier New'"; ctx.textAlign = "center";
-    ctx.fillText(e.ch, lx, (e.y1 + e.y2) / 2);
-  });
-
-  pos.forEach(({ x, y, node }) => {
-    const isRoot = node === root;
-    const isCur  = node.id === curId && pathIds.has(node.id) && !isRoot;
-    const isEnd  = node.isEnd && !isRoot;
-    const isPath = pathIds.has(node.id) && !isCur && !isRoot;
-
-    const fill   = isRoot ? "#3D1F7A" : (failed && isCur) ? "#3D0808" : isCur ? "#3D2200" : isEnd ? "#0F3D2E" : isPath ? "#0C1A4A" : "#12122a";
-    const stroke = isRoot ? "#9B96E8" : (failed && isCur) ? "#DC2626" : isCur ? "#EF9F27" : isEnd ? "#1D9E75" : isPath ? "#3B82F6" : "#2a2a4a";
-    const tc     = isRoot ? "#c4c0f5" : (failed && isCur) ? "#FCA5A5" : isCur ? "#FCD34D" : isEnd ? "#6EE7B7" : isPath ? "#93C5FD" : "#8888bb";
-
-    if (isRoot || isCur) {
-      ctx.beginPath(); ctx.arc(x, y, R + 7, 0, Math.PI * 2);
-      ctx.fillStyle = (isRoot ? "#9B96E8" : "#EF9F27") + "18"; ctx.fill();
+  const assign = (n: TNode, d: number): Laid => {
+    const kids = [...n.children.values()];
+    let x: number;
+    if (kids.length === 0) {
+      x = leaf++;
+    } else {
+      const cs = kids.map((k) => assign(k, d + 1));
+      x = (cs[0].x + cs[cs.length - 1].x) / 2;
     }
-    ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
-    ctx.fillStyle = fill; ctx.fill();
-    ctx.strokeStyle = stroke; ctx.lineWidth = isRoot || isCur ? 2 : 1.5; ctx.stroke();
-    ctx.fillStyle = tc; ctx.font = "bold 11px 'Courier New'";
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(String(node.id), x, y);
-    if (isEnd) {
-      ctx.beginPath(); ctx.arc(x + R - 2, y - R + 2, 4, 0, Math.PI * 2);
-      ctx.fillStyle = "#1D9E75"; ctx.fill();
-      ctx.strokeStyle = "#0a0a14"; ctx.lineWidth = 1; ctx.stroke();
-    }
-  });
-}
+    const laid: Laid = { node: n, x, y: d };
+    all.push(laid);
+    laidById.set(n.id, laid);
+    return laid;
+  };
+  assign(root, 0);
 
-// ── 2D table ──────────────────────────────────────────────────────────────────
-
-function buildTable(root: TNode) {
-  const nodes: TNode[] = [], rows = new Map<number, Map<string, string | number>>(), chars = new Set<string>();
-  function dfs(n: TNode) {
-    nodes.push(n);
-    const row = new Map<string, string | number>();
-    n.children.forEach((child, ch) => { chars.add(ch); row.set(ch, child.id); dfs(child); });
-    if (n.isEnd) { chars.add("\\0"); row.set("\\0", "✓"); }
-    rows.set(n.id, row);
+  const edges: { from: Laid; to: Laid }[] = [];
+  for (const l of all) {
+    l.node.children.forEach((c) => {
+      const cl = laidById.get(c.id);
+      if (cl) edges.push({ from: l, to: cl });
+    });
   }
-  dfs(root);
-  return { nodes, chars: [...chars].sort(), rows };
+  return { all, edges, cols: Math.max(1, leaf) };
 }
+
+// ── palette ───────────────────────────────────────────────────────────────────
+
+const COL = {
+  root:    { fill: "#2A1D57", stroke: "#9B96E8", text: "#C4C0F5" },
+  path:    { fill: "#3A2600", stroke: "#EF9F27", text: "#FCD34D" },
+  fail:    { fill: "#3A0B0B", stroke: "#DC2626", text: "#FCA5A5" },
+  end:     { fill: "#0E3B2C", stroke: "#1D9E75", text: "#6EE7B7" },
+  endPath: { fill: "#3A2600", stroke: "#EF9F27", text: "#FCD34D" },
+  plain:   { fill: "#161630", stroke: "#33335a", text: "#B7B7DE" },
+};
 
 // ── main component ────────────────────────────────────────────────────────────
 
 export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: number }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const snap = snapshots[step];
-  if (!snap) return null;
+  const allLocals = snap ? snap.stack.flatMap((f) => f.locals) : [];
 
-  // find root TrieNode from snapshot
-  // priority: direct 'root' var > self.root attribute > 't.root' > any object with 'children' attr
-  const allLocals = snap.stack.flatMap(f => f.locals);
-
+  // Locate the root, preferring the plain `_snapshot` dict (cleanest source).
   let rootVNode: ValueNode | undefined;
   let useDict = false;
+  const pick = (v: ValueNode | undefined, asDict: boolean) => {
+    if (v && !rootVNode) { rootVNode = v; useDict = asDict; }
+  };
 
-  // 0. _snapshot dict (most reliable — set by _update_snapshot())
-  const snapshotVar = allLocals.find(v => v.name === "_snapshot" && v.value.kind === "dict");
-  if (snapshotVar) { rootVNode = snapshotVar.value; useDict = true; }
-
-  // 1. direct root variable (object)
-  if (!rootVNode) {
-    const rootVar = allLocals.find(v => v.name === "root" && v.value.kind === "object");
-    if (rootVar) rootVNode = rootVar.value;
+  pick(allLocals.find((v) => v.name === "_snapshot" && v.value.kind === "dict")?.value, true);
+  pick(allLocals.find((v) => v.name === "root" && v.value.kind === "object")?.value, false);
+  for (const v of allLocals) {
+    if (rootVNode) break;
+    if (v.value.kind !== "object") continue;
+    const s = getAttr(v.value, "_snapshot");
+    if (s?.kind === "dict") { pick(s, true); break; }
+    const r = getAttr(v.value, "root");
+    if (r?.kind === "object") { pick(r, false); break; }
+    if (getAttr(v.value, "children")?.kind === "dict") { pick(v.value, false); break; }
   }
 
-  // 2. self.root (inside Trie methods)
-  if (!rootVNode) {
-    const selfVar = allLocals.find(v => v.name === "self");
-    if (selfVar) {
-      // check _snapshot first inside self
-      const snap2 = getAttr(selfVar.value, "_snapshot");
-      if (snap2?.kind === "dict") { rootVNode = snap2; useDict = true; }
-      else {
-        const rootAttr = getAttr(selfVar.value, "root");
-        if (rootAttr?.kind === "object") rootVNode = rootAttr;
-      }
-    }
+  let root: TNode | null = null;
+  if (rootVNode) {
+    const counter = { n: 0 };
+    const parsed = useDict ? parseDictNode(rootVNode, counter) : parseTrieNode(rootVNode, counter);
+    if (parsed) { parsed.ch = "•"; root = parsed; }
   }
 
-  // 3. t.root or trie.root (Trie instance variable)
-  if (!rootVNode) {
-    const trieVar = allLocals.find(v =>
-      (v.name === "t" || v.name === "trie") && v.value.kind === "object"
-    );
-    if (trieVar) {
-      const snap2 = getAttr(trieVar.value, "_snapshot");
-      if (snap2?.kind === "dict") { rootVNode = snap2; useDict = true; }
-      else {
-        const rootAttr = getAttr(trieVar.value, "root");
-        if (rootAttr?.kind === "object") rootVNode = rootAttr;
-      }
-    }
-  }
-
-  // 4. any object that has a children dict
-  if (!rootVNode) {
-    for (const v of allLocals) {
-      if (v.value.kind !== "object") continue;
-      const ch = getAttr(v.value, "children");
-      if (ch?.kind === "dict") { rootVNode = v.value; break; }
-    }
-  }
-
-  if (!rootVNode) {
-    // debug: show what we have
-    return (
-      <div className="overflow-hidden rounded-md border border-border/50 p-3">
-        <div className="text-[10px] text-muted-foreground mb-2">Trie detected — parsing tree... Variables found:</div>
-        {allLocals.slice(0, 8).map((v, i) => (
-          <div key={i} className="font-mono text-[10px] text-muted-foreground/70 mb-1">
-            {v.name}: {v.value.kind}
-            {v.value.kind === "object" && v.value.attributes
-              ? ` [attrs: ${v.value.attributes.map(a => a.name).join(", ")}]`
-              : ""}
-            {v.value.kind === "dict" && v.value.entries
-              ? ` [${v.value.entries.length} entries]`
-              : ""}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  // parse into internal TNode tree
-  
-  const counter = { n: 0 };
-  const root = useDict
-    ? parseDictNode(rootVNode, counter)
-    : parseTrieNode(rootVNode, counter);
-  if (!root) return null;
-  root.ch = "•";
-
-  // current word being processed
-  const wordVar = allLocals.find(v => v.name === "word");
+  // Current word being inserted/searched → highlight its path.
+  const wordVar = allLocals.find((v) => v.name === "word");
   const currentWord = wordVar
     ? String(wordVar.value.value ?? wordVar.value.repr ?? "").replace(/^['"]|['"]$/g, "")
     : "";
 
-  // current node pointer (inside insert/search)
-  const nodeVar = allLocals.find(v => v.name === "node" && v.value.kind === "object");
-
-  // build path ids by walking the word so far
   const pathIds = new Set<number>();
-  let curId = -1;
   let failed = false;
-
-  if (currentWord) {
-    let cur = root;
+  if (root && currentWord) {
+    let cur: TNode = root;
     pathIds.add(cur.id);
     for (const c of currentWord) {
-      if (cur.children.has(c)) { cur = cur.children.get(c)!; pathIds.add(cur.id); }
+      const child = cur.children.get(c);
+      if (child) { cur = child; pathIds.add(cur.id); }
       else { failed = true; break; }
     }
-    curId = cur.id;
   }
 
-  const total = countNodes(root);
-  const height = treeHeight(root) - 1;
-  const endCount = countEnd(root);
-  const ab = avgBranch(root);
-  const { nodes, chars, rows } = buildTable(root);
+  if (!snap || !root) {
+    return (
+      <div className="rounded-md border border-border/50 bg-[#0d0d1a] p-4 text-center text-xs text-muted-foreground">
+        Trie detected — building the tree…
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    if (canvasRef.current) drawTrie(canvasRef.current, root, pathIds, curId, failed);
-  });
+  const words = collectWords(root);
+  const nodeCount = countNodes(root);
+  const { all, edges, cols } = tidyLayout(root);
+
+  // pixel geometry
+  const R = 15, XSTEP = 46, YSTEP = 62, PAD = 26;
+  const W = Math.max(220, PAD * 2 + (cols - 1) * XSTEP);
+  const H = PAD * 2 + treeDepth(root) * YSTEP;
+  const px = (x: number) => PAD + x * XSTEP;
+  const py = (y: number) => PAD + y * YSTEP;
+
+  const colorFor = (l: Laid) => {
+    const onPath = pathIds.has(l.node.id);
+    const isCur = onPath && failed && !l.node.children.size; // last reached before a miss
+    if (l.node.ch === "•") return COL.root;
+    if (onPath && l.node.isEnd) return COL.endPath;
+    if (onPath) return isCur ? COL.fail : COL.path;
+    if (l.node.isEnd) return COL.end;
+    return COL.plain;
+  };
 
   return (
-    <div style={{ background: "#0d0d1a", borderRadius: 10, overflow: "hidden", fontFamily: "'Courier New', monospace" }}>
-
-      {/* stats header */}
-      <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #1e1e35" }}>
-        {[
-          { label: "Total Nodes", val: total },
-          { label: "Height", val: height },
-          { label: "End of Word", val: endCount },
-        ].map(s => (
-          <div key={s.label} style={{ padding: "10px 18px", borderRight: "1px solid #1e1e35" }}>
-            <div style={{ fontSize: 9, color: "#555577", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>{s.label}</div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: "#c4c0f5" }}>{s.val}</div>
-          </div>
-        ))}
-        <div style={{ display: "flex", gap: 12, padding: "0 14px", marginLeft: "auto", flexWrap: "wrap" }}>
-          {[["#9B96E8","Root"],["#EF9F27","Current"],["#1D9E75","End of Word"],["#3B82F6","Intermediate"]].map(([c,l]) => (
-            <div key={l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "#888" }}>
-              <div style={{ width: 9, height: 9, borderRadius: "50%", background: c }} />{l}
-            </div>
-          ))}
+    <div className="overflow-hidden rounded-md border border-border/50 bg-[#0b0b16]">
+      {/* header stats + legend */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-b border-border/40 bg-muted/30 px-3 py-2">
+        <Stat label="words" value={words.length} />
+        <Stat label="nodes" value={nodeCount} />
+        <Stat label="depth" value={treeDepth(root)} />
+        <div className="ml-auto flex flex-wrap gap-3">
+          <Legend color="#9B96E8" label="root" />
+          <Legend color="#EF9F27" label="current word" />
+          <Legend color="#1D9E75" label="end of word" />
         </div>
       </div>
 
-      {/* section label */}
-      <div style={{ fontSize: 9, color: "#555577", textTransform: "uppercase", letterSpacing: ".08em", padding: "5px 14px", borderBottom: "1px solid #1e1e35" }}>
-        Trie Visualization (2D)
+      {/* the tree */}
+      <div className="overflow-auto bg-[#0b0b16] p-2">
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="mx-auto block">
+          {edges.map((e, i) => (
+            <line
+              key={i}
+              x1={px(e.from.x)} y1={py(e.from.y) + R}
+              x2={px(e.to.x)}   y2={py(e.to.y) - R}
+              stroke={pathIds.has(e.to.node.id) ? "#EF9F27" : "#2c2c50"}
+              strokeWidth={pathIds.has(e.to.node.id) ? 2 : 1.5}
+            />
+          ))}
+          {all.map((l) => {
+            const c = colorFor(l);
+            const x = px(l.x), y = py(l.y);
+            const isRoot = l.node.ch === "•";
+            return (
+              <g key={l.node.id}>
+                {/* end-of-word outer ring */}
+                {l.node.isEnd && !isRoot && (
+                  <circle cx={x} cy={y} r={R + 3} fill="none" stroke={c.stroke} strokeWidth={1} opacity={0.5} />
+                )}
+                <circle cx={x} cy={y} r={R} fill={c.fill} stroke={c.stroke} strokeWidth={isRoot ? 2 : 1.5} />
+                <text
+                  x={x} y={y + 0.5} textAnchor="middle" dominantBaseline="central"
+                  fontFamily="var(--font-mono)" fontWeight={700}
+                  fontSize={isRoot ? 12 : 13} fill={c.text}
+                >
+                  {isRoot ? "root" : l.node.ch}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
       </div>
 
-      {/* canvas */}
-      <div style={{ background: "#0a0a14", overflowX: "auto" }}>
-        <canvas ref={canvasRef} />
+      {/* stored words */}
+      <div className="flex flex-wrap items-center gap-1.5 border-t border-border/40 px-3 py-2">
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground/50">words</span>
+        {words.length === 0 ? (
+          <span className="text-[11px] text-muted-foreground/50">none yet</span>
+        ) : (
+          words.map((w) => {
+            const active = w === currentWord;
+            return (
+              <span
+                key={w}
+                className="rounded px-1.5 py-0.5 font-mono text-[11px]"
+                style={{
+                  color: active ? "#FCD34D" : "#6EE7B7",
+                  background: active ? "#3A2600" : "#0E3B2C",
+                }}
+              >
+                {w}
+              </span>
+            );
+          })
+        )}
       </div>
 
-      {/* current word indicator */}
+      {/* current-word status */}
       {currentWord && (
-        <div style={{ padding: "5px 14px", fontSize: 10, borderTop: "1px solid #1e1e35", background: failed ? "#3D000811" : "#0F3D2E11" }}>
-          <span style={{ color: "#555577" }}>word = "</span>
-          <span style={{ color: "#EF9F27" }}>{currentWord}</span>
-          <span style={{ color: "#555577" }}>" — </span>
-          <span style={{ color: failed ? "#DC2626" : "#1D9E75" }}>
-            {failed ? "not found in trie" : "path exists"}
+        <div
+          className="border-t border-border/40 px-3 py-1.5 font-mono text-[11px]"
+          style={{ background: failed ? "#3A0B0B22" : "#0E3B2C22" }}
+        >
+          <span className="text-muted-foreground/60">word = </span>
+          <span style={{ color: "#EF9F27" }}>&quot;{currentWord}&quot;</span>
+          <span className="text-muted-foreground/40"> · </span>
+          <span style={{ color: failed ? "#FCA5A5" : "#6EE7B7" }}>
+            {failed ? "path breaks — not in trie" : "path exists in trie"}
           </span>
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* 2D table label */}
-      <div style={{ fontSize: 9, color: "#555577", textTransform: "uppercase", letterSpacing: ".08em", padding: "5px 14px", borderTop: "1px solid #1e1e35", borderBottom: "1px solid #1e1e35" }}>
-        Trie Table (2D View)
-      </div>
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <span className="font-mono text-base font-bold text-[#C4C0F5]">{value}</span>
+      <span className="text-[10px] uppercase tracking-wide text-muted-foreground/50">{label}</span>
+    </div>
+  );
+}
 
-      {/* table */}
-      <div style={{ overflowX: "auto", maxHeight: 200, padding: "0 14px 8px" }}>
-        <table style={{ borderCollapse: "collapse", fontSize: 10, fontFamily: "'Courier New', monospace", width: "100%" }}>
-          <thead>
-            <tr>
-              <th style={{ padding: "4px 10px", color: "#9B96E8", textAlign: "left", borderBottom: "1px solid #1e1e35", position: "sticky", top: 0, background: "#0d0d1a" }}>Node</th>
-              {chars.map(c => (
-                <th key={c} style={{ padding: "4px 10px", color: "#9B96E8", textAlign: "center", borderBottom: "1px solid #1e1e35", position: "sticky", top: 0, background: "#0d0d1a" }}>{c}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {nodes.map(n => {
-              const isRoot = n === root;
-              const isCurRow = n.id === curId && pathIds.has(n.id) && !isRoot;
-              const isEndRow = n.isEnd && !isRoot;
-              const rowColor = isRoot ? "#9B96E8" : isCurRow ? "#EF9F27" : isEndRow ? "#1D9E75" : "#3B82F6";
-              const row = rows.get(n.id) || new Map();
-              return (
-                <tr key={n.id} style={{ background: isCurRow ? "#3D220022" : "transparent" }}>
-                  <td style={{ padding: "3px 10px", color: rowColor, fontWeight: 600, borderBottom: "1px solid #1e1e3518" }}>{n.id}</td>
-                  {chars.map(c => {
-                    const v = row.get(c);
-                    return (
-                      <td key={c} style={{ padding: "3px 10px", textAlign: "center", borderBottom: "1px solid #1e1e3518", color: v === "✓" ? "#1D9E75" : v != null ? "#6EE7B7" : "#222260" }}>
-                        {v != null ? String(v) : "–"}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* bottom stats */}
-      <div style={{ display: "flex", gap: 16, padding: "5px 14px 8px", borderTop: "1px solid #1e1e35", flexWrap: "wrap" }}>
-        {[["Total Nodes", total, "#c4c0f5"], ["End of Word", endCount, "#1D9E75"], ["Height", height, "#c4c0f5"], ["Avg Branching", ab, "#EF9F27"]].map(([l, v, c]) => (
-          <div key={String(l)} style={{ fontSize: 10, color: "#555577" }}>
-            {l}: <span style={{ color: c as string }}>{v}</span>
-          </div>
-        ))}
-      </div>
-
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+      <span className="inline-block size-2 rounded-full" style={{ background: color }} />
+      {label}
     </div>
   );
 }

@@ -170,7 +170,10 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       const source = usesDriver
         ? runner!.buildSource(code, entry, inputs)
         : code;
-      const result = await getPyodideClient().run(source);
+      // Nested structures (linked lists, tries, trees) live several attribute
+      // hops deep — the default depth of 5 truncates them mid-chain. 12 lets a
+      // typical demo list/trie serialize fully; breadth is still capped by maxItems.
+      const result = await getPyodideClient().run(source, { maxDepth: 12 });
       set({
         snapshots: result.snapshots,
         result,

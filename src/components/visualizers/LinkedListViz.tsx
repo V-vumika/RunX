@@ -1,114 +1,201 @@
 "use client";
 
-import type { Snapshot, ValueNode } from "@/types/snapshot";
+import type { Snapshot, ValueNode, Variable } from "@/types/snapshot";
 import { shortRepr } from "@/lib/explain/narrate";
 
-function getNodeVal(v: ValueNode | undefined): string {
-  if (!v) return "null";
-  if (v.kind === "none") return "null";
-  if (v.kind === "object" && v.attributes) {
-    const val = v.attributes.find((a) => ["val","value","data"].includes(a.name));
-    if (val) return shortRepr(val.value, 5);
+// Which attribute holds a node's payload / its link to the next node.
+const VAL_ATTRS = ["val", "value", "data", "key"];
+// Named pointers we highlight on the chain, with a stable colour each.
+const POINTERS: { names: string[]; label: string; color: string; bg: string }[] = [
+  { names: ["head"],                 label: "head", color: "#EF9F27", bg: "#3D2A00" },
+  { names: ["dummy"],                label: "dummy", color: "#A78BFA", bg: "#231A4A" },
+  { names: ["prev"],                 label: "prev", color: "#93C5FD", bg: "#0C2040" },
+  { names: ["curr", "current", "node", "ptr", "p", "cur"], label: "curr", color: "#C4C0F5", bg: "#2D2A5A" },
+  { names: ["nxt", "next_node"],     label: "next", color: "#6EE7B7", bg: "#0A3028" },
+  { names: ["slow"],                 label: "slow", color: "#FCA5A5", bg: "#3D1010" },
+  { names: ["fast"],                 label: "fast", color: "#FCD34D", bg: "#3D2A00" },
+  { names: ["tail"],                 label: "tail", color: "#F0ABFC", bg: "#3A0A3A" },
+];
+
+function getAttr(node: ValueNode | undefined, names: string[]): ValueNode | undefined {
+  if (!node || node.kind !== "object") return undefined;
+  for (const n of names) {
+    const a = node.attributes?.find((x) => x.name === n);
+    if (a) return a.value;
   }
-  return shortRepr(v, 6);
+  return undefined;
+}
+
+function nodeValue(node: ValueNode | undefined): string {
+  const v = getAttr(node, VAL_ATTRS);
+  return v ? shortRepr(v, 6) : "?";
+}
+
+interface Chain {
+  nodes: { id?: number; val: string }[];
+  /** How the chain ends: a null terminator, a cycle, or truncated by trace depth. */
+  end: "null" | "cycle" | "more";
+}
+
+/** Walk a linked list from `head`, following `.next`, into a flat node array. */
+function walkChain(head: ValueNode | undefined): Chain {
+  const nodes: { id?: number; val: string }[] = [];
+  const seen = new Set<number>();
+  let cur = head;
+
+  for (let i = 0; i < 25; i++) {
+    if (!cur || cur.kind === "none") return { nodes, end: "null" };
+    if (cur.kind === "circular") return { nodes, end: "cycle" };
+    if (cur.kind !== "object") return { nodes, end: "null" };
+    if (cur.id != null) {
+      if (seen.has(cur.id)) return { nodes, end: "cycle" };
+      seen.add(cur.id);
+    }
+
+    nodes.push({ id: cur.id, val: nodeValue(cur) });
+
+    // Attributes absent → the serializer truncated by depth; we can't go deeper.
+    if (!cur.attributes) return { nodes, end: "more" };
+    const nextEntry = cur.attributes.find((a) => a.name === "next");
+    if (!nextEntry) return { nodes, end: "null" };
+    cur = nextEntry.value;
+  }
+  return { nodes, end: "more" };
+}
+
+/** Pick the best node to treat as the list head, plus every named pointer's target id. */
+function collectPointers(locals: Variable[]) {
+  const byName = new Map(locals.map((v) => [v.name, v.value]));
+
+  // Pointer name → the id (or null) it currently references.
+  const refs: { label: string; color: string; bg: string; id: number | null }[] = [];
+  for (const p of POINTERS) {
+    const v = p.names.map((n) => byName.get(n)).find(Boolean);
+    if (!v) continue;
+    refs.push({ label: p.label, color: p.color, bg: p.bg, id: v.kind === "none" ? null : v.id ?? null });
+  }
+
+  // Head candidate, in priority order:
+  //  1. an explicit head/dummy local, or self.head inside a method
+  //  2. a `head` attribute on any wrapper object (e.g. `ll` for a LinkedList
+  //     class) — this is the module-level case, where the list lives in ll.head
+  //  3. any object that itself has a `.next` (a bare node passed around)
+  let head =
+    byName.get("head") ??
+    byName.get("dummy") ??
+    getAttr(byName.get("self"), ["head"]);
+
+  if (!head || head.kind !== "object") {
+    for (const v of locals) {
+      const h = getAttr(v.value, ["head"]);
+      if (h && h.kind === "object") { head = h; break; }
+    }
+  }
+  if (!head || head.kind !== "object") {
+    const anyNode = locals.find(
+      (v) => v.value.kind === "object" && v.value.attributes?.some((a) => a.name === "next")
+    );
+    if (anyNode) head = anyNode.value;
+  }
+  return { head, refs };
 }
 
 export function LinkedListViz({ snapshots, step }: { snapshots: Snapshot[]; step: number }) {
-  const snap  = snapshots[step];
+  const snap = snapshots[step];
   const frame = snap?.stack.at(-1);
   if (!frame) return null;
 
-  const curr = frame.locals.find((v) => ["curr","current","node","ptr","p"].includes(v.name));
-  const head = frame.locals.find((v) => v.name === "head");
-  const prev = frame.locals.find((v) => v.name === "prev");
-  const nxt  = frame.locals.find((v) => v.name === "next");
-  const slow = frame.locals.find((v) => v.name === "slow");
-  const fast = frame.locals.find((v) => v.name === "fast");
+  const { head, refs } = collectPointers(frame.locals);
+  const { nodes, end } = walkChain(head);
 
-  if (!curr && !head) return null;
-
-  // Build pointer display list
-  const pointers = [
-    head && { label: "head", value: getNodeVal(head.value), raw: shortRepr(head.value,14), color: "#EF9F27", bg: "#3D2A00", stroke: "#EF9F27" },
-    prev && { label: "prev", value: getNodeVal(prev.value), raw: shortRepr(prev.value,14), color: "#93C5FD", bg: "#0C2040", stroke: "#3B82F6" },
-    curr && { label: "curr", value: getNodeVal(curr.value), raw: shortRepr(curr.value,14), color: "#C4C0F5", bg: "#2D2A5A", stroke: "#9B96E8" },
-    nxt  && { label: "next", value: getNodeVal(nxt.value),  raw: shortRepr(nxt.value,14),  color: "#6EE7B7", bg: "#0A3028", stroke: "#1D9E75" },
-    slow && { label: "slow", value: getNodeVal(slow.value), raw: shortRepr(slow.value,14), color: "#FCA5A5", bg: "#3D1010", stroke: "#DC2626" },
-    fast && { label: "fast", value: getNodeVal(fast.value), raw: shortRepr(fast.value,14), color: "#FCD34D", bg: "#3D2A00", stroke: "#F59E0B" },
-  ].filter(Boolean) as { label: string; value: string; raw: string; color: string; bg: string; stroke: string }[];
-
-  if (pointers.length === 0) return null;
-
-  const W = 300, H = 80;
-  const boxW = Math.min(60, Math.floor((W - 20) / pointers.length) - 8);
-  const boxH = 42;
-  const totalW = pointers.length * (boxW + 12) - 12;
-  const startX = (W - totalW) / 2;
-  const y = (H - boxH) / 2;
+  // Pointers that reference null (e.g. prev = None) render on the null terminator.
+  const nullRefs = refs.filter((r) => r.id === null);
+  const refsFor = (id?: number) => (id == null ? [] : refs.filter((r) => r.id === id));
 
   return (
     <div className="overflow-hidden rounded-md border border-border/50">
       <div className="border-b border-border/40 bg-muted/40 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-        linked list · pointers
+        linked list {nodes.length > 0 && <span className="text-muted-foreground/50">· {nodes.length} node{nodes.length > 1 ? "s" : ""}</span>}
       </div>
 
-      <div className="bg-[#0d0d1a] flex justify-center">
-        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
-          {pointers.map((p, i) => {
-            const x = startX + i * (boxW + 12);
-            const isNull = p.value === "null";
-            return (
-              <g key={i}>
-                {/* arrow between boxes */}
-                {i < pointers.length - 1 && (
-                  <g>
-                    <line x1={x + boxW} y1={y + boxH/2} x2={x + boxW + 12} y2={y + boxH/2}
-                      stroke="#2a2a4a" strokeWidth={1.5} />
-                    <polygon points={`${x+boxW+10},${y+boxH/2-3} ${x+boxW+14},${y+boxH/2} ${x+boxW+10},${y+boxH/2+3}`}
-                      fill="#2a2a4a" />
-                  </g>
-                )}
+      <div className="flex items-start gap-0 overflow-x-auto bg-[#0b0b16] px-4 py-5">
+        {/* head entry pointer */}
+        <div className="mr-1 flex flex-col items-center gap-1 pt-[18px]">
+          <span className="rounded bg-[#3D2A00] px-1.5 py-0.5 font-mono text-[9px] font-bold text-[#EF9F27]">head</span>
+          <span className="text-base text-[#EF9F27]/70">→</span>
+        </div>
 
-                {/* node box */}
-                <rect x={x} y={y} width={boxW} height={boxH} rx={5}
-                  fill={isNull ? "#0d0d1a" : p.bg}
-                  stroke={isNull ? "#2a2a3a" : p.stroke}
-                  strokeWidth={1.5} strokeDasharray={isNull ? "3 2" : undefined} />
-
-                {/* label */}
-                <text x={x + boxW/2} y={y + 11} textAnchor="middle"
-                  fontSize={8} fontFamily="var(--font-mono)" fill={p.color} opacity={0.8}>
-                  {p.label}
-                </text>
-
-                {/* value */}
-                <text x={x + boxW/2} y={y + 27} textAnchor="middle"
-                  fontSize={11} fontFamily="var(--font-mono)" fontWeight="700"
-                  fill={isNull ? "#333355" : p.color}>
-                  {p.value}
-                </text>
-
-                {/* null indicator */}
-                {isNull && (
-                  <text x={x + boxW/2} y={y + 38} textAnchor="middle"
-                    fontSize={7} fontFamily="var(--font-mono)" fill="#333355">
-                    NULL
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-
-      {/* raw values */}
-      <div className="flex flex-wrap gap-1.5 border-t border-border/40 p-2">
-        {pointers.map((p) => (
-          <div key={p.label} className="rounded border px-2 py-1" style={{ borderColor: p.stroke + "44", backgroundColor: p.bg + "88" }}>
-            <span className="font-mono text-[9px]" style={{ color: p.color }}>{p.label}</span>
-            <span className="font-mono text-[10px] text-muted-foreground ml-1">{p.raw}</span>
+        {nodes.length === 0 ? (
+          <div className="flex flex-col items-center gap-1 pt-[18px]">
+            <span className="rounded-md border border-dashed border-[#2a2a3a] px-3 py-2 font-mono text-[11px] text-muted-foreground/50">null</span>
+            <span className="text-[9px] text-muted-foreground/50">empty list</span>
           </div>
-        ))}
+        ) : (
+          <>
+            {nodes.map((n, i) => {
+              const here = refsFor(n.id);
+              const isCurr = here.some((r) => r.label === "curr" || r.label === "slow" || r.label === "fast");
+              return (
+                <div key={i} className="flex shrink-0 items-start">
+                  <div className="flex flex-col items-center gap-1">
+                    {/* pointer tags above the node */}
+                    <div className="flex min-h-4 flex-wrap justify-center gap-0.5">
+                      {here.map((r) => (
+                        <span
+                          key={r.label}
+                          className="rounded px-1 py-0.5 font-mono text-[8px] font-bold"
+                          style={{ color: r.color, background: r.bg }}
+                        >
+                          {r.label}
+                        </span>
+                      ))}
+                    </div>
+                    {/* node box: [ data | next ] */}
+                    <div
+                      className="flex items-stretch overflow-hidden rounded-md border font-mono transition-shadow"
+                      style={{
+                        borderColor: isCurr ? "#9B96E8" : "#33335a",
+                        boxShadow: isCurr ? "0 0 0 2px rgba(155,150,232,.35)" : undefined,
+                      }}
+                    >
+                      <span className="min-w-9 px-3 py-2 text-center text-sm font-bold text-foreground/90">{n.val}</span>
+                      <span className="flex items-center border-l border-[#2a2a4a] bg-[#171730] px-1.5 text-[8px] uppercase tracking-wide text-muted-foreground/50">
+                        next
+                      </span>
+                    </div>
+                    {/* index caption */}
+                    <span className="font-mono text-[9px] text-muted-foreground/35">{i}</span>
+                  </div>
+                  {/* arrow to next node */}
+                  {i < nodes.length - 1 && (
+                    <span className="px-1 pt-[26px] text-base text-[#4a4a6a]">→</span>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* terminator */}
+            <span className="px-1 pt-[26px] text-base text-[#4a4a6a]">→</span>
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex min-h-4 flex-wrap justify-center gap-0.5">
+                {nullRefs.map((r) => (
+                  <span key={r.label} className="rounded px-1 py-0.5 font-mono text-[8px] font-bold" style={{ color: r.color, background: r.bg }}>
+                    {r.label}
+                  </span>
+                ))}
+              </div>
+              <span
+                className="rounded-md border border-dashed px-3 py-2 font-mono text-[11px]"
+                style={{
+                  borderColor: end === "cycle" ? "#DC2626" : "#2a2a3a",
+                  color: end === "cycle" ? "#FCA5A5" : "#454568",
+                }}
+              >
+                {end === "cycle" ? "⟳ cycle" : end === "more" ? "…" : "null"}
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="border-t border-border/40 px-3 py-1 text-[10px] text-muted-foreground">
@@ -116,6 +203,7 @@ export function LinkedListViz({ snapshots, step }: { snapshots: Snapshot[]; step
         {snap.event === "return" && snap.returnValue && (
           <> · returns <span className="font-mono text-emerald-400">{shortRepr(snap.returnValue, 14)}</span></>
         )}
+        {end === "more" && <> · <span className="text-muted-foreground/50">list continues beyond trace depth</span></>}
       </div>
     </div>
   );

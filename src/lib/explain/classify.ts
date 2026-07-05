@@ -25,6 +25,7 @@ export type AlgoKind =
   | "dfs"
   | "tree"
   | "linked-list"
+  | "trie"
   | "recursion"
   | "nested-loop"
   | "iterative"
@@ -78,6 +79,7 @@ interface RuntimeSignals {
   recursionDepth: number;
   recursiveFn: string;
   sawSwap: boolean;
+  trie: boolean;
   structures: Set<string>;
 }
 
@@ -85,6 +87,7 @@ function analyzeTrace(snapshots: Snapshot[]): RuntimeSignals {
   let recursionDepth = 0;
   let recursiveFn = "";
   let sawSwap = false;
+  let trie = false;
   const structures = new Set<string>();
 
   const seqVarsAt = (s: Snapshot): Map<string, ValueNode> => {
@@ -115,6 +118,7 @@ function analyzeTrace(snapshots: Snapshot[]): RuntimeSignals {
       for (const v of f.locals) {
         if (v.name.startsWith("__")) continue;
         structures.add(detectStructure(v.name, v.value));
+        if (!trie && looksLikeTrie(v.name, v.value)) trie = true;
       }
     }
 
@@ -131,7 +135,27 @@ function analyzeTrace(snapshots: Snapshot[]): RuntimeSignals {
     }
   }
 
-  return { recursive: recursionDepth > 1, recursionDepth, recursiveFn, sawSwap, structures };
+  return { recursive: recursionDepth > 1, recursionDepth, recursiveFn, sawSwap, trie, structures };
+}
+
+/**
+ * High-confidence trie signal: a node object carrying a `children` **dict**
+ * (char → child), the trie's serialized `_snapshot` dict, or a dict with a
+ * `children` key. Deliberately narrow — a tree uses left/right, so this won't
+ * fire on ordinary trees, and requiring the dict avoids matching class bodies.
+ */
+function looksLikeTrie(name: string, val: ValueNode): boolean {
+  if (name === "_snapshot" && val.kind === "dict") return true;
+  if (
+    val.kind === "object" &&
+    val.attributes?.some((a) => a.name === "children" && a.value.kind === "dict")
+  ) {
+    return true;
+  }
+  if (val.kind === "dict" && val.entries?.some((e) => e.key.repr === "'children'")) {
+    return true;
+  }
+  return false;
 }
 
 // ── Complexity from AST facts ────────────────────────────────────────────────
@@ -225,6 +249,45 @@ export function classifyProgram(
     };
   }
 
+  // ── Structural data-structure detection ──────────────────────────────────
+  // These come BEFORE the name/behaviour heuristics below (sort/search): the
+  // actual runtime shape is far more reliable than a method being *named*
+  // "search". A Trie/LinkedList/Tree class with a `search` method must classify
+  // by its structure, not get caught by the linear-search name match.
+  if (rt.trie) {
+    return {
+      title: "Trie (prefix tree)",
+      kind: "trie",
+      complexity: "O(m)",
+      complexityReason: "each insert/search walks one node per character of the key (m = key length)",
+      description: "Stores strings as a tree of characters, so words sharing a prefix share the same path.",
+      keyIdea: "A shared prefix is stored once — lookup costs only the length of the word, no matter how many words are in the trie.",
+      signals,
+    };
+  }
+  if (rt.structures.has("tree")) {
+    return {
+      title: "Binary tree operations",
+      kind: "tree",
+      complexity: isRecursive ? "O(h)" : loopC.c,
+      complexityReason: isRecursive ? "recurses along the tree's height h" : loopC.why,
+      description: "Builds or traverses a binary tree of nodes with left/right children.",
+      keyIdea: "Cost tracks the tree's height h — O(log n) when balanced, but O(n) if it degenerates into a chain.",
+      signals,
+    };
+  }
+  if (rt.structures.has("linked-list")) {
+    return {
+      title: "Linked-list operations",
+      kind: "linked-list",
+      complexity: loopC.c,
+      complexityReason: "walks the list node by node",
+      description: "Builds or traverses a linked list by following each node's `next` pointer.",
+      keyIdea: "There's no indexing — to reach the k-th node you must walk k pointers from the head.",
+      signals,
+    };
+  }
+
   // Sorting
   if (rt.sawSwap || nameMatches(fns, /sort/i)) {
     const isMerge = nameMatches(fns, /merge/i);
@@ -285,30 +348,6 @@ export function classifyProgram(
       complexityReason: "scans the sequence one element at a time",
       description: "Scans a sequence from the start until it finds the target (or runs out).",
       keyIdea: "No assumptions about order, so there's no shortcut — worst case you touch every element.",
-      signals,
-    };
-  }
-
-  // Tree / linked-list operations
-  if (rt.structures.has("tree")) {
-    return {
-      title: "Binary tree operations",
-      kind: "tree",
-      complexity: isRecursive ? "O(h)" : loopC.c,
-      complexityReason: isRecursive ? "recurses along the tree's height h" : loopC.why,
-      description: "Builds or traverses a binary tree of nodes with left/right children.",
-      keyIdea: "Cost tracks the tree's height h — O(log n) when balanced, but O(n) if it degenerates into a chain.",
-      signals,
-    };
-  }
-  if (rt.structures.has("linked-list")) {
-    return {
-      title: "Linked-list operations",
-      kind: "linked-list",
-      complexity: loopC.c,
-      complexityReason: "walks the list node by node",
-      description: "Builds or traverses a linked list by following each node's `next` pointer.",
-      keyIdea: "There's no indexing — to reach the k-th node you must walk k pointers from the head.",
       signals,
     };
   }
