@@ -209,11 +209,12 @@ export function ExplainPanel() {
   const prevSnap = snapshots[currentStep - 1];
   const currSnap = snapshots[currentStep];
 
-  // When a pointer/window overlay is active, the array/string view *is* the
-  // array visual — the loop-state view would just be a confusing static dupe.
+  // When a pointer overlay or a grid view is active, that view *is* the data
+  // visual — the loop-state view would just be a confusing static dupe.
   const hasPointers = structures.some((s) => (s.overlay?.pointers.length ?? 0) > 0);
+  const hasGrid = structures.some((s) => s.view === "grid");
   const suppressLoopView =
-    hasPointers && summary != null && (summary.kind === "iterative" || summary.kind === "nested-loop");
+    (hasPointers || hasGrid) && summary != null && (summary.kind === "iterative" || summary.kind === "nested-loop");
   const hasAlgoView = summary != null && ALGO_VIEW_KINDS.has(summary.kind) && !suppressLoopView;
 
   // When the algorithm view already draws the list, drop duplicate flat views.

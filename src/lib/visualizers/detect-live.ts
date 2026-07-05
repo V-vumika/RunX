@@ -17,8 +17,9 @@
 import type { Snapshot, ValueNode } from "@/types/snapshot";
 import { detectStructure, type StructureKind } from "./structure-detect";
 import { detectPointers, type PointerOverlay } from "./pointers";
+import { detectGrid, isGridName, type GridInfo } from "./grid";
 
-export type StructureView = "array" | "string" | "stack" | "queue" | "matrix" | "hashmap" | "heap";
+export type StructureView = "array" | "string" | "stack" | "queue" | "matrix" | "grid" | "hashmap" | "heap";
 
 /** Views that take an explicit `node`; the rest self-locate from snapshots. */
 export const NODE_VIEWS: ReadonlySet<StructureView> = new Set(["array", "stack", "queue"]);
@@ -29,8 +30,10 @@ export interface LiveStructure {
   view: StructureView;
   node: ValueNode;
   diffState: "added" | "changed" | "unchanged";
-  /** Two-pointer / sliding-window overlay for array views. */
+  /** Two-pointer / sliding-window overlay for array/string views. */
   overlay?: PointerOverlay;
+  /** Current cursor + visited cells for the grid view. */
+  grid?: GridInfo;
 }
 
 /** A heap is just a scalar list — only treat it as one with a source-level signal. */
@@ -94,6 +97,8 @@ export function detectLiveStructures(
     if (heapHint && (kind === "array" || kind === "generic-list") && /heap|pq|priority/i.test(v.name)) {
       view = "heap";
     }
+    // A named 2-D grid (islands/maze/board) → grid view, not a DP table.
+    if (view === "matrix" && isGridName(v.name)) view = "grid";
     if (!view) continue;
 
     // Dedupe aliases pointing at the same object.
@@ -106,8 +111,9 @@ export function detectLiveStructures(
     const diffState = before === undefined ? "added" : before !== v.value.repr ? "changed" : "unchanged";
     // Pointer/window overlay only makes sense on a flat array.
     const overlay = view === "array" ? detectPointers(v.value.items?.length ?? 0, frame.locals) : undefined;
+    const grid = view === "grid" ? detectGrid(v.value, frame.locals) : undefined;
 
-    out.push({ key: `${v.name}#${v.value.id ?? out.length}`, name: v.name, view, node: v.value, diffState, overlay });
+    out.push({ key: `${v.name}#${v.value.id ?? out.length}`, name: v.name, view, node: v.value, diffState, overlay, grid });
   }
 
   return out.slice(0, 6);

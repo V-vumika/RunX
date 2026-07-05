@@ -20,7 +20,9 @@ const snap = (locals: Record<string, ValueNode>): Snapshot => ({
 
 describe("detectLiveStructures", () => {
   it("finds several structures in one frame", () => {
-    const s = snap({ nums: vlist([vint(1), vint(2)], 1), grid: vmatrix([[1, 2], [3, 4]], 2), seen: vdict(3), n: vint(5) });
+    // `dp` is a DP-table name → matrix view; a `grid`-named 2-D list would route
+    // to the grid view instead (covered in grid.test.ts).
+    const s = snap({ nums: vlist([vint(1), vint(2)], 1), dp: vmatrix([[1, 2], [3, 4]], 2), seen: vdict(3), n: vint(5) });
     const views = detectLiveStructures(s, undefined, "").map((x) => x.view).sort();
     expect(views).toEqual(["array", "hashmap", "matrix"]);
   });

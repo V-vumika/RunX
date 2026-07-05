@@ -18,9 +18,9 @@ export default defineConfig({
     // Windows + vitest 4 worker pool intermittently fails to hand the config to
     // workers ("reading 'config'"). Pin to a single fork so the whole suite runs
     // in one stable process — it's tiny and pure, so serial costs nothing.
-    pool: "forks",
+    pool: "threads",
     fileParallelism: false,
     maxWorkers: 1,
-    minWorkers: 1,
+    isolate: false,
   },
 });
