@@ -68,6 +68,8 @@ interface ExecutionState {
   entry: EntryPoint;
   /** Input values per parameter name; we build the call, the user fills these. */
   inputs: Inputs;
+  /** Text fed to stdin for input()-based programs. */
+  stdin: string;
   snapshots: Snapshot[];
   currentStep: number;
   isRunning: boolean;
@@ -87,6 +89,7 @@ interface ExecutionState {
 
   setCode: (code: string) => void;
   setInput: (name: string, value: string) => void;
+  setStdin: (stdin: string) => void;
   initEngine: () => void;
   run: () => Promise<void>;
   stepForward: () => void;
@@ -106,6 +109,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   language: "python",
   // DEFAULT_CODE has top-level driver code, so this resolves to has-driver.
   ...deriveEntry("python", DEFAULT_CODE, {}),
+  stdin: "",
   snapshots: [],
   currentStep: 0,
   isRunning: false,
@@ -135,6 +139,8 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
 
   setInput: (name, value) =>
     set((state) => ({ inputs: { ...state.inputs, [name]: value } })),
+
+  setStdin: (stdin) => set({ stdin }),
 
   initEngine: () => {
     if (get().engineSubscribed || typeof window === "undefined") return;
@@ -194,7 +200,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       // Nested structures (linked lists, tries, trees) live several attribute
       // hops deep — the default depth of 5 truncates them mid-chain. 12 lets a
       // typical demo list/trie serialize fully; breadth is still capped by maxItems.
-      const result = await getPyodideClient().run(source, { maxDepth: 12 });
+      const result = await getPyodideClient().run(source, { maxDepth: 12, stdin: get().stdin });
       set({
         snapshots: result.snapshots,
         result,

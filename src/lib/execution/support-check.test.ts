@@ -1,14 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { preflightCheck } from "./support-check";
+import { preflightCheck, usesStdin } from "./support-check";
 
 describe("preflightCheck", () => {
-  it("blocks input() — it would hang on missing stdin", () => {
-    const issues = preflightCheck("x = input()\nprint(x)");
-    expect(issues.some((i) => i.severity === "block" && /input/i.test(i.title))).toBe(true);
+  it("no longer blocks input() — stdin is supported now", () => {
+    expect(preflightCheck("x = input()\nprint(x)")).toHaveLength(0);
   });
 
-  it("does not trip on input() inside a comment", () => {
-    const issues = preflightCheck("# read with input()\nx = 5");
+  it("does not trip on a warn rule inside a comment", () => {
+    const issues = preflightCheck("# uses requests\nx = 5");
     expect(issues).toHaveLength(0);
   });
 
@@ -27,5 +26,15 @@ describe("preflightCheck", () => {
 
   it("passes clean pure-Python code", () => {
     expect(preflightCheck("def f(n):\n    return n * 2\nprint(f(3))")).toHaveLength(0);
+  });
+});
+
+describe("usesStdin", () => {
+  it("detects input() and sys.stdin", () => {
+    expect(usesStdin("n = int(input())")).toBe(true);
+    expect(usesStdin("import sys\ndata = sys.stdin.read()")).toBe(true);
+  });
+  it("is false for code that doesn't read input", () => {
+    expect(usesStdin("print('hi')")).toBe(false);
   });
 });

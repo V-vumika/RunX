@@ -122,7 +122,7 @@ def __runx_analyze_complexity(source):
     return {"maxLoopDepth": max_loop_depth(tree, 0), "recursion": recursion}
 
 
-def __runx_run(source, max_steps, max_items, max_depth, max_string):
+def __runx_run(source, max_steps, max_items, max_depth, max_string, stdin_text):
     snapshots = []
     out = io.StringIO()
     state = {"error": None, "truncated": False}
@@ -275,12 +275,29 @@ def __runx_run(source, max_steps, max_items, max_depth, max_string):
         return tracer
 
     user_globals = {"__name__": "__main__"}
+
+    # stdin support: feed the user-provided text to input() and sys.stdin, so
+    # input()-based programs run instead of hanging. input() is shadowed in the
+    # user's globals (not builtins) and reads line-by-line from the same buffer.
+    _stdin_buf = io.StringIO(stdin_text or "")
+
+    def __runx_input(prompt=""):
+        line = _stdin_buf.readline()
+        if line == "":
+            raise EOFError("EOF when reading a line")
+        return line.rstrip("\n")
+
+    user_globals["input"] = __runx_input
+
     real_stdout = sys.stdout
+    real_stdin = sys.stdin
     sys.stdout = out
+    sys.stdin = _stdin_buf
     try:
         compiled = compile(source, _RUNX_FILENAME, "exec")
     except SyntaxError as e:
         sys.stdout = real_stdout
+        sys.stdin = real_stdin
         state["error"] = {
             "type": type(e).__name__,
             "message": str(e.msg),
@@ -310,6 +327,7 @@ def __runx_run(source, max_steps, max_items, max_depth, max_string):
     finally:
         sys.settrace(None)
         sys.stdout = real_stdout
+        sys.stdin = real_stdin
 
     return json.dumps({
         "snapshots": snapshots,
@@ -326,6 +344,7 @@ __runx_run(
     __runx_max_items,
     __runx_max_depth,
     __runx_max_string,
+    __runx_stdin,
 )
 `;
 
@@ -368,6 +387,7 @@ self.onmessage = async (event) => {
     py.globals.set("__runx_max_items", opts.maxItems ?? 100);
     py.globals.set("__runx_max_depth", opts.maxDepth ?? 5);
     py.globals.set("__runx_max_string", opts.maxString ?? 200);
+    py.globals.set("__runx_stdin", opts.stdin ?? "");
 
     const resultJson = await py.runPythonAsync(TRACE_PROGRAM);
     const result = JSON.parse(resultJson);

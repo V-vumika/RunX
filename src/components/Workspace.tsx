@@ -13,6 +13,7 @@ import { CodeEditor } from "@/components/editor/CodeEditor";
 import { ExecutionControls } from "@/components/execution/ExecutionControls";
 import { OutputPanel } from "@/components/execution/OutputPanel";
 import { InputsPanel } from "@/components/execution/InputsPanel";
+import { StdinPanel } from "@/components/execution/StdinPanel";
 import { ExplainPanel } from "@/components/explain/ExplainPanel";
 import { ComplexityPanel } from "@/components/explain/ComplexityPanel";
 import { useExecutionStore } from "@/lib/store/execution-store";
@@ -60,6 +61,7 @@ export function Workspace() {
                   <CodeEditor />
                 </div>
                 <InputsPanel />
+                <StdinPanel />
               </div>
             </ResizablePanel>
 
@@ -89,6 +91,7 @@ function MobileLayout() {
           <CodeEditor />
         </div>
         <InputsPanel />
+        <StdinPanel />
       </div>
 
       <div className="h-[50vh] shrink-0">

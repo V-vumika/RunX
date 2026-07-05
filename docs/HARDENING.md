@@ -46,14 +46,27 @@ Tests: `detect-live.test.ts` (multi-structure, alias dedupe, heap promotion, dif
 
 **Exit:** ✅ mixed-structure programs show a view each; dispatch is structure-driven; DP/HashMap/Heap reachable.
 
-## Phase 3 — Reach & depth (coverage + insight)
+## Phase 3 — Reach & depth (coverage + insight)  ✅ DONE (2026-07-05)
 *Goal: cover the biggest missing input case and make complexity convincing.*
 
-- **3.1 stdin support** — input box feeding `sys.stdin`, so `input()`-based code runs. Highest-value add.
-- **3.2 Empirical complexity** — measure ops/steps vs input size; plot alongside the rules-based class.
-- **3.3 Robustness / presentation polish** across all views + edge cases.
+- ✅ **3.1 stdin support** — the Pyodide worker (`__runx_run`) now takes `stdin_text`, shadows `input()` in
+  the user's globals and swaps `sys.stdin` to a buffer, so `input()` / `sys.stdin.read()` both work
+  (validated against CPython). Client `RunOptions.stdin` → store `stdin`/`setStdin` → new `StdinPanel`
+  (shown when `usesStdin(code)`). `input()` is no longer a preflight block.
+- ✅ **3.2 Empirical complexity** — `src/lib/explain/measure.ts` (`measureRun`) counts real operations
+  (line executions), function calls, peak depth, and detected input size from the trace; shown in
+  `ComplexityPanel` as a "Measured this run" card group beside the theoretical class (honest single-run
+  facts + ops÷n, not a guessed curve). Capped runs are flagged as a lower bound.
+- ✅ **3.3 Robustness / presentation polish** — `ArrayView` empty state added (Stack/Queue already had one);
+  detection feeds arbitrary data safely.
 
-**Exit:** `input()` code runs; complexity shown empirically.
+Tests: `measure.test.ts` (+ updated `support-check` for stdin). 32 total.
+
+**Exit:** ✅ `input()` code runs with a stdin box; complexity shows measured operations for the run.
+
+---
+
+## Status: all three phases DONE (2026-07-05). Next track = Phase 9 multi-language (JS → sandbox → Java → C++), per `docs/ROADMAP.md`. Deferred from this plan: AI teacher, Supabase, watch/breakpoints.
 
 ---
 

@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useExecutionStore } from "@/lib/store/execution-store";
 import { classifyProgram, deriveSpaceComplexity } from "@/lib/explain/classify";
+import { measureRun } from "@/lib/explain/measure";
 
 export function ComplexityPanel() {
   const snapshots = useExecutionStore((s) => s.snapshots);
@@ -23,6 +24,10 @@ export function ComplexityPanel() {
   const space = useMemo(
     () => (summary ? deriveSpaceComplexity(summary, complexity) : null),
     [summary, complexity]
+  );
+  const measured = useMemo(
+    () => (hasTrace ? measureRun(snapshots, result?.truncated ?? false) : null),
+    [snapshots, hasTrace, result?.truncated]
   );
 
   if (!hasTrace || !summary) {
@@ -91,6 +96,34 @@ export function ComplexityPanel() {
             sub="recursive calls"
           />
         </div>
+
+        {/* Measured this run — empirical counterpart to the theoretical class */}
+        {measured && (
+          <div className="rounded-md border bg-card p-3">
+            <div className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Measured this run
+              {measured.truncated && (
+                <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[9px] normal-case text-amber-300">
+                  capped — lower bound
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <MetricCard label="Operations" value={measured.steps.toLocaleString()} sub="lines executed" />
+              <MetricCard label="Function calls" value={measured.calls.toLocaleString()} sub="invocations" />
+              <MetricCard label="Input size" value={measured.inputSize != null ? String(measured.inputSize) : "—"} sub="detected n" />
+              <MetricCard
+                label="Ops ÷ n"
+                value={measured.inputSize ? (measured.steps / measured.inputSize).toFixed(1) : "—"}
+                sub="work per element"
+              />
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+              Actual work done on this input. The class above is the worst-case growth — run a bigger input to
+              watch operations grow with it.
+            </p>
+          </div>
+        )}
 
         {/* Algorithm signals */}
         {summary.signals.length > 0 && (

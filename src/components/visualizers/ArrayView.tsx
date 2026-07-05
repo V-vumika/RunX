@@ -48,6 +48,11 @@ export function ArrayView({ name, node, diffState = "unknown" }: Props) {
         </span>
       </div>
       <div className="flex flex-wrap gap-1.5">
+        {items.length === 0 && (
+          <div className="rounded-lg border border-dashed px-3 py-1.5 text-[12px] text-muted-foreground">
+            (empty)
+          </div>
+        )}
         {items.map((item, i) => (
           <div key={i} className="flex flex-col items-center gap-0.5">
             <div className="flex min-w-10 items-center justify-center rounded-lg border-2 border-border/60 bg-muted/40 px-2.5 py-1.5 font-mono text-[13px]">

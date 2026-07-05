@@ -20,6 +20,8 @@ export interface RunOptions {
   maxDepth?: number;
   /** Maximum string/repr length before truncation. */
   maxString?: number;
+  /** Text fed to input() / sys.stdin for programs that read standard input. */
+  stdin?: string;
 }
 
 type StatusListener = (status: EngineStatus, error?: string) => void;

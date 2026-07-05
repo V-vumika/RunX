@@ -28,13 +28,6 @@ interface Rule {
 
 const RULES: Rule[] = [
   {
-    severity: "block",
-    test: /\binput\s*\(/,
-    title: "Reads input via input()",
-    detail:
-      "Reading from standard input isn't supported yet — the sandbox has no stdin, so input() would hang forever. For now, hardcode the values directly in your code. (stdin support is planned.)",
-  },
-  {
     severity: "warn",
     test: /\basync\s+def\b|\bawait\b|\bimport\s+asyncio\b/,
     title: "Uses async / await",
@@ -81,4 +74,10 @@ export function preflightCheck(code: string): SupportIssue[] {
     }
   }
   return issues;
+}
+
+/** True when the code reads standard input — reveals the stdin panel. */
+export function usesStdin(code: string): boolean {
+  const scan = stripComments(code);
+  return /\binput\s*\(/.test(scan) || /\bsys\.stdin\b/.test(scan);
 }
