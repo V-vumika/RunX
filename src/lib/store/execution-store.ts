@@ -11,6 +11,7 @@ import {
   type Inputs,
   type Language,
 } from "@/lib/execution/entry";
+import { preflightCheck, type SupportIssue } from "@/lib/execution/support-check";
 
 /** Starter program: a loop accumulator + recursion, to exercise the visualizer. */
 export const DEFAULT_CODE = `def factorial(n):
@@ -72,6 +73,8 @@ interface ExecutionState {
   isRunning: boolean;
   result: RunResult | null;
   runError: string | null;
+  /** Non-blocking support warnings (network/files/threads/async) for the last run. */
+  supportWarnings: SupportIssue[];
 
   engineStatus: EngineStatus;
   engineError?: string;
@@ -108,6 +111,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   isRunning: false,
   result: null,
   runError: null,
+  supportWarnings: [],
 
   engineStatus: "uninitialized",
   engineError: undefined,
@@ -124,7 +128,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       const derived = deriveEntry(state.language, code, state.inputs);
       const cleared =
         state.snapshots.length > 0
-          ? { snapshots: [], currentStep: 0, result: null, runError: null }
+          ? { snapshots: [], currentStep: 0, result: null, runError: null, supportWarnings: [] }
           : {};
       return { code, ...derived, ...cleared };
     }),
@@ -148,6 +152,23 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
     get().pause();
 
     const { code, language, entry, inputs } = get();
+
+    // Pre-flight: some code can't run in the sandbox. Block the hang cases
+    // (input()), keep the rest as warnings shown alongside the trace.
+    const issues = preflightCheck(code);
+    const blocking = issues.find((i) => i.severity === "block");
+    const warnings = issues.filter((i) => i.severity === "warn");
+    if (blocking) {
+      set({
+        runError: `${blocking.title} — ${blocking.detail}`,
+        supportWarnings: [],
+        snapshots: [],
+        result: null,
+        currentStep: 0,
+      });
+      return;
+    }
+
     // For a bare solution (no top-level driver), we synthesize a call to the
     // entry point so it actually executes and gets traced.
     const runner = getEntryRunner(language);
@@ -165,7 +186,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       }
     }
 
-    set({ isRunning: true, runError: null });
+    set({ isRunning: true, runError: null, supportWarnings: warnings });
     try {
       const source = usesDriver
         ? runner!.buildSource(code, entry, inputs)
@@ -216,7 +237,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
 
   reset: () => {
     get().pause();
-    set({ snapshots: [], currentStep: 0, result: null, runError: null });
+    set({ snapshots: [], currentStep: 0, result: null, runError: null, supportWarnings: [] });
   },
 
   play: () => {

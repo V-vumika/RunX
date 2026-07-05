@@ -20,6 +20,7 @@ import { DPTableViz }      from "@/components/visualizers/DPTableViz";
 import { TrieViz }         from "@/components/visualizers/TrieViz";
 import { HashMapViz }      from "@/components/visualizers/HashMapViz";
 import { HeapViz }         from "@/components/visualizers/HeapViz";
+import { GenericViz }      from "@/components/visualizers/GenericViz";
 
 // ── kind pill ────────────────────────────────────────────────────────────────
 
@@ -141,7 +142,9 @@ function AutoViz({ kind, snapshots, step }: { kind: AlgoKind | "dp" | "trie" | "
     case "trie":           return <TrieViz snapshots={snapshots} step={step} />;
     case "hashmap":         return <HashMapViz snapshots={snapshots} step={step} />;
     case "heap":            return <HeapViz snapshots={snapshots} step={step} />;
-    default:                return null;
+    // Every other program (plain scripts, linear search, unmatched patterns)
+    // still gets a rich, always-useful data view instead of nothing.
+    default:                return <GenericViz snapshots={snapshots} step={step} />;
   }
 }
 
@@ -152,6 +155,8 @@ export function ExplainPanel() {
   const code        = useExecutionStore((s) => s.code);
   const currentStep = useExecutionStore((s) => s.currentStep);
   const result      = useExecutionStore((s) => s.result);
+  const runError    = useExecutionStore((s) => s.runError);
+  const warnings    = useExecutionStore((s) => s.supportWarnings);
 
   const hasTrace   = snapshots.length > 0;
   const error      = result?.error ?? null;
@@ -165,6 +170,18 @@ export function ExplainPanel() {
     () => (hasTrace ? narrateAll(snapshots, code, summary?.kind) : []),
     [snapshots, code, hasTrace, summary?.kind]
   );
+
+  // Blocked before running (e.g. input()) — show a clear, honest reason.
+  if (!hasTrace && runError) {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-center">
+        <div className="max-w-sm rounded-md border border-amber-500/30 bg-amber-500/10 p-4">
+          <TriangleAlert className="mx-auto mb-2 size-6 text-amber-400" />
+          <p className="text-sm leading-relaxed text-foreground/90">{runError}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!hasTrace && !error) {
     return (
@@ -187,6 +204,21 @@ export function ExplainPanel() {
   return (
     <ScrollArea className="h-full">
       <div className="flex flex-col gap-2.5 p-3">
+
+        {/* support warnings — ran, but something may misbehave in the sandbox */}
+        {warnings.length > 0 && (
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5">
+            {warnings.map((w) => (
+              <div key={w.title} className="flex items-start gap-1.5 text-xs">
+                <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
+                <span>
+                  <span className="font-medium text-amber-300">{w.title}</span>
+                  <span className="text-muted-foreground"> — {w.detail}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* error */}
         {error && (
