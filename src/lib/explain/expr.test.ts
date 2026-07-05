@@ -47,6 +47,17 @@ describe("evaluateLine — substitution", () => {
     expect(val(subs, "arr[-1]")).toBe("30");
   });
 
+  it("resolves the element of a list comprehension per iteration", () => {
+    const subs = evaluateLine("squares = [x*x for x in nums]", scope({ nums: vlist([1, 2, 3]), x: vint(3) }));
+    expect(val(subs, "x")).toBe("3");
+    expect(val(subs, "x*x")).toBe("9");
+  });
+
+  it("resolves the value part of a dict comprehension", () => {
+    const subs = evaluateLine("d = {k: k+1 for k in nums}", scope({ nums: vlist([1, 2]), k: vint(2) }));
+    expect(val(subs, "k+1")).toBe("3");
+  });
+
   it("returns nothing on unresolvable input instead of throwing", () => {
     expect(evaluateLine("result = solve(board)", scope({}))).toEqual([]);
     expect(evaluateLine("x = weird$$syntax", scope({}))).toEqual([]);

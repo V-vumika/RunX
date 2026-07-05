@@ -34,7 +34,12 @@ The common LeetCode patterns that currently fall to the generic view.
   and `MemoryView.tsx`: when 2+ names/slots point at the same object (`a = b = []`, `grid = [row, row]`),
   they share one colored box with a "mutating one changes all" note. Renders only when real sharing exists.
   4 tests.
-- **5.3 Comprehension / generator stepping** 🔵 — step the inner iteration instead of one opaque line.
+- ✅ **5.3 Comprehension / generator stepping** — Python 3.12+ already inlines comprehensions (the tracer
+  fires a step per iteration with the loop var live), so the gap was the evaluator choking on `for`.
+  `expr.ts` now reduces a comprehension line to its element (`x*x`, or the value of a dict comp) so the
+  per-iteration value chips resolve (`x = 3`, `x*x = 9`). 2 tests.
+
+**Phase 5 DONE** (5.1–5.3). 55 tests total.
 
 ## Phase 6 — AI teacher
 Per-step natural-language + "explain this", layered on the deterministic trace (provider-agnostic,

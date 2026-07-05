@@ -326,20 +326,50 @@ function listNums(args: V[]): number[] {
 
 // ── public entry ────────────────────────────────────────────────────────────
 
+/** Index of a top-level `:` (not inside brackets), or -1. Used for dict comps. */
+function topLevelColon(s: string): number {
+  let depth = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === "[" || c === "{" || c === "(") depth++;
+    else if (c === "]" || c === "}" || c === ")") depth--;
+    else if (c === ":" && depth === 0) return i;
+  }
+  return -1;
+}
+
+/**
+ * A comprehension steps once per iteration (Python 3.12+ inlines them, so the
+ * loop var is live in-frame). Reduce it to its element expression so we can
+ * resolve the element's value each iteration (`x*x` with the current `x`).
+ */
+function reduceComprehension(expr: string): string {
+  const m = expr.match(/\sfor\s/);
+  if (!m || m.index === undefined) return expr;
+  let elem = expr.slice(0, m.index).trim().replace(/^[[{(]\s*/, "");
+  const colon = topLevelColon(elem); // dict comp "k: v" → the value
+  if (colon >= 0) elem = elem.slice(colon + 1).trim();
+  return elem;
+}
+
 /** Extract the primary expression from a statement line (RHS / condition / iterable). */
 function expressionFromLine(line: string): string | null {
   const t = line.trim();
   if (!t || t.startsWith("#")) return null;
+  let candidate: string;
   let m: RegExpMatchArray | null;
-  if ((m = t.match(/^return\s+(.+)$/))) return m[1];
-  if ((m = t.match(/^(?:if|elif|while)\s+(.+?):?\s*$/))) return m[1];
-  if ((m = t.match(/^for\s+.+?\s+in\s+(.+?):?\s*$/))) return m[1];
-  // assignment (plain or augmented) → right-hand side
-  if (!/^(def|class|import|from|for|while|if|elif|else|try|except|with|return)\b/.test(t)) {
-    m = t.match(/^[\w.[\]]+\s*(?:[+\-*/%]|\/\/|\*\*)?=(?!=)\s*(.+)$/);
-    if (m) return m[1];
+  if ((m = t.match(/^return\s+(.+)$/))) candidate = m[1];
+  else if ((m = t.match(/^(?:if|elif|while)\s+(.+?):?\s*$/))) candidate = m[1];
+  else if ((m = t.match(/^for\s+.+?\s+in\s+(.+?):?\s*$/))) candidate = m[1];
+  else if (
+    !/^(def|class|import|from|for|while|if|elif|else|try|except|with|return)\b/.test(t) &&
+    (m = t.match(/^[\w.[\]]+\s*(?:[+\-*/%]|\/\/|\*\*)?=(?!=)\s*(.+)$/))
+  ) {
+    candidate = m[1];
+  } else {
+    candidate = t; // bare expression / call
   }
-  return t; // bare expression / call
+  return reduceComprehension(candidate);
 }
 
 /**
