@@ -24,8 +24,12 @@ The common LeetCode patterns that currently fall to the generic view.
 **Phase 4 DONE** (4.1–4.4; 4.5 folded into P5). Tests: pointers, grid, classify-backtracking. 43 total.
 
 ## Phase 5 — Explanation depth (the "why", for all code)
-- **5.1 Expression-level value substitution** 🔵 — show sub-expressions resolving inline
-  (`min(2, 2) → 2`). Thonny's killer feature; the single biggest teaching upgrade.
+- ✅ **5.1 Expression-level value substitution** — `src/lib/explain/expr.ts` (`evaluateLine`): a small
+  tokenizer + recursive-descent evaluator that resolves the sub-expressions on a line (indexing, arithmetic,
+  comparisons, attributes, `len/min/max/abs/sum`) against the **already-captured `ValueNode` locals** — so
+  no re-execution and zero side-effect risk. Wired into `narrate.ts` so the step's value chips now show
+  `arr[i] = 3`, `arr[i-1] + 1 = 3`, `nums[mid] < target = True`. Falls back to plain variable values, and
+  yields nothing on anything it can't resolve. 6 tests. (Absorbs the 4.5 1D-DP recurrence display.)
 - **5.2 Object / reference memory view** 🔵🟣 — aliasing + OOP relationships as a memory diagram.
 - **5.3 Comprehension / generator stepping** 🔵 — step the inner iteration instead of one opaque line.
 

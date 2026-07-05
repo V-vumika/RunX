@@ -21,6 +21,7 @@
 import type { Snapshot, StackFrame, ValueNode } from "@/types/snapshot";
 import { diffFrames } from "@/lib/visualizers/step-diff";
 import { enrichFrames } from "@/lib/visualizers/stack-analysis";
+import { evaluateLine } from "@/lib/explain/expr";
 
 export type StepKind =
   | "start"
@@ -325,8 +326,12 @@ export function narrateStep(
     if (node) { changes.push(describeVarChange(name, pMap.get(name), node)); names.push(name); }
   }
 
-  // Live values feeding this line (Thonny-style), minus the ones it just changed.
-  const lineValues = valuesOnLine(ranSrc, currTop).filter((v) => !names.includes(v.name));
+  // Sub-expression values feeding this line (Thonny-style substitution), minus
+  // the bare names it just changed. Falls back to plain variable values.
+  const evaluated = evaluateLine(ranSrc, cMap);
+  const lineValues = (evaluated.length > 0 ? evaluated : valuesOnLine(ranSrc, currTop)).filter(
+    (v) => !names.includes(v.name)
+  );
 
   if (changes.length === 0) {
     // Nothing visible changed: a condition check, a loop header, or a print.

@@ -16,11 +16,10 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts"],
     // Windows + vitest 4 worker pool intermittently fails to hand the config to
-    // workers ("reading 'config'"). Pin to a single fork so the whole suite runs
-    // in one stable process — it's tiny and pure, so serial costs nothing.
+    // workers ("reading 'config'"). A single thread runs the whole suite in one
+    // stable context. (`poolOptions` logs a deprecation notice but still works
+    // and is the only variant that hasn't flaked here.)
     pool: "threads",
-    fileParallelism: false,
-    maxWorkers: 1,
-    isolate: false,
+    poolOptions: { threads: { singleThread: true } },
   },
 });
