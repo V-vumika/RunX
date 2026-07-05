@@ -24,17 +24,27 @@ Each phase is independently shippable. Owner: 🔵 Shiv (engine/contract), 🟣 
 
 **Exit:** ✅ paste anything that runs → useful view or a clear reason; `npm test` green (22).
 
-## Phase 2 — Visualization architecture (per-structure, robust, complete)
+## Phase 2 — Visualization architecture (per-structure, robust, complete)  ✅ DONE (2026-07-05)
 *Goal: right view(s) for any recognizable structure, no name-guessing, all visualizers reachable.*
 
-- **2.1 Per-variable structure detection** surfaced to the panel (a program can hold several live structures).
-- **2.2 Multi-viz dispatch** — render a view per live structure, not one global `AlgoKind`. Keep `AlgoKind`
-  only for the algorithm summary / complexity.
-- **2.3 Kill hardcoded variable-name guessing** in visualizers — drive from detected structure + generic
-  walking (no more reactive `head`/`_snapshot`/`root` patches).
-- **2.4 Wire remaining dead visualizers** (heap, dp, hashmap) under the new model, each verified live.
+- ✅ **2.1 Per-variable structure detection** — `src/lib/visualizers/detect-live.ts` (`detectLiveStructures`)
+  scans the current frame's variables (shape via `detectStructure`), dedupes aliases by object id, tags
+  each with a diff state, and promotes a scalar list to a heap only with a `heapq` source signal.
+- ✅ **2.2 Multi-viz dispatch** — `StructureList.tsx` renders a view per detected structure (several at once).
+  `AlgoKind` now drives only the algorithm summary + algorithm/wrapped-structure animation (`AutoViz`
+  trimmed to sort/binary-search/recursion/bfs-dfs/tree/linked-list/trie/iterative); flat data structures
+  come from detection. Duplicate flat views suppressed when the algorithm view already draws the list.
+- ◑ **2.3 Name-guessing** — flat views (Array/Stack/Queue) are node-based (no guessing); DP/HashMap
+  self-locate by **shape** (not name); Heap uses a name hint consistent with detection. *Residual:* the
+  wrapped views (Tree/Trie/LinkedList) keep their own root-finding (`head`/`root`/`_snapshot`) — that's
+  genuine wrapper-unwrapping, not blind guessing, so left as-is. Node-refactor of DP/HashMap/Heap is a
+  future refinement.
+- ✅ **2.4 Remaining dead visualizers reachable** — DPTable (matrix), HashMap (dict), Heap (heapq list) now
+  render via detection instead of the never-emitted `AlgoKind`s. Trie was wired in Phase-1 prep.
 
-**Exit:** mixed-structure programs visualize correctly; no name-guessing; all 11 visualizers reachable.
+Tests: `detect-live.test.ts` (multi-structure, alias dedupe, heap promotion, diff state). 27 total.
+
+**Exit:** ✅ mixed-structure programs show a view each; dispatch is structure-driven; DP/HashMap/Heap reachable.
 
 ## Phase 3 — Reach & depth (coverage + insight)
 *Goal: cover the biggest missing input case and make complexity convincing.*

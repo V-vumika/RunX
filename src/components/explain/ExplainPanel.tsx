@@ -16,11 +16,10 @@ import { GraphViz }        from "@/components/visualizers/GraphViz";
 import { TreeViz }         from "@/components/visualizers/TreeViz";
 import { LinkedListViz }   from "@/components/visualizers/LinkedListViz";
 import { IterativeViz }    from "@/components/visualizers/IterativeViz";
-import { DPTableViz }      from "@/components/visualizers/DPTableViz";
 import { TrieViz }         from "@/components/visualizers/TrieViz";
-import { HashMapViz }      from "@/components/visualizers/HashMapViz";
-import { HeapViz }         from "@/components/visualizers/HeapViz";
 import { GenericViz }      from "@/components/visualizers/GenericViz";
+import { StructureList }   from "@/components/visualizers/StructureList";
+import { detectLiveStructures, NODE_VIEWS } from "@/lib/visualizers/detect-live";
 
 // ── kind pill ────────────────────────────────────────────────────────────────
 
@@ -127,7 +126,17 @@ function VariableDiff({ prev, curr }: { prev: Snapshot | undefined; curr: Snapsh
 
 // ── auto viz picker ───────────────────────────────────────────────────────────
 
-function AutoViz({ kind, snapshots, step }: { kind: AlgoKind | "dp" | "trie" | "hashmap" | "heap"; snapshots: Snapshot[]; step: number }) {
+// Algorithm animations + "wrapped" structures (tree/linked-list/trie) whose
+// views do their own root-finding. Flat data structures (arrays/dicts/heaps/
+// matrices) are handled per-variable by StructureList, not here.
+const ALGO_VIEW_KINDS = new Set<AlgoKind>([
+  "sort", "binary-search", "recursion", "bfs", "dfs",
+  "tree", "linked-list", "trie", "nested-loop", "iterative",
+]);
+// Kinds whose algorithm view already draws the list — suppress a duplicate array view.
+const SUPPRESS_FLAT = new Set<AlgoKind>(["sort", "binary-search"]);
+
+function AutoViz({ kind, snapshots, step }: { kind: AlgoKind; snapshots: Snapshot[]; step: number }) {
   switch (kind) {
     case "sort":           return <SortViz snapshots={snapshots} step={step} />;
     case "recursion":      return <RecursionViz snapshots={snapshots} step={step} />;
@@ -136,15 +145,10 @@ function AutoViz({ kind, snapshots, step }: { kind: AlgoKind | "dp" | "trie" | "
     case "dfs":            return <GraphViz snapshots={snapshots} step={step} />;
     case "tree":           return <TreeViz snapshots={snapshots} step={step} />;
     case "linked-list":    return <LinkedListViz snapshots={snapshots} step={step} />;
+    case "trie":           return <TrieViz snapshots={snapshots} step={step} />;
     case "nested-loop":
     case "iterative":      return <IterativeViz snapshots={snapshots} step={step} />;
-    case "dp":             return <DPTableViz snapshots={snapshots} step={step} />;
-    case "trie":           return <TrieViz snapshots={snapshots} step={step} />;
-    case "hashmap":         return <HashMapViz snapshots={snapshots} step={step} />;
-    case "heap":            return <HeapViz snapshots={snapshots} step={step} />;
-    // Every other program (plain scripts, linear search, unmatched patterns)
-    // still gets a rich, always-useful data view instead of nothing.
-    default:                return <GenericViz snapshots={snapshots} step={step} />;
+    default:               return null;
   }
 }
 
@@ -169,6 +173,10 @@ export function ExplainPanel() {
   const explanations = useMemo(
     () => (hasTrace ? narrateAll(snapshots, code, summary?.kind) : []),
     [snapshots, code, hasTrace, summary?.kind]
+  );
+  const structures = useMemo(
+    () => (hasTrace ? detectLiveStructures(snapshots[currentStep], snapshots[currentStep - 1], code) : []),
+    [snapshots, currentStep, code, hasTrace]
   );
 
   // Blocked before running (e.g. input()) — show a clear, honest reason.
@@ -200,6 +208,13 @@ export function ExplainPanel() {
   const current  = explanations[currentStep];
   const prevSnap = snapshots[currentStep - 1];
   const currSnap = snapshots[currentStep];
+
+  const hasAlgoView = summary != null && ALGO_VIEW_KINDS.has(summary.kind);
+  // When the algorithm view already draws the list, drop duplicate flat views.
+  const shownStructures =
+    summary != null && SUPPRESS_FLAT.has(summary.kind)
+      ? structures.filter((s) => !NODE_VIEWS.has(s.view))
+      : structures;
 
   return (
     <ScrollArea className="h-full">
@@ -240,8 +255,16 @@ export function ExplainPanel() {
         {/* algo badge */}
         {summary && <AlgoBadge kind={summary.kind} complexity={summary.complexity} />}
 
-        {/* visualization */}
-        {summary && <AutoViz kind={summary.kind} snapshots={snapshots} step={currentStep} />}
+        {/* algorithm / wrapped-structure animation (one per program) */}
+        {hasAlgoView && summary && <AutoViz kind={summary.kind} snapshots={snapshots} step={currentStep} />}
+
+        {/* live data structures (per-variable, possibly several) */}
+        <StructureList structures={shownStructures} snapshots={snapshots} step={currentStep} />
+
+        {/* universal fallback — only when nothing else drew a view */}
+        {!hasAlgoView && shownStructures.length === 0 && (
+          <GenericViz snapshots={snapshots} step={currentStep} />
+        )}
 
         {/* current step card */}
         {current && (
