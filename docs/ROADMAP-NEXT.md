@@ -10,11 +10,18 @@ The common LeetCode patterns that currently fall to the generic view.
   name-gated + range-gated) attaches to array structures in `detect-live.ts`; `ArrayView` marks each
   pointer (`left↓`/`right↓`/…) on its cell and shades the window between the extremes. 5 tests. Fires only
   on plain-array scans (sort/binary-search have their own views).
-- **4.2 String view** 🟣 — indexed character cells (reuse ArrayView layout + the 4.1 overlay) for
-  palindrome / substring / two-pointer-on-string.
-- **4.3 Grid view** 🟣 — a 2D traversal grid (distinct from the DP table) with visited / path / frontier cells.
-- **4.4 Backtracking view** 🟣 — the decision tree / choices being made & undone.
-- **4.5 1D-DP fill** 🟣 — animate a 1D dp array filling against its recurrence.
+- ✅ **4.2 String view** — `StringView.tsx`: indexed character cells with the same pointer/window overlay,
+  shown when pointers traverse a string (palindrome / two-pointer-on-string).
+- ✅ **4.3 Grid view** — `grid.ts` + `GridView.tsx`: named 2-D grids (islands/maze/board) render as a
+  traversal grid with the current (row,col) cursor + visited cells, distinct from the DP table. DP tables
+  (`dp`/`memo`/…) still route to `DPTableViz`.
+- ✅ **4.4 Backtracking view** — classifier kind `backtracking` + `BacktrackingView.tsx`: shows the current
+  candidate path (building/unwinding) and the results collected so far, distinct from the raw call stack.
+- ⏭ **4.5 1D-DP fill** — *deferred:* a 1-D `dp` array already gets the ArrayView + pointer overlay (the fill
+  index `i` highlights the current cell). The extra value (showing the recurrence dependencies) is really
+  Phase 5.1 expression-substitution work, so folded there.
+
+**Phase 4 DONE** (4.1–4.4; 4.5 folded into P5). Tests: pointers, grid, classify-backtracking. 43 total.
 
 ## Phase 5 — Explanation depth (the "why", for all code)
 - **5.1 Expression-level value substitution** 🔵 — show sub-expressions resolving inline

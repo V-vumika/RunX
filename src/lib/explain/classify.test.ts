@@ -51,6 +51,24 @@ describe("classifyProgram — structure beats name heuristics", () => {
     expect(classifyProgram(code, [s0, s1]).kind).toBe("sort");
   });
 
+  it("detects backtracking (recursive candidate build) over generic recursion", () => {
+    const code = "def subsets(nums):\n    res = []\n    def backtrack(start, path):\n        res.append(path[:])\n        for i in range(start, len(nums)):\n            path.append(nums[i])\n            backtrack(i + 1, path)\n            path.pop()\n    backtrack(0, [])\n    return res";
+    const frame = (fn: string, locals: Record<string, ValueNode>) => ({
+      functionName: fn, line: 1,
+      locals: Object.entries(locals).map(([name, value]) => ({ name, value })),
+    });
+    // A recursive stack: two nested `backtrack` frames → recursionDepth > 1.
+    const s: Snapshot = {
+      step: 0, line: 1, event: "line", stdout: "",
+      stack: [
+        frame("subsets", { res: vlist([]) }),
+        frame("backtrack", { start: vint(0), path: vlist([]) }),
+        frame("backtrack", { start: vint(1), path: vlist([vint(1)]) }),
+      ],
+    };
+    expect(classifyProgram(code, [s]).kind).toBe("backtracking");
+  });
+
   it("falls back to 'script' for a plain program", () => {
     const code = "x = 1\ny = 2\nz = x + y";
     expect(classifyProgram(code, [snap("<module>", { x: vint(1), y: vint(2) })]).kind).toBe("script");

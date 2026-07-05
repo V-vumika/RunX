@@ -17,6 +17,7 @@ import { TreeViz }         from "@/components/visualizers/TreeViz";
 import { LinkedListViz }   from "@/components/visualizers/LinkedListViz";
 import { IterativeViz }    from "@/components/visualizers/IterativeViz";
 import { TrieViz }         from "@/components/visualizers/TrieViz";
+import { BacktrackingView } from "@/components/visualizers/BacktrackingView";
 import { GenericViz }      from "@/components/visualizers/GenericViz";
 import { StructureList }   from "@/components/visualizers/StructureList";
 import { detectLiveStructures, NODE_VIEWS } from "@/lib/visualizers/detect-live";
@@ -55,6 +56,7 @@ const ALGO_META: Record<string, { label: string; color: string }> = {
   tree:            { label: "Tree",          color: "bg-violet-500/15 text-violet-300 border-violet-500/30" },
   "linked-list":   { label: "Linked List",   color: "bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/30" },
   recursion:       { label: "Recursion",     color: "bg-violet-500/15 text-violet-300 border-violet-500/30" },
+  backtracking:    { label: "Backtracking",  color: "bg-violet-500/15 text-violet-300 border-violet-500/30" },
   "nested-loop":   { label: "Nested Loop",   color: "bg-orange-500/15 text-orange-300 border-orange-500/30" },
   iterative:       { label: "Iterative",     color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
   dp:              { label: "Dynamic Programming", color: "bg-pink-500/15 text-pink-300 border-pink-500/30" },
@@ -131,7 +133,7 @@ function VariableDiff({ prev, curr }: { prev: Snapshot | undefined; curr: Snapsh
 // matrices) are handled per-variable by StructureList, not here.
 const ALGO_VIEW_KINDS = new Set<AlgoKind>([
   "sort", "binary-search", "recursion", "bfs", "dfs",
-  "tree", "linked-list", "trie", "nested-loop", "iterative",
+  "tree", "linked-list", "trie", "backtracking", "nested-loop", "iterative",
 ]);
 // Kinds whose algorithm view already draws the list — suppress a duplicate array view.
 const SUPPRESS_FLAT = new Set<AlgoKind>(["sort", "binary-search"]);
@@ -146,6 +148,7 @@ function AutoViz({ kind, snapshots, step }: { kind: AlgoKind; snapshots: Snapsho
     case "tree":           return <TreeViz snapshots={snapshots} step={step} />;
     case "linked-list":    return <LinkedListViz snapshots={snapshots} step={step} />;
     case "trie":           return <TrieViz snapshots={snapshots} step={step} />;
+    case "backtracking":   return <BacktrackingView snapshots={snapshots} step={step} />;
     case "nested-loop":
     case "iterative":      return <IterativeViz snapshots={snapshots} step={step} />;
     default:               return null;

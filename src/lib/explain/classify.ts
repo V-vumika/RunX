@@ -26,6 +26,7 @@ export type AlgoKind =
   | "tree"
   | "linked-list"
   | "trie"
+  | "backtracking"
   | "recursion"
   | "nested-loop"
   | "iterative"
@@ -348,6 +349,19 @@ export function classifyProgram(
       complexityReason: "scans the sequence one element at a time",
       description: "Scans a sequence from the start until it finds the target (or runs out).",
       keyIdea: "No assumptions about order, so there's no shortcut — worst case you touch every element.",
+      signals,
+    };
+  }
+
+  // Backtracking — recursive exploration that builds & unwinds a candidate.
+  if (isRecursive && nameMatches(fns, /backtrack|permut|subset|combin|combo|nqueen|n_queen|generate|solve/i)) {
+    return {
+      title: "Backtracking",
+      kind: "backtracking",
+      complexity: loopC.c === "O(1)" ? "O(2ⁿ)" : loopC.c,
+      complexityReason: "explores the decision tree, undoing each choice on the way back",
+      description: "Builds a candidate step by step, and backtracks (undoes the last choice) when a path can't work.",
+      keyIdea: "Every branch is a choice; on return you undo it, so the same slot can try the next option — that's the 'back' in backtracking.",
       signals,
     };
   }
