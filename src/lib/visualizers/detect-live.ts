@@ -16,8 +16,9 @@
 
 import type { Snapshot, ValueNode } from "@/types/snapshot";
 import { detectStructure, type StructureKind } from "./structure-detect";
+import { detectPointers, type PointerOverlay } from "./pointers";
 
-export type StructureView = "array" | "stack" | "queue" | "matrix" | "hashmap" | "heap";
+export type StructureView = "array" | "string" | "stack" | "queue" | "matrix" | "hashmap" | "heap";
 
 /** Views that take an explicit `node`; the rest self-locate from snapshots. */
 export const NODE_VIEWS: ReadonlySet<StructureView> = new Set(["array", "stack", "queue"]);
@@ -28,6 +29,8 @@ export interface LiveStructure {
   view: StructureView;
   node: ValueNode;
   diffState: "added" | "changed" | "unchanged";
+  /** Two-pointer / sliding-window overlay for array views. */
+  overlay?: PointerOverlay;
 }
 
 /** A heap is just a scalar list — only treat it as one with a source-level signal. */
@@ -70,6 +73,21 @@ export function detectLiveStructures(
   for (const v of frame.locals) {
     if (v.name.startsWith("__")) continue;
 
+    // A string being traversed by pointers gets a character view (else it's
+    // just a scalar and stays in the variable list).
+    if (v.value.kind === "str") {
+      const len = typeof v.value.value === "string" ? v.value.value.length : 0;
+      if (len >= 2) {
+        const overlay = detectPointers(len, frame.locals);
+        if (overlay.pointers.length > 0) {
+          const before = prevReprs.get(v.name);
+          const diffState = before === undefined ? "added" : before !== v.value.repr ? "changed" : "unchanged";
+          out.push({ key: `${v.name}#str`, name: v.name, view: "string", node: v.value, diffState, overlay });
+        }
+      }
+      continue;
+    }
+
     const kind = detectStructure(v.name, v.value);
     let view = viewForKind(kind);
     // A heap is a scalar list; promote only with the heapq signal + a heap-ish name.
@@ -86,8 +104,10 @@ export function detectLiveStructures(
 
     const before = prevReprs.get(v.name);
     const diffState = before === undefined ? "added" : before !== v.value.repr ? "changed" : "unchanged";
+    // Pointer/window overlay only makes sense on a flat array.
+    const overlay = view === "array" ? detectPointers(v.value.items?.length ?? 0, frame.locals) : undefined;
 
-    out.push({ key: `${v.name}#${v.value.id ?? out.length}`, name: v.name, view, node: v.value, diffState });
+    out.push({ key: `${v.name}#${v.value.id ?? out.length}`, name: v.name, view, node: v.value, diffState, overlay });
   }
 
   return out.slice(0, 6);

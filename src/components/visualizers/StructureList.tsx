@@ -4,6 +4,7 @@ import type { Snapshot } from "@/types/snapshot";
 import type { LiveStructure } from "@/lib/visualizers/detect-live";
 
 import { ArrayView } from "./ArrayView";
+import { StringView } from "./StringView";
 import { StackView } from "./StackView";
 import { QueueView } from "./QueueView";
 import { DPTableViz } from "./DPTableViz";
@@ -33,7 +34,9 @@ export function StructureList({
       {structures.map((s) => {
         switch (s.view) {
           case "array":
-            return <ArrayView key={s.key} name={s.name} node={s.node} diffState={s.diffState} />;
+            return <ArrayView key={s.key} name={s.name} node={s.node} diffState={s.diffState} overlay={s.overlay} />;
+          case "string":
+            return <StringView key={s.key} name={s.name} node={s.node} overlay={s.overlay} />;
           case "stack":
             return <StackView key={s.key} name={s.name} node={s.node} diffState={s.diffState} />;
           case "queue":

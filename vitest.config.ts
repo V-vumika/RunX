@@ -15,9 +15,12 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
-    // Windows + vitest 4 worker pool can fail to hand the config to parallel
-    // workers ("reading 'config'"); running files serially avoids it. The suite
-    // is tiny and pure, so this costs nothing.
+    // Windows + vitest 4 worker pool intermittently fails to hand the config to
+    // workers ("reading 'config'"). Pin to a single fork so the whole suite runs
+    // in one stable process — it's tiny and pure, so serial costs nothing.
+    pool: "forks",
     fileParallelism: false,
+    maxWorkers: 1,
+    minWorkers: 1,
   },
 });
