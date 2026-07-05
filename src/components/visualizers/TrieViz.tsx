@@ -8,8 +8,34 @@ import type { Snapshot, ValueNode } from "@/types/snapshot";
 interface TNode { id: number; ch: string; isEnd: boolean; children: Map<string, TNode> }
 
 let _nid = 0;
+function mk(ch: string): TNode { return { id: _nid++, ch, isEnd: false, children: new Map() }; }
 
-// ── parse ValueNode tree into TNode tree ──────────────────────────────────────
+// ── parse from dict (from _snapshot variable) ────────────────────────────────
+
+function parseDictNode(vnode: ValueNode | undefined, counter: { n: number }, depth = 0): TNode | undefined {
+  if (!vnode || vnode.kind === "none" || depth > 20) return undefined;
+  const id = counter.n++;
+  const tnode: TNode = { id, ch: "•", isEnd: false, children: new Map() };
+
+  if (vnode.kind === "dict" && vnode.entries) {
+    // {"children": {...}, "is_end": True/False}
+    const isEndEntry = vnode.entries.find(e => ["is_end","isEnd","end_of_word"].includes(String(e.key.value ?? e.key.repr ?? "")));
+    if (isEndEntry) tnode.isEnd = isEndEntry.value.value === true || isEndEntry.value.repr === "True";
+
+    const childrenEntry = vnode.entries.find(e => ["children","kids"].includes(String(e.key.value ?? e.key.repr ?? "")));
+    if (childrenEntry?.value.kind === "dict" && childrenEntry.value.entries) {
+      for (const { key, value } of childrenEntry.value.entries) {
+        const ch = String(key.value ?? key.repr ?? "").replace(/^['"]|['"]$/g, "");
+        if (!ch) continue;
+        const child = parseDictNode(value, counter, depth + 1);
+        if (child) { child.ch = ch; tnode.children.set(ch, child); }
+      }
+    }
+  }
+  return tnode;
+}
+
+// ── parse from object attributes ──────────────────────────────────────────────
 
 function getAttr(node: ValueNode, name: string): ValueNode | undefined {
   return node.attributes?.find(a => a.name === name)?.value;
@@ -91,6 +117,8 @@ function drawTrie(
   const ctx = canvas.getContext("2d")!;
   ctx.clearRect(0, 0, W, H);
 
+  const posById = new Map(pos.map(p => [p.node.id, p]));
+
   edg.forEach(e => {
     const dx = e.x2 - e.x1, dy = (e.y2 - R) - (e.y1 + R);
     const len = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -166,17 +194,29 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
   const allLocals = snap.stack.flatMap(f => f.locals);
 
   let rootVNode: ValueNode | undefined;
+  let useDict = false;
 
-  // 1. direct root variable
-  const rootVar = allLocals.find(v => v.name === "root" && v.value.kind === "object");
-  if (rootVar) rootVNode = rootVar.value;
+  // 0. _snapshot dict (most reliable — set by _update_snapshot())
+  const snapshotVar = allLocals.find(v => v.name === "_snapshot" && v.value.kind === "dict");
+  if (snapshotVar) { rootVNode = snapshotVar.value; useDict = true; }
+
+  // 1. direct root variable (object)
+  if (!rootVNode) {
+    const rootVar = allLocals.find(v => v.name === "root" && v.value.kind === "object");
+    if (rootVar) rootVNode = rootVar.value;
+  }
 
   // 2. self.root (inside Trie methods)
   if (!rootVNode) {
     const selfVar = allLocals.find(v => v.name === "self");
     if (selfVar) {
-      const rootAttr = getAttr(selfVar.value, "root");
-      if (rootAttr?.kind === "object") rootVNode = rootAttr;
+      // check _snapshot first inside self
+      const snap2 = getAttr(selfVar.value, "_snapshot");
+      if (snap2?.kind === "dict") { rootVNode = snap2; useDict = true; }
+      else {
+        const rootAttr = getAttr(selfVar.value, "root");
+        if (rootAttr?.kind === "object") rootVNode = rootAttr;
+      }
     }
   }
 
@@ -186,12 +226,16 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
       (v.name === "t" || v.name === "trie") && v.value.kind === "object"
     );
     if (trieVar) {
-      const rootAttr = getAttr(trieVar.value, "root");
-      if (rootAttr?.kind === "object") rootVNode = rootAttr;
+      const snap2 = getAttr(trieVar.value, "_snapshot");
+      if (snap2?.kind === "dict") { rootVNode = snap2; useDict = true; }
+      else {
+        const rootAttr = getAttr(trieVar.value, "root");
+        if (rootAttr?.kind === "object") rootVNode = rootAttr;
+      }
     }
   }
 
-  // 4. any object that has a children dict with single-char keys
+  // 4. any object that has a children dict
   if (!rootVNode) {
     for (const v of allLocals) {
       if (v.value.kind !== "object") continue;
@@ -200,12 +244,32 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
     }
   }
 
-  if (!rootVNode) return null;
+  if (!rootVNode) {
+    // debug: show what we have
+    return (
+      <div className="overflow-hidden rounded-md border border-border/50 p-3">
+        <div className="text-[10px] text-muted-foreground mb-2">Trie detected — parsing tree... Variables found:</div>
+        {allLocals.slice(0, 8).map((v, i) => (
+          <div key={i} className="font-mono text-[10px] text-muted-foreground/70 mb-1">
+            {v.name}: {v.value.kind}
+            {v.value.kind === "object" && v.value.attributes
+              ? ` [attrs: ${v.value.attributes.map(a => a.name).join(", ")}]`
+              : ""}
+            {v.value.kind === "dict" && v.value.entries
+              ? ` [${v.value.entries.length} entries]`
+              : ""}
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   // parse into internal TNode tree
-  _nid = 0;
+  
   const counter = { n: 0 };
-  const root = parseTrieNode(rootVNode, counter);
+  const root = useDict
+    ? parseDictNode(rootVNode, counter)
+    : parseTrieNode(rootVNode, counter);
   if (!root) return null;
   root.ch = "•";
 
@@ -214,6 +278,9 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
   const currentWord = wordVar
     ? String(wordVar.value.value ?? wordVar.value.repr ?? "").replace(/^['"]|['"]$/g, "")
     : "";
+
+  // current node pointer (inside insert/search)
+  const nodeVar = allLocals.find(v => v.name === "node" && v.value.kind === "object");
 
   // build path ids by walking the word so far
   const pathIds = new Set<number>();
@@ -277,9 +344,9 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
       {/* current word indicator */}
       {currentWord && (
         <div style={{ padding: "5px 14px", fontSize: 10, borderTop: "1px solid #1e1e35", background: failed ? "#3D000811" : "#0F3D2E11" }}>
-          <span style={{ color: "#555577" }}>word = &quot;</span>
+          <span style={{ color: "#555577" }}>word = "</span>
           <span style={{ color: "#EF9F27" }}>{currentWord}</span>
-          <span style={{ color: "#555577" }}>&quot; — </span>
+          <span style={{ color: "#555577" }}>" — </span>
           <span style={{ color: failed ? "#DC2626" : "#1D9E75" }}>
             {failed ? "not found in trie" : "path exists"}
           </span>
