@@ -285,7 +285,7 @@ def __runx_run(source, max_steps, max_items, max_depth, max_string, stdin_text):
         line = _stdin_buf.readline()
         if line == "":
             raise EOFError("EOF when reading a line")
-        return line.rstrip("\n")
+        return line.rstrip(chr(13) + chr(10))
 
     user_globals["input"] = __runx_input
 

@@ -26,7 +26,9 @@ export interface RunOptions {
 
 type StatusListener = (status: EngineStatus, error?: string) => void;
 
-const WORKER_URL = "/workers/pyodide.worker.js";
+// The `?v=` tag busts the browser's aggressive Web Worker cache — bump it when
+// the worker changes so the new version is fetched instead of a stale one.
+const WORKER_URL = "/workers/pyodide.worker.js?v=20260705-stdin";
 
 interface PendingRun {
   resolve: (result: RunResult) => void;
