@@ -112,3 +112,47 @@ export function buildAliasMap(variables: Variable[]): AliasMap {
     infoFor: (id) => (id == null ? undefined : byId.get(id)),
   };
 }
+
+/** One shared object plus the reference paths that reach it. */
+export interface SharedObject {
+  id: number;
+  color: string;
+  refCount: number;
+  /** How each reference reaches it, e.g. `a`, `b`, `grid[0]`, `node.next`. */
+  paths: string[];
+  node: ValueNode;
+}
+
+/**
+ * For each shared object in `map`, collect the reference paths that reach it
+ * (variable names + nested slots). Feeds the memory view.
+ */
+export function collectSharedRefs(variables: Variable[], map: AliasMap): SharedObject[] {
+  const paths = new Map<number, string[]>();
+  const nodeFor = new Map<number, ValueNode>();
+
+  const walkPath = (node: ValueNode, path: string) => {
+    if (node.id != null && map.isShared(node.id)) {
+      const arr = paths.get(node.id) ?? [];
+      if (arr.length < 6 && !arr.includes(path)) arr.push(path);
+      paths.set(node.id, arr);
+      if (!nodeFor.has(node.id)) nodeFor.set(node.id, node);
+    }
+    node.items?.forEach((it, i) => walkPath(it, `${path}[${i}]`));
+    node.entries?.forEach((e) => walkPath(e.value, `${path}[${e.key.repr}]`));
+    node.attributes?.forEach((a) => walkPath(a.value, `${path}.${a.name}`));
+  };
+
+  for (const v of variables) {
+    if (v.name.startsWith("__")) continue;
+    walkPath(v.value, v.name);
+  }
+
+  const out: SharedObject[] = [];
+  for (const [id, info] of map.byId) {
+    const node = nodeFor.get(id);
+    if (!node) continue;
+    out.push({ id, color: info.color, refCount: info.refCount, paths: paths.get(id) ?? [], node });
+  }
+  return out;
+}

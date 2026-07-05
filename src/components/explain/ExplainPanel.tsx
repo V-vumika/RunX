@@ -19,6 +19,7 @@ import { IterativeViz }    from "@/components/visualizers/IterativeViz";
 import { TrieViz }         from "@/components/visualizers/TrieViz";
 import { BacktrackingView } from "@/components/visualizers/BacktrackingView";
 import { GenericViz }      from "@/components/visualizers/GenericViz";
+import { MemoryView }      from "@/components/visualizers/MemoryView";
 import { StructureList }   from "@/components/visualizers/StructureList";
 import { detectLiveStructures, NODE_VIEWS } from "@/lib/visualizers/detect-live";
 
@@ -270,6 +271,9 @@ export function ExplainPanel() {
 
         {/* live data structures (per-variable, possibly several) */}
         <StructureList structures={shownStructures} snapshots={snapshots} step={currentStep} />
+
+        {/* aliasing — only when two names share one object */}
+        <MemoryView snapshots={snapshots} step={currentStep} />
 
         {/* universal fallback — only when nothing else drew a view */}
         {!hasAlgoView && shownStructures.length === 0 && (

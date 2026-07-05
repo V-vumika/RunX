@@ -30,7 +30,10 @@ The common LeetCode patterns that currently fall to the generic view.
   no re-execution and zero side-effect risk. Wired into `narrate.ts` so the step's value chips now show
   `arr[i] = 3`, `arr[i-1] + 1 = 3`, `nums[mid] < target = True`. Falls back to plain variable values, and
   yields nothing on anything it can't resolve. 6 tests. (Absorbs the 4.5 1D-DP recurrence display.)
-- **5.2 Object / reference memory view** 🔵🟣 — aliasing + OOP relationships as a memory diagram.
+- ✅ **5.2 Object / reference memory view** — reused `aliasing.ts` (`buildAliasMap`) + new `collectSharedRefs`
+  and `MemoryView.tsx`: when 2+ names/slots point at the same object (`a = b = []`, `grid = [row, row]`),
+  they share one colored box with a "mutating one changes all" note. Renders only when real sharing exists.
+  4 tests.
 - **5.3 Comprehension / generator stepping** 🔵 — step the inner iteration instead of one opaque line.
 
 ## Phase 6 — AI teacher
