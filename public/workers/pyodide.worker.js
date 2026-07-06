@@ -389,6 +389,10 @@ self.onmessage = async (event) => {
     py.globals.set("__runx_max_string", opts.maxString ?? 200);
     py.globals.set("__runx_stdin", opts.stdin ?? "");
 
+    // Runtime is loaded; user code is about to execute. Lets the client start
+    // its execution watchdog now (separate from the slower first-load budget).
+    self.postMessage({ type: "running", id });
+
     const resultJson = await py.runPythonAsync(TRACE_PROGRAM);
     const result = JSON.parse(resultJson);
     result.durationMs = Date.now() - started;

@@ -28,11 +28,17 @@ type StatusListener = (status: EngineStatus, error?: string) => void;
 
 // The `?v=` tag busts the browser's aggressive Web Worker cache — bump it when
 // the worker changes so the new version is fetched instead of a stale one.
-const WORKER_URL = "/workers/pyodide.worker.js?v=20260705-stdin";
+const WORKER_URL = "/workers/pyodide.worker.js?v=20260706-watchdog";
+
+/** Budget for the first run (includes downloading + initializing Pyodide). */
+const LOAD_TIMEOUT_MS = 60_000;
+/** Budget for executing user code once the runtime is ready. */
+const EXEC_TIMEOUT_MS = 12_000;
 
 interface PendingRun {
   resolve: (result: RunResult) => void;
   reject: (error: Error) => void;
+  timer: ReturnType<typeof setTimeout> | null;
 }
 
 class PyodideClient {
@@ -83,6 +89,7 @@ class PyodideClient {
     const data = event.data as
       | { type: "status"; status: string }
       | { type: "ready" }
+      | { type: "running"; id: number }
       | { type: "init-error"; error: string }
       | { type: "result"; id: number; result: RunResult }
       | { type: "run-error"; id: number; error: string };
@@ -94,6 +101,12 @@ class PyodideClient {
       case "ready":
         this.setStatus("ready");
         break;
+      case "running": {
+        // Loading is done; re-arm the watchdog with the (shorter) exec budget.
+        const pending = this.pending.get(data.id);
+        if (pending) this.armTimer(data.id, EXEC_TIMEOUT_MS);
+        break;
+      }
       case "init-error":
         this.setStatus("error", data.error);
         this.failAllPending(data.error);
@@ -101,6 +114,7 @@ class PyodideClient {
       case "result": {
         const pending = this.pending.get(data.id);
         if (pending) {
+          if (pending.timer) clearTimeout(pending.timer);
           this.pending.delete(data.id);
           pending.resolve(data.result);
         }
@@ -109,6 +123,7 @@ class PyodideClient {
       case "run-error": {
         const pending = this.pending.get(data.id);
         if (pending) {
+          if (pending.timer) clearTimeout(pending.timer);
           this.pending.delete(data.id);
           pending.reject(new Error(data.error));
         }
@@ -117,8 +132,35 @@ class PyodideClient {
     }
   }
 
+  /** (Re)start the watchdog for a run; on fire, the hung worker is killed. */
+  private armTimer(id: number, ms: number) {
+    const pending = this.pending.get(id);
+    if (!pending) return;
+    if (pending.timer) clearTimeout(pending.timer);
+    pending.timer = setTimeout(() => this.onTimeout(id), ms);
+  }
+
+  /** A run overran its budget — reject it and hard-reset the worker to recover. */
+  private onTimeout(id: number) {
+    const pending = this.pending.get(id);
+    const message =
+      "Execution timed out — the program may have an infinite loop or a very large input. The engine was reset; try a smaller input.";
+    if (pending) {
+      if (pending.timer) clearTimeout(pending.timer);
+      this.pending.delete(id);
+      pending.reject(new Error(message));
+    }
+    // Terminate the hung worker (there's no other way to stop it) and drop it;
+    // the next run() lazily spins up a fresh one.
+    this.failAllPending(message);
+    this.worker?.terminate();
+    this.worker = null;
+    this.setStatus("uninitialized");
+  }
+
   private failAllPending(message: string) {
     for (const pending of this.pending.values()) {
+      if (pending.timer) clearTimeout(pending.timer);
       pending.reject(new Error(message));
     }
     this.pending.clear();
@@ -139,7 +181,10 @@ class PyodideClient {
     }
     const id = this.nextId++;
     return new Promise<RunResult>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      this.pending.set(id, { resolve, reject, timer: null });
+      // Start with the load budget; the worker's "running" message swaps it for
+      // the shorter exec budget once the runtime is ready.
+      this.armTimer(id, LOAD_TIMEOUT_MS);
       this.worker!.postMessage({ type: "run", id, code, options });
     });
   }
