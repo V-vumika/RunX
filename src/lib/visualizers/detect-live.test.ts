@@ -27,6 +27,11 @@ describe("detectLiveStructures", () => {
     expect(views).toEqual(["array", "hashmap", "matrix"]);
   });
 
+  it("routes a set to the set view (not an indexed array)", () => {
+    const s = snap({ seen: { kind: "set", pyType: "set", repr: "{1, 2}", id: 1, items: [vint(1), vint(2)] } });
+    expect(detectLiveStructures(s, undefined, "")[0].view).toBe("set");
+  });
+
   it("dedupes aliases pointing at the same object", () => {
     const shared = vlist([vint(1)], 42);
     const s = snap({ a: shared, b: shared });

@@ -5,6 +5,7 @@ import type { LiveStructure } from "@/lib/visualizers/detect-live";
 
 import { ArrayView } from "./ArrayView";
 import { StringView } from "./StringView";
+import { SetView } from "./SetView";
 import { GridView } from "./GridView";
 import { UnionFindView } from "./UnionFindView";
 import { IntervalsView } from "./IntervalsView";
@@ -40,6 +41,8 @@ export function StructureList({
             return <ArrayView key={s.key} name={s.name} node={s.node} diffState={s.diffState} overlay={s.overlay} />;
           case "string":
             return <StringView key={s.key} name={s.name} node={s.node} overlay={s.overlay} />;
+          case "set":
+            return <SetView key={s.key} name={s.name} node={s.node} diffState={s.diffState} />;
           case "grid":
             return <GridView key={s.key} name={s.name} node={s.node} grid={s.grid} />;
           case "union-find":

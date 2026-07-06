@@ -22,7 +22,7 @@ import { isUnionFind } from "./union-find";
 import { isIntervals } from "./intervals";
 
 export type StructureView =
-  | "array" | "string" | "stack" | "queue" | "matrix" | "grid" | "hashmap" | "heap" | "union-find" | "intervals";
+  | "array" | "string" | "set" | "stack" | "queue" | "matrix" | "grid" | "hashmap" | "heap" | "union-find" | "intervals";
 
 /** Views that take an explicit `node`; the rest self-locate from snapshots. */
 export const NODE_VIEWS: ReadonlySet<StructureView> = new Set(["array", "stack", "queue"]);
@@ -96,6 +96,8 @@ export function detectLiveStructures(
 
     const kind = detectStructure(v.name, v.value);
     let view = viewForKind(kind);
+    // A set is unordered — never an indexed array.
+    if (v.value.kind === "set") view = "set";
     // A heap is a scalar list; promote only with the heapq signal + a heap-ish name.
     if (heapHint && (kind === "array" || kind === "generic-list") && /heap|pq|priority/i.test(v.name)) {
       view = "heap";
