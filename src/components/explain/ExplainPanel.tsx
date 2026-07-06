@@ -19,7 +19,6 @@ import { IterativeViz }    from "@/components/visualizers/IterativeViz";
 import { TrieViz }         from "@/components/visualizers/TrieViz";
 import { BacktrackingView } from "@/components/visualizers/BacktrackingView";
 import { GenericViz }      from "@/components/visualizers/GenericViz";
-import { MemoryView }      from "@/components/visualizers/MemoryView";
 import { StructureList }   from "@/components/visualizers/StructureList";
 import { detectLiveStructures, NODE_VIEWS } from "@/lib/visualizers/detect-live";
 
@@ -129,14 +128,10 @@ function VariableDiff({ prev, curr }: { prev: Snapshot | undefined; curr: Snapsh
 
 // ── auto viz picker ───────────────────────────────────────────────────────────
 
-// Algorithm animations + "wrapped" structures (tree/linked-list/trie) whose
-// views do their own root-finding. Flat data structures (arrays/dicts/heaps/
-// matrices) are handled per-variable by StructureList, not here.
 const ALGO_VIEW_KINDS = new Set<AlgoKind>([
   "sort", "binary-search", "recursion", "bfs", "dfs",
   "tree", "linked-list", "trie", "backtracking", "nested-loop", "iterative",
 ]);
-// Kinds whose algorithm view already draws the list — suppress a duplicate array view.
 const SUPPRESS_FLAT = new Set<AlgoKind>(["sort", "binary-search"]);
 
 function AutoViz({ kind, snapshots, step }: { kind: AlgoKind; snapshots: Snapshot[]; step: number }) {
@@ -183,7 +178,6 @@ export function ExplainPanel() {
     [snapshots, currentStep, code, hasTrace]
   );
 
-  // Blocked before running (e.g. input()) — show a clear, honest reason.
   if (!hasTrace && runError) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-center">
@@ -213,15 +207,12 @@ export function ExplainPanel() {
   const prevSnap = snapshots[currentStep - 1];
   const currSnap = snapshots[currentStep];
 
-  // When a pointer overlay or a grid view is active, that view *is* the data
-  // visual — the loop-state view would just be a confusing static dupe.
   const hasPointers = structures.some((s) => (s.overlay?.pointers.length ?? 0) > 0);
   const hasGrid = structures.some((s) => s.view === "grid");
   const suppressLoopView =
     (hasPointers || hasGrid) && summary != null && (summary.kind === "iterative" || summary.kind === "nested-loop");
   const hasAlgoView = summary != null && ALGO_VIEW_KINDS.has(summary.kind) && !suppressLoopView;
 
-  // When the algorithm view already draws the list, drop duplicate flat views.
   const shownStructures =
     summary != null && SUPPRESS_FLAT.has(summary.kind)
       ? structures.filter((s) => !NODE_VIEWS.has(s.view))
@@ -231,7 +222,7 @@ export function ExplainPanel() {
     <ScrollArea className="h-full">
       <div className="flex flex-col gap-2.5 p-3">
 
-        {/* support warnings — ran, but something may misbehave in the sandbox */}
+        {/* support warnings */}
         {warnings.length > 0 && (
           <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5">
             {warnings.map((w) => (
@@ -266,16 +257,13 @@ export function ExplainPanel() {
         {/* algo badge */}
         {summary && <AlgoBadge kind={summary.kind} complexity={summary.complexity} />}
 
-        {/* algorithm / wrapped-structure animation (one per program) */}
+        {/* algorithm animation */}
         {hasAlgoView && summary && <AutoViz kind={summary.kind} snapshots={snapshots} step={currentStep} />}
 
-        {/* live data structures (per-variable, possibly several) */}
+        {/* live data structures */}
         <StructureList structures={shownStructures} snapshots={snapshots} step={currentStep} />
 
-        {/* aliasing — only when two names share one object */}
-        <MemoryView snapshots={snapshots} step={currentStep} />
-
-        {/* universal fallback — only when nothing else drew a view */}
+        {/* universal fallback */}
         {!hasAlgoView && shownStructures.length === 0 && (
           <GenericViz snapshots={snapshots} step={currentStep} />
         )}

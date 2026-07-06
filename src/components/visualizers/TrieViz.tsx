@@ -63,7 +63,6 @@ function parseTrieNode(vnode: ValueNode | undefined, counter: { n: number }, dep
 function countNodes(n: TNode): number { let c = 1; n.children.forEach((ch) => (c += countNodes(ch))); return c; }
 function treeDepth(n: TNode): number { if (!n.children.size) return 0; let mx = 0; n.children.forEach((ch) => { const h = treeDepth(ch); if (h > mx) mx = h; }); return mx + 1; }
 
-/** Every complete word stored in the trie (paths ending on an is_end node). */
 function collectWords(root: TNode): string[] {
   const out: string[] = [];
   const dfs = (n: TNode, prefix: string) => {
@@ -75,12 +74,11 @@ function collectWords(root: TNode): string[] {
   return out.sort();
 }
 
-// ── tidy tree layout (leaf-slot assignment → no overlap) ──────────────────────
+// ── tidy tree layout ──────────────────────────────────────────────────────────
 
 interface Laid { node: TNode; x: number; y: number }
 
 function tidyLayout(root: TNode) {
-  const laidById = new Map<number, Laid>();
   const all: Laid[] = [];
   let leaf = 0;
 
@@ -95,16 +93,16 @@ function tidyLayout(root: TNode) {
     }
     const laid: Laid = { node: n, x, y: d };
     all.push(laid);
-    laidById.set(n.id, laid);
     return laid;
   };
   assign(root, 0);
 
-  const edges: { from: Laid; to: Laid }[] = [];
+  const laidById = new Map(all.map((l) => [l.node.id, l]));
+  const edges: { from: Laid; to: Laid; ch: string }[] = [];
   for (const l of all) {
-    l.node.children.forEach((c) => {
+    l.node.children.forEach((c, ch) => {
       const cl = laidById.get(c.id);
-      if (cl) edges.push({ from: l, to: cl });
+      if (cl) edges.push({ from: l, to: cl, ch });
     });
   }
   return { all, edges, cols: Math.max(1, leaf) };
@@ -127,7 +125,6 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
   const snap = snapshots[step];
   const allLocals = snap ? snap.stack.flatMap((f) => f.locals) : [];
 
-  // Locate the root, preferring the plain `_snapshot` dict (cleanest source).
   let rootVNode: ValueNode | undefined;
   let useDict = false;
   const pick = (v: ValueNode | undefined, asDict: boolean) => {
@@ -153,7 +150,6 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
     if (parsed) { parsed.ch = "•"; root = parsed; }
   }
 
-  // Current word being inserted/searched → highlight its path.
   const wordVar = allLocals.find((v) => v.name === "word");
   const currentWord = wordVar
     ? String(wordVar.value.value ?? wordVar.value.repr ?? "").replace(/^['"]|['"]$/g, "")
@@ -183,7 +179,6 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
   const nodeCount = countNodes(root);
   const { all, edges, cols } = tidyLayout(root);
 
-  // pixel geometry
   const R = 15, XSTEP = 46, YSTEP = 62, PAD = 26;
   const W = Math.max(220, PAD * 2 + (cols - 1) * XSTEP);
   const H = PAD * 2 + treeDepth(root) * YSTEP;
@@ -192,17 +187,16 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
 
   const colorFor = (l: Laid) => {
     const onPath = pathIds.has(l.node.id);
-    const isCur = onPath && failed && !l.node.children.size; // last reached before a miss
     if (l.node.ch === "•") return COL.root;
     if (onPath && l.node.isEnd) return COL.endPath;
-    if (onPath) return isCur ? COL.fail : COL.path;
+    if (onPath) return COL.path;
     if (l.node.isEnd) return COL.end;
     return COL.plain;
   };
 
   return (
     <div className="overflow-hidden rounded-md border border-border/50 bg-[#0b0b16]">
-      {/* header stats + legend */}
+      {/* header */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-b border-border/40 bg-muted/30 px-3 py-2">
         <Stat label="words" value={words.length} />
         <Stat label="nodes" value={nodeCount} />
@@ -214,35 +208,41 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
         </div>
       </div>
 
-      {/* the tree */}
+      {/* tree */}
       <div className="overflow-auto bg-[#0b0b16] p-2">
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="mx-auto block">
-          {edges.map((e, i) => (
-            <line
-              key={i}
-              x1={px(e.from.x)} y1={py(e.from.y) + R}
-              x2={px(e.to.x)}   y2={py(e.to.y) - R}
-              stroke={pathIds.has(e.to.node.id) ? "#EF9F27" : "#2c2c50"}
-              strokeWidth={pathIds.has(e.to.node.id) ? 2 : 1.5}
-            />
-          ))}
+          {edges.map((e, i) => {
+            const onPath = pathIds.has(e.to.node.id);
+            const x1 = px(e.from.x), y1 = py(e.from.y) + R;
+            const x2 = px(e.to.x),   y2 = py(e.to.y) - R;
+            const mx = (x1 + x2) / 2 + (x2 > x1 ? 8 : -8);
+            const my = (y1 + y2) / 2;
+            return (
+              <g key={i}>
+                <line x1={x1} y1={y1} x2={x2} y2={y2}
+                  stroke={onPath ? "#EF9F27" : "#2c2c50"}
+                  strokeWidth={onPath ? 2 : 1.5} />
+                <text x={mx} y={my} textAnchor="middle" dominantBaseline="central"
+                  fontSize={10} fontFamily="var(--font-mono)" fill="#8888aa">
+                  {e.ch}
+                </text>
+              </g>
+            );
+          })}
           {all.map((l) => {
             const c = colorFor(l);
             const x = px(l.x), y = py(l.y);
             const isRoot = l.node.ch === "•";
             return (
               <g key={l.node.id}>
-                {/* end-of-word outer ring */}
                 {l.node.isEnd && !isRoot && (
                   <circle cx={x} cy={y} r={R + 3} fill="none" stroke={c.stroke} strokeWidth={1} opacity={0.5} />
                 )}
                 <circle cx={x} cy={y} r={R} fill={c.fill} stroke={c.stroke} strokeWidth={isRoot ? 2 : 1.5} />
-                <text
-                  x={x} y={y + 0.5} textAnchor="middle" dominantBaseline="central"
+                <text x={x} y={y + 0.5} textAnchor="middle" dominantBaseline="central"
                   fontFamily="var(--font-mono)" fontWeight={700}
-                  fontSize={isRoot ? 12 : 13} fill={c.text}
-                >
-                  {isRoot ? "root" : l.node.ch}
+                  fontSize={isRoot ? 11 : 13} fill={c.text}>
+                  {isRoot ? "•" : l.node.ch}
                 </text>
               </g>
             );
@@ -259,14 +259,8 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
           words.map((w) => {
             const active = w === currentWord;
             return (
-              <span
-                key={w}
-                className="rounded px-1.5 py-0.5 font-mono text-[11px]"
-                style={{
-                  color: active ? "#FCD34D" : "#6EE7B7",
-                  background: active ? "#3A2600" : "#0E3B2C",
-                }}
-              >
+              <span key={w} className="rounded px-1.5 py-0.5 font-mono text-[11px]"
+                style={{ color: active ? "#FCD34D" : "#6EE7B7", background: active ? "#3A2600" : "#0E3B2C" }}>
                 {w}
               </span>
             );
@@ -274,12 +268,10 @@ export function TrieViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
         )}
       </div>
 
-      {/* current-word status */}
+      {/* current word status */}
       {currentWord && (
-        <div
-          className="border-t border-border/40 px-3 py-1.5 font-mono text-[11px]"
-          style={{ background: failed ? "#3A0B0B22" : "#0E3B2C22" }}
-        >
+        <div className="border-t border-border/40 px-3 py-1.5 font-mono text-[11px]"
+          style={{ background: failed ? "#3A0B0B22" : "#0E3B2C22" }}>
           <span className="text-muted-foreground/60">word = </span>
           <span style={{ color: "#EF9F27" }}>&quot;{currentWord}&quot;</span>
           <span className="text-muted-foreground/40"> · </span>
