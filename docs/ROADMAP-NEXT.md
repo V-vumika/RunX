@@ -46,7 +46,12 @@ Per-step natural-language + "explain this", layered on the deterministic trace (
 server-side). Only after the deterministic base is rich. Needs an API-key / cost decision.
 
 ## Phase 7 — Advanced DSA
-Weighted graph / Dijkstra, Union-Find, Segment/Fenwick tree, intervals, bit-manipulation, sets.
+- ✅ **Union-Find** — `union-find.ts` + `UnionFindView.tsx`: a DSU `parent` self-index array renders as
+  connected components (grouped by root, colored, roots ringed). 4 tests.
+- ✅ **Intervals** — `intervals.ts` + `IntervalsView.tsx`: a named list of `[start, end]` pairs renders as a
+  shared timeline so overlaps/gaps are visible. 3 tests.
+- Remaining: weighted graph / Dijkstra (extends GraphViz — bigger), segment/Fenwick tree, bit-manipulation,
+  sets.
 
 ## Phase 8 — Multi-language (committed)
 JS tracer (own worker) → backend sandbox → Java → C++. Same `ValueNode`/`Snapshot` contract.

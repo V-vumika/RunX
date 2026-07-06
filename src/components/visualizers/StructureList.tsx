@@ -7,6 +7,7 @@ import { ArrayView } from "./ArrayView";
 import { StringView } from "./StringView";
 import { GridView } from "./GridView";
 import { UnionFindView } from "./UnionFindView";
+import { IntervalsView } from "./IntervalsView";
 import { StackView } from "./StackView";
 import { QueueView } from "./QueueView";
 import { DPTableViz } from "./DPTableViz";
@@ -43,6 +44,8 @@ export function StructureList({
             return <GridView key={s.key} name={s.name} node={s.node} grid={s.grid} />;
           case "union-find":
             return <UnionFindView key={s.key} name={s.name} node={s.node} />;
+          case "intervals":
+            return <IntervalsView key={s.key} name={s.name} node={s.node} />;
           case "stack":
             return <StackView key={s.key} name={s.name} node={s.node} diffState={s.diffState} />;
           case "queue":

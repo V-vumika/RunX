@@ -19,8 +19,10 @@ import { detectStructure, type StructureKind } from "./structure-detect";
 import { detectPointers, type PointerOverlay } from "./pointers";
 import { detectGrid, isGridName, type GridInfo } from "./grid";
 import { isUnionFind } from "./union-find";
+import { isIntervals } from "./intervals";
 
-export type StructureView = "array" | "string" | "stack" | "queue" | "matrix" | "grid" | "hashmap" | "heap" | "union-find";
+export type StructureView =
+  | "array" | "string" | "stack" | "queue" | "matrix" | "grid" | "hashmap" | "heap" | "union-find" | "intervals";
 
 /** Views that take an explicit `node`; the rest self-locate from snapshots. */
 export const NODE_VIEWS: ReadonlySet<StructureView> = new Set(["array", "stack", "queue"]);
@@ -100,6 +102,8 @@ export function detectLiveStructures(
     }
     // A named 2-D grid (islands/maze/board) → grid view, not a DP table.
     if (view === "matrix" && isGridName(v.name)) view = "grid";
+    // A named list of [start, end] pairs → interval timeline, not a DP table.
+    if (view === "matrix" && isIntervals(v.name, v.value)) view = "intervals";
     // A DSU `parent` self-index array → union-find view, not a plain array.
     if (view === "array" && isUnionFind(v.name, v.value)) view = "union-find";
     if (!view) continue;
