@@ -9,6 +9,7 @@ import { SetView } from "./SetView";
 import { GridView } from "./GridView";
 import { UnionFindView } from "./UnionFindView";
 import { IntervalsView } from "./IntervalsView";
+import { CounterView } from "./CounterView";
 import { StackView } from "./StackView";
 import { QueueView } from "./QueueView";
 import { DPTableViz } from "./DPTableViz";
@@ -49,6 +50,8 @@ export function StructureList({
             return <UnionFindView key={s.key} name={s.name} node={s.node} />;
           case "intervals":
             return <IntervalsView key={s.key} name={s.name} node={s.node} />;
+          case "counter":
+            return <CounterView key={s.key} name={s.name} node={s.node} />;
           case "stack":
             return <StackView key={s.key} name={s.name} node={s.node} diffState={s.diffState} />;
           case "queue":
