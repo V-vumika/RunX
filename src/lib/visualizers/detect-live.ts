@@ -21,10 +21,11 @@ import { detectGrid, isGridName, type GridInfo } from "./grid";
 import { isUnionFind } from "./union-find";
 import { isIntervals } from "./intervals";
 import { isCounter } from "./counter";
+import { isBitVar } from "./binary";
 
 export type StructureView =
   | "array" | "string" | "set" | "stack" | "queue" | "matrix" | "grid"
-  | "hashmap" | "counter" | "heap" | "union-find" | "intervals";
+  | "hashmap" | "counter" | "heap" | "union-find" | "intervals" | "binary";
 
 /** Views that take an explicit `node`; the rest self-locate from snapshots. */
 export const NODE_VIEWS: ReadonlySet<StructureView> = new Set(["array", "stack", "queue"]);
@@ -92,6 +93,16 @@ export function detectLiveStructures(
           const diffState = before === undefined ? "added" : before !== v.value.repr ? "changed" : "unchanged";
           out.push({ key: `${v.name}#str`, name: v.name, view: "string", node: v.value, diffState, overlay });
         }
+      }
+      continue;
+    }
+
+    // An int used as a bitmask → binary bit-row (else it's a plain scalar).
+    if (v.value.kind === "int") {
+      if (isBitVar(v.name, v.value, code)) {
+        const before = prevReprs.get(v.name);
+        const diffState = before === undefined ? "added" : before !== v.value.repr ? "changed" : "unchanged";
+        out.push({ key: `${v.name}#bit`, name: v.name, view: "binary", node: v.value, diffState });
       }
       continue;
     }

@@ -50,8 +50,11 @@ server-side). Only after the deterministic base is rich. Needs an API-key / cost
   connected components (grouped by root, colored, roots ringed). 4 tests.
 - ✅ **Intervals** — `intervals.ts` + `IntervalsView.tsx`: a named list of `[start, end]` pairs renders as a
   shared timeline so overlaps/gaps are visible. 3 tests.
-- Remaining: weighted graph / Dijkstra (extends GraphViz — bigger), segment/Fenwick tree, bit-manipulation,
-  sets.
+- ✅ **Sets** — `SetView.tsx`: unordered members as chips (no misleading indices).
+- ✅ **Frequency counter** — `counter.ts` + `CounterView.tsx`: a Counter/tally dict as sorted bars.
+- ✅ **Bitmask / binary** — `binary.ts` + `BinaryView.tsx`: a `mask`-named int (with bit ops in the code) as
+  a labeled bit row, set bits highlighted.
+- Remaining: weighted graph / Dijkstra (extends GraphViz — bigger), segment/Fenwick tree.
 
 ## Phase 8 — Multi-language (committed)
 JS tracer (own worker) → backend sandbox → Java → C++. Same `ValueNode`/`Snapshot` contract.
