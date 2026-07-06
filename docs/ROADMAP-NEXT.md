@@ -55,9 +55,13 @@ JS tracer (own worker) → backend sandbox → Java → C++. Same `ValueNode`/`S
 Supabase auth / save / share, watch + breakpoints, interview mode, landing page, deploy.
 
 ## Cross-cutting: Quality & Trust (continuous, not a phase)
+- ✅ **Worker watchdog** — `pyodide-client` now arms a timeout per run (60s load budget → 12s exec budget
+  once the worker signals `running`); on overrun it terminates the hung worker, rejects with a clear
+  "timed out" message, and lazily re-inits. No run can hang the UI forever.
+- ✅ **Golden-trace tests** — `src/lib/__fixtures__/*.json` are REAL traces captured by running the worker's
+  own Python under CPython (`scripts/gen-golden-fixtures.py`); `golden.test.ts` runs the full
+  classify/detect/narrate pipeline on them, guarding the whole serialization contract. 6 tests (61 total).
 - Consistency refactor — unify inline-style vs Tailwind across views; split the 16KB `DPTableViz`;
-  finish killing name-guessing (node-refactor DP/HashMap/Heap).
-- **Worker watchdog** — hard execution timeout → terminate/restart (no run should hang the UI).
-- **Golden-trace tests** — real Pyodide snapshots as fixtures, so the *visual* layer has regression cover.
-- **Scale** — the 2000-step cap kills real algorithms; trace virtualization + adaptive depth.
-- Cheap wins — shareable URL (encode code+stdin), example gallery, mobile / empty-state polish.
+  finish killing name-guessing (node-refactor DP/HashMap/Heap). *(pending)*
+- **Scale** — the 2000-step cap kills real algorithms; trace virtualization + adaptive depth. *(pending)*
+- Cheap wins — shareable URL (encode code+stdin), example gallery, mobile / empty-state polish. *(pending)*
