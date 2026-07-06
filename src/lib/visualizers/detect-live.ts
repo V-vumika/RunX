@@ -18,8 +18,9 @@ import type { Snapshot, ValueNode } from "@/types/snapshot";
 import { detectStructure, type StructureKind } from "./structure-detect";
 import { detectPointers, type PointerOverlay } from "./pointers";
 import { detectGrid, isGridName, type GridInfo } from "./grid";
+import { isUnionFind } from "./union-find";
 
-export type StructureView = "array" | "string" | "stack" | "queue" | "matrix" | "grid" | "hashmap" | "heap";
+export type StructureView = "array" | "string" | "stack" | "queue" | "matrix" | "grid" | "hashmap" | "heap" | "union-find";
 
 /** Views that take an explicit `node`; the rest self-locate from snapshots. */
 export const NODE_VIEWS: ReadonlySet<StructureView> = new Set(["array", "stack", "queue"]);
@@ -99,6 +100,8 @@ export function detectLiveStructures(
     }
     // A named 2-D grid (islands/maze/board) → grid view, not a DP table.
     if (view === "matrix" && isGridName(v.name)) view = "grid";
+    // A DSU `parent` self-index array → union-find view, not a plain array.
+    if (view === "array" && isUnionFind(v.name, v.value)) view = "union-find";
     if (!view) continue;
 
     // Dedupe aliases pointing at the same object.
