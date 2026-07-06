@@ -1,15 +1,16 @@
 # RunX — Core Hardening Plan (2026-07-05)
 
-Depth before breadth: make Python rock-solid and *general* before the multi-language lift.
+Depth before breadth: make Python rock-solid and _general_ before the multi-language lift.
 Scope from the architecture review. **AI teacher is intentionally excluded** here (separate track);
 Supabase / watch-breakpoints also deferred (product features, not core-hardening).
 
-Each phase is independently shippable. Owner: 🔵 Shiv (engine/contract), 🟣 Vumi (visual polish).
+Each phase is independently shippable. Owner: 🟣 Vumi (visual polish and all other), 🔵 Shiv (engine/contract) .
 
 ---
 
-## Phase 1 — Harden the core (correctness + "works for every code")  ✅ DONE (2026-07-05)
-*Goal: any Python that runs shows a genuinely useful, correct view; nothing fails silently; regressions get caught.*
+## Phase 1 — Harden the core (correctness + "works for every code") ✅ DONE (2026-07-05)
+
+_Goal: any Python that runs shows a genuinely useful, correct view; nothing fails silently; regressions get caught._
 
 - ✅ **1.1 Bulletproof generic fallback** 🔵 — `GenericViz` (`src/components/visualizers/GenericViz.tsx`)
   wired into `AutoViz`'s `default`. Renders every frame variable as a rich nested value card (reuses
@@ -24,8 +25,9 @@ Each phase is independently shippable. Owner: 🔵 Shiv (engine/contract), 🟣 
 
 **Exit:** ✅ paste anything that runs → useful view or a clear reason; `npm test` green (22).
 
-## Phase 2 — Visualization architecture (per-structure, robust, complete)  ✅ DONE (2026-07-05)
-*Goal: right view(s) for any recognizable structure, no name-guessing, all visualizers reachable.*
+## Phase 2 — Visualization architecture (per-structure, robust, complete) ✅ DONE (2026-07-05)
+
+_Goal: right view(s) for any recognizable structure, no name-guessing, all visualizers reachable._
 
 - ✅ **2.1 Per-variable structure detection** — `src/lib/visualizers/detect-live.ts` (`detectLiveStructures`)
   scans the current frame's variables (shape via `detectStructure`), dedupes aliases by object id, tags
@@ -35,7 +37,7 @@ Each phase is independently shippable. Owner: 🔵 Shiv (engine/contract), 🟣 
   trimmed to sort/binary-search/recursion/bfs-dfs/tree/linked-list/trie/iterative); flat data structures
   come from detection. Duplicate flat views suppressed when the algorithm view already draws the list.
 - ◑ **2.3 Name-guessing** — flat views (Array/Stack/Queue) are node-based (no guessing); DP/HashMap
-  self-locate by **shape** (not name); Heap uses a name hint consistent with detection. *Residual:* the
+  self-locate by **shape** (not name); Heap uses a name hint consistent with detection. _Residual:_ the
   wrapped views (Tree/Trie/LinkedList) keep their own root-finding (`head`/`root`/`_snapshot`) — that's
   genuine wrapper-unwrapping, not blind guessing, so left as-is. Node-refactor of DP/HashMap/Heap is a
   future refinement.
@@ -46,8 +48,9 @@ Tests: `detect-live.test.ts` (multi-structure, alias dedupe, heap promotion, dif
 
 **Exit:** ✅ mixed-structure programs show a view each; dispatch is structure-driven; DP/HashMap/Heap reachable.
 
-## Phase 3 — Reach & depth (coverage + insight)  ✅ DONE (2026-07-05)
-*Goal: cover the biggest missing input case and make complexity convincing.*
+## Phase 3 — Reach & depth (coverage + insight) ✅ DONE (2026-07-05)
+
+_Goal: cover the biggest missing input case and make complexity convincing._
 
 - ✅ **3.1 stdin support** — the Pyodide worker (`__runx_run`) now takes `stdin_text`, shadows `input()` in
   the user's globals and swaps `sys.stdin` to a buffer, so `input()` / `sys.stdin.read()` both work
@@ -71,8 +74,9 @@ Tests: `measure.test.ts` (+ updated `support-check` for stdin). 32 total.
 ---
 
 ### Known coverage limits (be honest with users)
+
 - **Tracing is general** for deterministic, self-contained, standard-library Python that finishes fast.
 - **Breaks/degrades** on: `input()`/file/network/async/threads, native C-ext libs, >2000 steps,
-  structures deeper/wider than the serializer caps. Phase 1.2 makes these fail *clearly*; Phase 3.1 fixes stdin.
+  structures deeper/wider than the serializer caps. Phase 1.2 makes these fail _clearly_; Phase 3.1 fixes stdin.
 - **Rich DSA views** are pattern-matched to common shapes — not every implementation. Phase 1.1 guarantees a
-  good *generic* view for the rest; Phase 2 widens real coverage.
+  good _generic_ view for the rest; Phase 2 widens real coverage.
