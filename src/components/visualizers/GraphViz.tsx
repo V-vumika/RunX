@@ -2,20 +2,7 @@
 
 import type { Snapshot, ValueNode } from "@/types/snapshot";
 import { shortRepr } from "@/lib/explain/narrate";
-
-function parseAdjacency(node: ValueNode | undefined): Map<string, string[]> | null {
-  if (!node || node.kind !== "dict" || !node.entries) return null;
-  const adj = new Map<string, string[]>();
-  for (const { key, value } of node.entries) {
-    const k = String(key.value ?? key.repr ?? "?");
-    const neighbors: string[] = [];
-    if (value.kind === "list" || value.kind === "set" || value.kind === "deque") {
-      for (const item of value.items ?? []) neighbors.push(String(item.value ?? item.repr ?? "?"));
-    }
-    adj.set(k, neighbors);
-  }
-  return adj.size > 0 ? adj : null;
-}
+import { parseGraph, parseDist, parseFrontierNodes } from "@/lib/visualizers/graph";
 
 function parseSet(node: ValueNode | undefined): Set<string> {
   const s = new Set<string>();
@@ -33,6 +20,9 @@ function circleLayout(keys: string[], cx: number, cy: number, r: number) {
   return pos;
 }
 
+const fmtDist = (d: number | undefined): string =>
+  d === undefined || !Number.isFinite(d) ? "∞" : String(d);
+
 export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: number }) {
   const snap = snapshots[step];
   const allLocals = snap?.stack.flatMap((f) => f.locals) ?? [];
@@ -40,15 +30,23 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
 
   const graphVar   = allLocals.find((v) => ["graph","adj","adjacency","G"].includes(v.name));
   const visitedVar = frame?.locals.find((v) => v.name === "visited");
-  const queueVar   = frame?.locals.find((v) => v.name === "queue" || v.name === "stack");
+  const distVar    = allLocals.find((v) => ["dist","distance","distances","d"].includes(v.name));
+  const queueVar   = frame?.locals.find((v) =>
+    ["queue","stack","heap","pq","frontier","min_heap","minheap","heapq"].includes(v.name));
   const currentVar = frame?.locals.find((v) => ["node","curr","current","vertex","u","v"].includes(v.name));
 
-  const adj        = parseAdjacency(graphVar?.value);
+  const graph      = parseGraph(graphVar?.value);
   const visited    = parseSet(visitedVar?.value);
-  const inQueue    = parseSet(queueVar?.value);
+  const dist       = parseDist(distVar?.value);
   const currentNode = currentVar ? String(currentVar.value.value ?? currentVar.value.repr ?? "") : null;
 
-  if (!adj) {
+  const nodeSet    = new Set(graph?.nodes ?? []);
+  // Dijkstra's frontier is a heap of (dist, node) tuples; fall back to a bare set.
+  const inQueue    = graph
+    ? parseFrontierNodes(queueVar?.value, nodeSet)
+    : parseSet(queueVar?.value);
+
+  if (!graph) {
     // text fallback
     if (!visitedVar && !queueVar) return null;
     return (
@@ -72,26 +70,19 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
     );
   }
 
-  const keys  = Array.from(adj.keys());
+  const keys  = graph.nodes;
+  const weighted = graph.weighted;
+  const hasDist = dist.size > 0;
   const W = 300, H = 200;
   const cx = 150, cy = 100;
   const r = Math.min(75, Math.max(40, 30 + keys.length * 6));
   const pos = circleLayout(keys, cx, cy, r);
   const nodeR = Math.max(12, Math.min(16, 32 - keys.length));
 
-  const edges: [string, string][] = [];
-  const seen = new Set<string>();
-  adj.forEach((neighbors, from) => {
-    neighbors.forEach((to) => {
-      const key = [from, to].sort().join("--");
-      if (!seen.has(key)) { seen.add(key); edges.push([from, to]); }
-    });
-  });
-
   return (
     <div className="overflow-hidden rounded-md border border-border/50">
       <div className="border-b border-border/40 bg-muted/40 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-        graph · {keys.length} nodes · {edges.length} edges
+        {weighted ? "weighted graph" : "graph"} · {keys.length} nodes · {graph.edges.length} edges
       </div>
 
       <div className="bg-[#0d0d1a] flex justify-center">
@@ -105,18 +96,30 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
           )}
 
           {/* edges */}
-          {edges.map(([a, b]) => {
+          {graph.edges.map(({ from: a, to: b, w }) => {
             const pa = pos.get(a), pb = pos.get(b);
             if (!pa || !pb) return null;
             const bothVisited = visited.has(a) && visited.has(b);
             const aCurr = a === currentNode, bCurr = b === currentNode;
             const active = aCurr || bCurr;
+            const mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2;
             return (
               <g key={`${a}-${b}`}>
                 <line x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
                   stroke={bothVisited ? "#1D9E75" : active ? "#7F77DD" : "#2a2a4a"}
                   strokeWidth={bothVisited ? 2 : active ? 1.5 : 1}
                   strokeOpacity={bothVisited ? 0.7 : active ? 0.6 : 0.35} />
+                {weighted && w != null && (
+                  <>
+                    <rect x={mx - 8} y={my - 6} width={16} height={11} rx={2}
+                      fill="#0d0d1a" opacity={0.85} />
+                    <text x={mx} y={my + 2.5} textAnchor="middle"
+                      fontSize={9} fontFamily="var(--font-mono)" fontWeight="700"
+                      fill={active ? "#9B96E8" : "#8888aa"}>
+                      {w}
+                    </text>
+                  </>
+                )}
               </g>
             );
           })}
@@ -147,6 +150,14 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
                   fontSize={11} fontFamily="var(--font-mono)" fontWeight="700" fill={tc}>
                   {k}
                 </text>
+                {/* running shortest distance under each node (Dijkstra) */}
+                {hasDist && (
+                  <text x={p.x} y={p.y + nodeR + 9} textAnchor="middle"
+                    fontSize={8.5} fontFamily="var(--font-mono)" fontWeight="700"
+                    fill={dist.has(k) && Number.isFinite(dist.get(k)!) ? "#5BC8F5" : "#44445e"}>
+                    {fmtDist(dist.get(k))}
+                  </text>
+                )}
               </g>
             );
           })}
@@ -154,17 +165,22 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
       </div>
 
       {/* legend + live state */}
-      <div className="flex items-center gap-3 border-t border-border/40 px-3 py-1.5 text-[10px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 border-t border-border/40 px-3 py-1.5 text-[10px] text-muted-foreground">
         <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#9B96E8]" />current</span>
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#EF9F27]" />queue</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#EF9F27]" />frontier</span>
         <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#1D9E75]" />visited</span>
+        {hasDist && <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#5BC8F5]" />distance</span>}
       </div>
       <div className="grid grid-cols-2 gap-1.5 border-t border-border/40 p-2">
         {queueVar && <div className="rounded border border-border/40 bg-muted/30 px-2 py-1">
           <div className="mb-0.5 text-[10px] text-muted-foreground">{queueVar.name}</div>
           <div className="font-mono text-[11px] font-medium text-amber-300 break-all">{shortRepr(queueVar.value, 32)}</div>
         </div>}
-        {visitedVar && <div className="rounded border border-border/40 bg-muted/30 px-2 py-1">
+        {distVar && <div className="rounded border border-border/40 bg-muted/30 px-2 py-1">
+          <div className="mb-0.5 text-[10px] text-muted-foreground">{distVar.name}</div>
+          <div className="font-mono text-[11px] font-medium text-sky-300 break-all">{shortRepr(distVar.value, 32)}</div>
+        </div>}
+        {visitedVar && !distVar && <div className="rounded border border-border/40 bg-muted/30 px-2 py-1">
           <div className="mb-0.5 text-[10px] text-muted-foreground">visited</div>
           <div className="font-mono text-[11px] font-medium text-emerald-300 break-all">{shortRepr(visitedVar.value, 32)}</div>
         </div>}

@@ -69,6 +69,34 @@ describe("classifyProgram — structure beats name heuristics", () => {
     expect(classifyProgram(code, [s]).kind).toBe("backtracking");
   });
 
+  it("detects Dijkstra from a graph + heap + distance map", () => {
+    const code =
+      "import heapq\n" +
+      "def dijkstra(graph, src):\n" +
+      "    dist = {src: 0}\n" +
+      "    heap = [(0, src)]\n" +
+      "    while heap:\n" +
+      "        d, u = heapq.heappop(heap)\n" +
+      "        for v, w in graph[u]:\n" +
+      "            heapq.heappush(heap, (d + w, v))";
+    // graph as a pure adjacency dict → detectStructure sees a "graph".
+    const graph = vdict([
+      [vint(0), vlist([vint(1), vint(2)])],
+      [vint(1), vlist([vint(2)])],
+      [vint(2), vlist([])],
+    ]);
+    const dist = vdict([[vint(0), vint(0)]]);
+    const s = snap("dijkstra", { graph, dist });
+    expect(classifyProgram(code, [s]).kind).toBe("dijkstra");
+  });
+
+  it("does not mistake a plain BFS (no heap/dist) for Dijkstra", () => {
+    const code = "def bfs(graph, src):\n    queue = [src]\n    visited = set()\n    while queue:\n        u = queue.pop(0)";
+    const graph = vdict([[vint(0), vlist([vint(1)])], [vint(1), vlist([])]]);
+    const s = snap("bfs", { graph, queue: vlist([vint(0)]) });
+    expect(classifyProgram(code, [s]).kind).toBe("bfs");
+  });
+
   it("falls back to 'script' for a plain program", () => {
     const code = "x = 1\ny = 2\nz = x + y";
     expect(classifyProgram(code, [snap("<module>", { x: vint(1), y: vint(2) })]).kind).toBe("script");

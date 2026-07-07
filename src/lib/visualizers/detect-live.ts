@@ -22,10 +22,11 @@ import { isUnionFind } from "./union-find";
 import { isIntervals } from "./intervals";
 import { isCounter } from "./counter";
 import { isBitVar } from "./binary";
+import { isFenwick } from "./fenwick";
 
 export type StructureView =
   | "array" | "string" | "set" | "stack" | "queue" | "matrix" | "grid"
-  | "hashmap" | "counter" | "heap" | "union-find" | "intervals" | "binary";
+  | "hashmap" | "counter" | "heap" | "union-find" | "intervals" | "binary" | "fenwick";
 
 /** Views that take an explicit `node`; the rest self-locate from snapshots. */
 export const NODE_VIEWS: ReadonlySet<StructureView> = new Set(["array", "stack", "queue"]);
@@ -121,6 +122,8 @@ export function detectLiveStructures(
     if (view === "matrix" && isIntervals(v.name, v.value)) view = "intervals";
     // A DSU `parent` self-index array → union-find view, not a plain array.
     if (view === "array" && isUnionFind(v.name, v.value)) view = "union-find";
+    // A BIT array (named like a Fenwick tree + lowbit trick in source) → fenwick view.
+    if (view === "array" && isFenwick(v.name, v.value, code)) view = "fenwick";
     // A frequency dict → sorted bars, not a raw hash table.
     if (view === "hashmap" && isCounter(v.name, v.value)) view = "counter";
     if (!view) continue;

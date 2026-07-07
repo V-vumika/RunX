@@ -53,6 +53,7 @@ const ALGO_META: Record<string, { label: string; color: string }> = {
   "linear-search": { label: "Linear Search", color: "bg-sky-500/10 text-sky-400 border-sky-500/20" },
   bfs:             { label: "BFS",           color: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30" },
   dfs:             { label: "DFS",           color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20" },
+  dijkstra:        { label: "Dijkstra",      color: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30" },
   tree:            { label: "Tree",          color: "bg-violet-500/15 text-violet-300 border-violet-500/30" },
   "linked-list":   { label: "Linked List",   color: "bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/30" },
   recursion:       { label: "Recursion",     color: "bg-violet-500/15 text-violet-300 border-violet-500/30" },
@@ -129,7 +130,7 @@ function VariableDiff({ prev, curr }: { prev: Snapshot | undefined; curr: Snapsh
 // ── auto viz picker ───────────────────────────────────────────────────────────
 
 const ALGO_VIEW_KINDS = new Set<AlgoKind>([
-  "sort", "binary-search", "recursion", "bfs", "dfs",
+  "sort", "binary-search", "recursion", "bfs", "dfs", "dijkstra",
   "tree", "linked-list", "trie", "backtracking", "nested-loop", "iterative",
 ]);
 const SUPPRESS_FLAT = new Set<AlgoKind>(["sort", "binary-search"]);
@@ -140,7 +141,8 @@ function AutoViz({ kind, snapshots, step }: { kind: AlgoKind; snapshots: Snapsho
     case "recursion":      return <RecursionViz snapshots={snapshots} step={step} />;
     case "binary-search":  return <BinarySearchViz snapshots={snapshots} step={step} />;
     case "bfs":
-    case "dfs":            return <GraphViz snapshots={snapshots} step={step} />;
+    case "dfs":
+    case "dijkstra":       return <GraphViz snapshots={snapshots} step={step} />;
     case "tree":           return <TreeViz snapshots={snapshots} step={step} />;
     case "linked-list":    return <LinkedListViz snapshots={snapshots} step={step} />;
     case "trie":           return <TrieViz snapshots={snapshots} step={step} />;

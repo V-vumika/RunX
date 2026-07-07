@@ -23,6 +23,7 @@ export type AlgoKind =
   | "linear-search"
   | "bfs"
   | "dfs"
+  | "dijkstra"
   | "tree"
   | "linked-list"
   | "trie"
@@ -225,6 +226,25 @@ export function classifyProgram(
   }
 
   const loopC = complexityFromLoops(nesting);
+
+  // Dijkstra — a graph + a min-heap + a running distance map. Checked before
+  // BFS/DFS: it uses a graph too, but the heap + distances make it distinct.
+  const usesHeap = /\bheapq\b|\bheappush\b|\bheappop\b/.test(code);
+  const usesDist = /\bdist(ance)?s?\b/.test(code);
+  if (
+    nameMatches(fns, /dijkstra|shortest.?path/i) ||
+    (rt.structures.has("graph") && usesHeap && usesDist)
+  ) {
+    return {
+      title: "Dijkstra's Shortest Path",
+      kind: "dijkstra",
+      complexity: "O((V + E) log V)",
+      complexityReason: "every edge relaxation does an O(log V) heap operation",
+      description: "Finds the shortest path from a source to every node in a weighted graph, always expanding the closest unsettled node next.",
+      keyIdea: "A min-heap keyed on distance guarantees the node you pop is already final — greedily settling the nearest node is what makes it correct (for non-negative weights).",
+      signals,
+    };
+  }
 
   // BFS / DFS
   if (nameMatches(fns, /bfs|breadth/i) || (rt.structures.has("graph") && rt.structures.has("queue"))) {
@@ -434,6 +454,9 @@ export function deriveSpaceComplexity(
     case "bfs":
     case "dfs":
       return { value: "O(V)", reason: "stores visited nodes plus the frontier (queue/stack)" };
+
+    case "dijkstra":
+      return { value: "O(V)", reason: "a distance entry per node plus the heap frontier" };
 
     case "binary-search":
       return rec

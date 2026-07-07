@@ -54,7 +54,18 @@ server-side). Only after the deterministic base is rich. Needs an API-key / cost
 - ✅ **Frequency counter** — `counter.ts` + `CounterView.tsx`: a Counter/tally dict as sorted bars.
 - ✅ **Bitmask / binary** — `binary.ts` + `BinaryView.tsx`: a `mask`-named int (with bit ops in the code) as
   a labeled bit row, set bits highlighted.
-- Remaining: weighted graph / Dijkstra (extends GraphViz — bigger), segment/Fenwick tree.
+- ✅ **Weighted graph / Dijkstra** — `graph.ts` (`parseGraph`/`parseDist`/`parseFrontierNodes`) is the pure,
+  tested core; `GraphViz` now understands weighted adjacency ((neighbour, weight) tuples **or**
+  {neighbour: weight} dicts), draws edge-weight labels, shows the running shortest distance under each node,
+  and highlights the heap frontier (pulling the node out of `(dist, node)` heap tuples). Classifier emits new
+  `AlgoKind` `"dijkstra"` (graph + heapq + a distance map, or a `dijkstra`/`shortest-path` name) → O((V+E) log V);
+  wired into `AutoViz` + badge. BFS/DFS rendering unchanged. 10 tests (graph + classify).
+- ✅ **Fenwick / BIT** — `fenwick.ts` + `FenwickView.tsx`: a BIT-named int array (gated on the lowbit `i & -i`
+  source idiom so it never hijacks a plain list named `tree`) renders each slot with the index range it
+  aggregates (`[i - lowbit(i) + 1 .. i]`) — the thing a flat array view can't show. Wired via `detect-live`. 5 tests.
+- Remaining: **segment tree** (flat 4n array → needs the tree-layout treatment + murkier detection than
+  Fenwick's lowbit signal; deferred as the harder sibling), weighted-graph *edge-relaxation* step animation
+  (Vumi visual-polish follow-up on `GraphViz` — highlight the edge being relaxed + animate distance drops).
 
 ## Phase 8 — Multi-language (committed)
 JS tracer (own worker) → backend sandbox → Java → C++. Same `ValueNode`/`Snapshot` contract.
