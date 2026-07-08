@@ -85,5 +85,10 @@ Supabase auth / save / share, watch + breakpoints, interview mode, landing page,
   classify/detect/narrate pipeline on them, guarding the whole serialization contract. 6 tests (61 total).
 - Consistency refactor — unify inline-style vs Tailwind across views; split the 16KB `DPTableViz`;
   finish killing name-guessing (node-refactor DP/HashMap/Heap). *(pending)*
-- **Scale** — the 2000-step cap kills real algorithms; trace virtualization + adaptive depth. *(pending)*
+- ✅ **Scale** — the old 2000-step cap *aborted* real algorithms mid-run (you never saw the result). Now the
+  worker records up to an **adaptive** budget (`step-budget.ts`, scales with program size, 4k–10k) and then
+  keeps running without recording so the program **finishes** — appending one synthetic final-state snapshot
+  of the module globals, with a `hard_limit` on executed lines as the runaway guard (the client watchdog is
+  the wall-clock backstop). `Snapshot.final` flags it; `ExplainPanel` shows a "trace capped — still finished"
+  notice. 4 tests.
 - Cheap wins — shareable URL (encode code+stdin), example gallery, mobile / empty-state polish. *(pending)*

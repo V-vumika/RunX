@@ -48,6 +48,15 @@ Live status. Update as we go. Assignees: 🟣 **Vumi** (owner) · 🔵 **Shiv** 
 - ⏭ **Remaining Phase 7:** 🟣 Vumi visual-polish follow-up on `GraphViz` (animate the edge being relaxed +
   distance drops on Dijkstra).
 
+## ✅ Done (2026-07-08) — Scale fix
+- 🔵 **Traces no longer abort mid-run.** The old 2000-step cap `raise`d out of `exec`, so big algorithms never
+  finished and the result was never shown. Worker now records up to an adaptive budget then keeps running
+  (recording paused) so the program completes, and appends a synthetic **final-state** snapshot (`Snapshot.final`)
+  of the module globals — plus a `hard_limit` executed-lines guard (client watchdog remains the wall-clock backstop).
+- 🔵 `src/lib/execution/step-budget.ts` — `stepBudget(code)` scales the recorded budget with program size
+  (4k–10k), wired into the store's `run()`; `ExplainPanel` shows a "trace capped — still ran to completion" notice.
+  Worker cache-bust bumped to `v=20260708-runcomplete`. 4 tests.
+
 ## 🐛 Bugfixes (2026-07-05)
 - 🔵 **TrieViz — 6 lint issues incl. a real crash.** `useEffect` was called *after* three early `return`s → Rules-of-Hooks violation that crashed the visualizer when it switched between "trie found / not found" across steps. Restructured so all hooks run unconditionally before any return (root is now nullable, computed without early returns). Also removed 3 unused vars (`mk`/`_nid`, `posById`, `nodeVar`) and escaped two literal `"` in JSX. `tsc` + lint clean.
 - 🔵 **Trie never dispatched.** `classify.ts` now detects a trie (high-confidence: a node object with a `children` **dict** attr, the `_snapshot` dict, or a dict with a `children` key — narrow enough not to fire on ordinary trees) and emits new `AlgoKind` `"trie"`, so `AutoViz` actually selects `TrieViz`.
