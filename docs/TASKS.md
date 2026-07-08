@@ -45,8 +45,12 @@ Live status. Update as we go. Assignees: 🟣 **Vumi** (owner) · 🔵 **Shiv** 
   seg-named number array (gated on the `2*i`/`i<<1` child-indexing idiom) drawn as an implicit binary tree
   (node `i` → `2i`/`2i+1`) with per-node value + aggregated range (exact for power-of-two sizes; padded
   arrays prune zero subtrees). Wired via `detect-live` + `StructureList`.
-- ⏭ **Remaining Phase 7:** 🟣 Vumi visual-polish follow-up on `GraphViz` (animate the edge being relaxed +
-  distance drops on Dijkstra).
+- 🟣 **Phase 7 — GraphViz edge-relaxation animation (Phase 7 now fully done).** `GraphViz` separates popped
+  node `u` from neighbour `v`, marching-dash highlights the edge being relaxed, and pulses a green ring +
+  distance label on nodes whose distance just dropped (diffed vs the previous step). SMIL, self-contained.
+- 🟣 **Cheap wins — example gallery + shareable URL + empty-state.** `lib/examples.ts` + `ExampleGallery`
+  (6 one-click starters in the Explain empty state); `lib/share.ts` + header `ShareButton` encode code+stdin
+  into a `#s=` hash restored on load (no backend). Mobile polish skipped (not a mobile target). Tests: `share` (5).
 
 ## ✅ Done (2026-07-08) — Scale fix
 - 🔵 **Traces no longer abort mid-run.** The old 2000-step cap `raise`d out of `exec`, so big algorithms never

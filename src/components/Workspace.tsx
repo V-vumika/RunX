@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeEditor } from "@/components/editor/CodeEditor";
+import { ShareButton } from "@/components/ShareButton";
+import { decodeShare } from "@/lib/share";
 import { ExecutionControls } from "@/components/execution/ExecutionControls";
 import { OutputPanel } from "@/components/execution/OutputPanel";
 import { InputsPanel } from "@/components/execution/InputsPanel";
@@ -21,12 +23,25 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 
 export function Workspace() {
   const initEngine = useExecutionStore((s) => s.initEngine);
+  const setCode = useExecutionStore((s) => s.setCode);
+  const setStdin = useExecutionStore((s) => s.setStdin);
   const isMobile = useIsMobile();
 
   // Spin up the Pyodide worker as soon as the workspace mounts.
   useEffect(() => {
     initEngine();
   }, [initEngine]);
+
+  // Restore code + stdin from a shared link (#s=…), if present.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash;
+    if (!hash.startsWith("#s=")) return;
+    const payload = decodeShare(hash.slice(3));
+    if (!payload) return;
+    if (payload.stdin) setStdin(payload.stdin);
+    setCode(payload.code);
+  }, [setCode, setStdin]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -39,6 +54,9 @@ export function Workspace() {
           <span className="truncate text-xs text-muted-foreground">
             Run Python step-by-step and watch your variables change.
           </span>
+        </div>
+        <div className="ml-auto shrink-0">
+          <ShareButton />
         </div>
       </header>
 

@@ -67,8 +67,10 @@ server-side). Only after the deterministic base is rich. Needs an API-key / cost
   `2*i` / `i<<1` child-indexing idiom) drawn as the implicit binary tree it is (node `i` → `2i`/`2i+1`), each
   node showing its value and — for a perfect power-of-two size — the range it aggregates. Non-perfect/padded
   arrays render the value tree with zero subtrees pruned. Wired via `detect-live`. 5 tests.
-- Remaining: weighted-graph *edge-relaxation* step animation (Vumi visual-polish follow-up on `GraphViz` —
-  highlight the edge being relaxed + animate distance drops).
+- ✅ **Weighted-graph edge-relaxation animation** — `GraphViz` now separates the popped node `u` from the
+  neighbour `v` under test, lights the edge being relaxed with marching dashes, and pulses a green ring +
+  green distance label on any node whose shortest distance dropped since the previous step (diffed against
+  `snapshots[step-1]`'s `dist`). SMIL animations, self-contained. **Phase 7 fully done.**
 
 ## Phase 8 — Multi-language (committed)
 JS tracer (own worker) → backend sandbox → Java → C++. Same `ValueNode`/`Snapshot` contract.
@@ -91,4 +93,7 @@ Supabase auth / save / share, watch + breakpoints, interview mode, landing page,
   of the module globals, with a `hard_limit` on executed lines as the runaway guard (the client watchdog is
   the wall-clock backstop). `Snapshot.final` flags it; `ExplainPanel` shows a "trace capped — still finished"
   notice. 4 tests.
-- Cheap wins — shareable URL (encode code+stdin), example gallery, mobile / empty-state polish. *(pending)*
+- ◑ Cheap wins — ✅ **shareable URL** (`lib/share.ts`, encodes code+stdin into a `#s=` hash, no backend; a
+  Share button in the header + restore-on-load in `Workspace`; 5 tests) · ✅ **example gallery** (`lib/examples.ts`
+  + `ExampleGallery` in the Explain empty state — 6 one-click starters spanning sort/search/BST/Dijkstra/trie/
+  recursion) · ✅ **empty-state polish**. _Mobile polish intentionally skipped — RunX isn't targeting mobile._
