@@ -12,6 +12,7 @@ import {
   type Language,
 } from "@/lib/execution/entry";
 import { preflightCheck, type SupportIssue } from "@/lib/execution/support-check";
+import { stepBudget } from "@/lib/execution/step-budget";
 
 /** Starter program: a loop accumulator + recursion, to exercise the visualizer. */
 export const DEFAULT_CODE = `def factorial(n):
@@ -200,7 +201,11 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       // Nested structures (linked lists, tries, trees) live several attribute
       // hops deep — the default depth of 5 truncates them mid-chain. 12 lets a
       // typical demo list/trie serialize fully; breadth is still capped by maxItems.
-      const result = await getPyodideClient().run(source, { maxDepth: 12, stdin: get().stdin });
+      const result = await getPyodideClient().run(source, {
+        maxDepth: 12,
+        maxSteps: stepBudget(source),
+        stdin: get().stdin,
+      });
       set({
         snapshots: result.snapshots,
         result,

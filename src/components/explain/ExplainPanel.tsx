@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { TriangleAlert, Lightbulb } from "lucide-react";
+import { TriangleAlert, Lightbulb, Layers } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useExecutionStore } from "@/lib/store/execution-store";
 import { narrateAll, shortRepr, type StepKind } from "@/lib/explain/narrate";
@@ -253,6 +253,20 @@ export function ExplainPanel() {
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
               {explainException(error.type, error.message).hint}
             </p>
+          </div>
+        )}
+
+        {/* trace truncated — but the program still finished */}
+        {result?.truncated && (
+          <div className="flex items-start gap-1.5 rounded-md border border-sky-500/30 bg-sky-500/10 p-2.5 text-xs">
+            <Layers className="mt-0.5 size-3.5 shrink-0 text-sky-400" />
+            <span>
+              <span className="font-medium text-sky-300">Long run — trace capped</span>
+              <span className="text-muted-foreground">
+                {" "}at {snapshots.length - (currSnap?.final ? 1 : 0)} steps. The program still ran to completion
+                {currSnap?.final || snapshots.at(-1)?.final ? "; the last step shows its final state." : "."}
+              </span>
+            </span>
           </div>
         )}
 
