@@ -33,18 +33,44 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
   const distVar    = allLocals.find((v) => ["dist","distance","distances","d"].includes(v.name));
   const queueVar   = frame?.locals.find((v) =>
     ["queue","stack","heap","pq","frontier","min_heap","minheap","heapq"].includes(v.name));
-  const currentVar = frame?.locals.find((v) => ["node","curr","current","vertex","u","v"].includes(v.name));
+  // Source (popped) node vs the neighbour currently being relaxed — kept
+  // separate so we can light up the exact edge under consideration.
+  const currentVar  = frame?.locals.find((v) => ["u","node","curr","current","vertex"].includes(v.name));
+  const neighborVar = frame?.locals.find((v) => ["v","neighbor","neighbour","nei","to","child"].includes(v.name));
 
   const graph      = parseGraph(graphVar?.value);
   const visited    = parseSet(visitedVar?.value);
   const dist       = parseDist(distVar?.value);
   const currentNode = currentVar ? String(currentVar.value.value ?? currentVar.value.repr ?? "") : null;
+  const neighborNode = neighborVar ? String(neighborVar.value.value ?? neighborVar.value.repr ?? "") : null;
 
   const nodeSet    = new Set(graph?.nodes ?? []);
   // Dijkstra's frontier is a heap of (dist, node) tuples; fall back to a bare set.
   const inQueue    = graph
     ? parseFrontierNodes(queueVar?.value, nodeSet)
     : parseSet(queueVar?.value);
+
+  // The edge being relaxed this step = (current node → neighbour under test).
+  const relaxEdge: [string, string] | null =
+    currentNode && neighborNode && currentNode !== neighborNode &&
+    nodeSet.has(currentNode) && nodeSet.has(neighborNode)
+      ? [currentNode, neighborNode]
+      : null;
+
+  // Nodes whose shortest distance dropped since the previous step (Dijkstra).
+  const prevDistVar = snapshots[step - 1]?.stack
+    .flatMap((f) => f.locals)
+    .find((v) => ["dist","distance","distances","d"].includes(v.name));
+  const prevDist = parseDist(prevDistVar?.value);
+  const improved = new Set<string>();
+  if (dist.size > 0 && prevDist.size > 0) {
+    for (const [k, dv] of dist) {
+      const pv = prevDist.get(k);
+      if (Number.isFinite(dv) && (pv === undefined || !Number.isFinite(pv) || dv < pv)) improved.add(k);
+    }
+  }
+  const sameEdge = (a: string, b: string) =>
+    relaxEdge != null && ((a === relaxEdge[0] && b === relaxEdge[1]) || (a === relaxEdge[1] && b === relaxEdge[0]));
 
   if (!graph) {
     // text fallback
@@ -103,12 +129,20 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
             const aCurr = a === currentNode, bCurr = b === currentNode;
             const active = aCurr || bCurr;
             const mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2;
+            const relaxing = sameEdge(a, b);
             return (
               <g key={`${a}-${b}`}>
                 <line x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
                   stroke={bothVisited ? "#1D9E75" : active ? "#7F77DD" : "#2a2a4a"}
                   strokeWidth={bothVisited ? 2 : active ? 1.5 : 1}
                   strokeOpacity={bothVisited ? 0.7 : active ? 0.6 : 0.35} />
+                {/* edge being relaxed this step — bright, marching dashes */}
+                {relaxing && (
+                  <line x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
+                    stroke="#EF9F27" strokeWidth={2.5} strokeDasharray="5 3" strokeOpacity={0.95}>
+                    <animate attributeName="stroke-dashoffset" from="0" to="-16" dur="0.5s" repeatCount="indefinite" />
+                  </line>
+                )}
                 {weighted && w != null && (
                   <>
                     <rect x={mx - 8} y={my - 6} width={16} height={11} rx={2}
@@ -137,9 +171,17 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
             const glow   = isCurrent ? "#7F77DD"  : isVisited ? "#1D9E75" : isInQueue ? "#EF9F27" : null;
             const tc     = (isCurrent || isVisited || isInQueue) ? "#fff" : "#555577";
 
+            const isImproved = improved.has(k);
             return (
               <g key={k}>
                 {glow && <circle cx={p.x} cy={p.y} r={nodeR + 6} fill={glow} opacity={0.12} />}
+                {/* distance just dropped — pulse a green ring */}
+                {isImproved && (
+                  <circle cx={p.x} cy={p.y} r={nodeR + 2} fill="none" stroke="#34d399" strokeWidth={2}>
+                    <animate attributeName="r" values={`${nodeR + 2};${nodeR + 9};${nodeR + 2}`} dur="0.9s" repeatCount="indefinite" />
+                    <animate attributeName="stroke-opacity" values="0.9;0;0.9" dur="0.9s" repeatCount="indefinite" />
+                  </circle>
+                )}
                 {isCurrent && (
                   <circle cx={p.x} cy={p.y} r={nodeR + 4}
                     fill="none" stroke="#9B96E8" strokeWidth={1}
@@ -154,7 +196,7 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
                 {hasDist && (
                   <text x={p.x} y={p.y + nodeR + 9} textAnchor="middle"
                     fontSize={8.5} fontFamily="var(--font-mono)" fontWeight="700"
-                    fill={dist.has(k) && Number.isFinite(dist.get(k)!) ? "#5BC8F5" : "#44445e"}>
+                    fill={isImproved ? "#34d399" : dist.has(k) && Number.isFinite(dist.get(k)!) ? "#5BC8F5" : "#44445e"}>
                     {fmtDist(dist.get(k))}
                   </text>
                 )}
