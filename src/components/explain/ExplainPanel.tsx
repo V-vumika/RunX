@@ -7,6 +7,7 @@ import { useExecutionStore } from "@/lib/store/execution-store";
 import { narrateAll, shortRepr, type StepKind } from "@/lib/explain/narrate";
 import { classifyProgram, type AlgoKind } from "@/lib/explain/classify";
 import { explainException } from "@/lib/explain/exceptions";
+import { ExampleGallery } from "@/components/explain/ExampleGallery";
 import type { Snapshot, Variable, ValueNode } from "@/types/snapshot";
 
 import { SortViz }         from "@/components/visualizers/SortViz";
@@ -193,15 +194,23 @@ export function ExplainPanel() {
 
   if (!hasTrace && !error) {
     return (
-      <div className="flex h-full items-center justify-center p-6 text-center">
-        <div className="max-w-xs">
-          <Lightbulb className="mx-auto mb-3 size-6 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">
-            Press <span className="font-medium text-foreground">Run</span> — RunX auto-detects
-            the algorithm and visualizes it step by step.
-          </p>
+      <ScrollArea className="h-full">
+        <div className="flex flex-col gap-4 p-4">
+          <div className="text-center">
+            <Lightbulb className="mx-auto mb-3 size-6 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">
+              Press <span className="font-medium text-foreground">Run</span> — RunX auto-detects
+              the algorithm and visualizes it step by step.
+            </p>
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-medium uppercase tracking-widest text-muted-foreground/70">
+              Or start with an example
+            </p>
+            <ExampleGallery />
+          </div>
         </div>
-      </div>
+      </ScrollArea>
     );
   }
 
