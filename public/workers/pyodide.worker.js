@@ -129,7 +129,7 @@ def __runx_run(source, max_steps, max_items, max_depth, max_string, stdin_text):
 
     # Once the snapshot budget is full we STOP recording but keep running the
     # program, so it finishes and produces real output + a real final state
-    # instead of being aborted mid-run. `hard_limit` is the runaway/infinite-loop
+    # instead of being aborted mid-run. hard_limit is the runaway/infinite-loop
     # guard on total executed lines (the client's wall-clock watchdog is the
     # ultimate backstop).
     hard_limit = max(max_steps * 60, 120000)

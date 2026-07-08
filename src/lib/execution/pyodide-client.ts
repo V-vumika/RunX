@@ -28,7 +28,7 @@ type StatusListener = (status: EngineStatus, error?: string) => void;
 
 // The `?v=` tag busts the browser's aggressive Web Worker cache — bump it when
 // the worker changes so the new version is fetched instead of a stale one.
-const WORKER_URL = "/workers/pyodide.worker.js?v=20260708-runcomplete";
+const WORKER_URL = "/workers/pyodide.worker.js?v=20260708-runcomplete2";
 
 /** Budget for the first run (includes downloading + initializing Pyodide). */
 const LOAD_TIMEOUT_MS = 60_000;
