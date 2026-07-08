@@ -23,10 +23,12 @@ import { isIntervals } from "./intervals";
 import { isCounter } from "./counter";
 import { isBitVar } from "./binary";
 import { isFenwick } from "./fenwick";
+import { isSegmentTree } from "./segment-tree";
 
 export type StructureView =
   | "array" | "string" | "set" | "stack" | "queue" | "matrix" | "grid"
-  | "hashmap" | "counter" | "heap" | "union-find" | "intervals" | "binary" | "fenwick";
+  | "hashmap" | "counter" | "heap" | "union-find" | "intervals" | "binary"
+  | "fenwick" | "segment-tree";
 
 /** Views that take an explicit `node`; the rest self-locate from snapshots. */
 export const NODE_VIEWS: ReadonlySet<StructureView> = new Set(["array", "stack", "queue"]);
@@ -124,6 +126,8 @@ export function detectLiveStructures(
     if (view === "array" && isUnionFind(v.name, v.value)) view = "union-find";
     // A BIT array (named like a Fenwick tree + lowbit trick in source) → fenwick view.
     if (view === "array" && isFenwick(v.name, v.value, code)) view = "fenwick";
+    // A segment-tree array (named + 2*i child indexing in source) → implicit binary tree.
+    if (view === "array" && isSegmentTree(v.name, v.value, code)) view = "segment-tree";
     // A frequency dict → sorted bars, not a raw hash table.
     if (view === "hashmap" && isCounter(v.name, v.value)) view = "counter";
     if (!view) continue;

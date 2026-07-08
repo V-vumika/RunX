@@ -63,9 +63,12 @@ server-side). Only after the deterministic base is rich. Needs an API-key / cost
 - ✅ **Fenwick / BIT** — `fenwick.ts` + `FenwickView.tsx`: a BIT-named int array (gated on the lowbit `i & -i`
   source idiom so it never hijacks a plain list named `tree`) renders each slot with the index range it
   aggregates (`[i - lowbit(i) + 1 .. i]`) — the thing a flat array view can't show. Wired via `detect-live`. 5 tests.
-- Remaining: **segment tree** (flat 4n array → needs the tree-layout treatment + murkier detection than
-  Fenwick's lowbit signal; deferred as the harder sibling), weighted-graph *edge-relaxation* step animation
-  (Vumi visual-polish follow-up on `GraphViz` — highlight the edge being relaxed + animate distance drops).
+- ✅ **Segment tree** — `segment-tree.ts` + `SegmentTreeView.tsx`: a seg-named number array (gated on the
+  `2*i` / `i<<1` child-indexing idiom) drawn as the implicit binary tree it is (node `i` → `2i`/`2i+1`), each
+  node showing its value and — for a perfect power-of-two size — the range it aggregates. Non-perfect/padded
+  arrays render the value tree with zero subtrees pruned. Wired via `detect-live`. 5 tests.
+- Remaining: weighted-graph *edge-relaxation* step animation (Vumi visual-polish follow-up on `GraphViz` —
+  highlight the edge being relaxed + animate distance drops).
 
 ## Phase 8 — Multi-language (committed)
 JS tracer (own worker) → backend sandbox → Java → C++. Same `ValueNode`/`Snapshot` contract.

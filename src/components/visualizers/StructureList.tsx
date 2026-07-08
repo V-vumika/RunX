@@ -12,6 +12,7 @@ import { IntervalsView } from "./IntervalsView";
 import { CounterView } from "./CounterView";
 import { BinaryView } from "./BinaryView";
 import { FenwickView } from "./FenwickView";
+import { SegmentTreeView } from "./SegmentTreeView";
 import { StackView } from "./StackView";
 import { QueueView } from "./QueueView";
 import { DPTableViz } from "./DPTableViz";
@@ -58,6 +59,8 @@ export function StructureList({
             return <BinaryView key={s.key} name={s.name} node={s.node} />;
           case "fenwick":
             return <FenwickView key={s.key} name={s.name} node={s.node} diffState={s.diffState} />;
+          case "segment-tree":
+            return <SegmentTreeView key={s.key} name={s.name} node={s.node} diffState={s.diffState} />;
           case "stack":
             return <StackView key={s.key} name={s.name} node={s.node} diffState={s.diffState} />;
           case "queue":
