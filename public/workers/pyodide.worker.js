@@ -125,7 +125,14 @@ def __runx_analyze_complexity(source):
 def __runx_run(source, max_steps, max_items, max_depth, max_string, stdin_text):
     snapshots = []
     out = io.StringIO()
-    state = {"error": None, "truncated": False}
+    state = {"error": None, "truncated": False, "executed": 0}
+
+    # Once the snapshot budget is full we STOP recording but keep running the
+    # program, so it finishes and produces real output + a real final state
+    # instead of being aborted mid-run. `hard_limit` is the runaway/infinite-loop
+    # guard on total executed lines (the client's wall-clock watchdog is the
+    # ultimate backstop).
+    hard_limit = max(max_steps * 60, 120000)
 
     class _StepLimit(Exception):
         pass
@@ -261,17 +268,21 @@ def __runx_run(source, max_steps, max_items, max_depth, max_string, stdin_text):
         if event == "return":
             snap["returnValue"] = serialize(arg, 0, frozenset())
         snapshots.append(snap)
-        if len(snapshots) >= max_steps:
-            state["truncated"] = True
-            raise _StepLimit()
 
     def tracer(frame, event, arg):
-        if state["truncated"]:
-            return None
         if frame.f_code.co_filename != _RUNX_FILENAME:
             return None
-        if event in ("line", "call", "return", "exception"):
+        if event not in ("line", "call", "return", "exception"):
+            return tracer
+        state["executed"] += 1
+        if len(snapshots) < max_steps:
             record(frame, event, arg)
+        else:
+            # Budget full: keep running (so the program completes) but record
+            # nothing more, until the hard ceiling trips the runaway guard.
+            state["truncated"] = True
+            if state["executed"] > hard_limit:
+                raise _StepLimit()
         return tracer
 
     user_globals = {"__name__": "__main__"}
@@ -328,6 +339,28 @@ def __runx_run(source, max_steps, max_items, max_depth, max_string, stdin_text):
         sys.settrace(None)
         sys.stdout = real_stdout
         sys.stdin = real_stdin
+
+    # If we stopped recording early but the program finished, capture one final
+    # snapshot of the module-level state so the user still sees the end result
+    # (the sorted list, the computed answer) rather than just the first N steps.
+    if state["truncated"] and state["error"] is None:
+        final_locals = []
+        for name, val in list(user_globals.items()):
+            if name in _RUNX_SKIP_NAMES:
+                continue
+            if name.startswith("__") and name.endswith("__"):
+                continue
+            if isinstance(val, types.ModuleType) or callable(val):
+                continue
+            final_locals.append({"name": name, "value": serialize(val, 0, frozenset())})
+        snapshots.append({
+            "step": len(snapshots),
+            "line": 0,
+            "event": "line",
+            "stack": [{"functionName": "<module>", "line": 0, "locals": final_locals}],
+            "stdout": out.getvalue(),
+            "final": True,
+        })
 
     return json.dumps({
         "snapshots": snapshots,

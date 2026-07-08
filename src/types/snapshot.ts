@@ -84,6 +84,12 @@ export interface Snapshot {
   stdout: string;
   /** Value returned by the frame on a "return" event, if any. */
   returnValue?: ValueNode;
+  /**
+   * True for the synthetic final-state snapshot appended when a run was
+   * truncated but still ran to completion — it shows the end result (module
+   * globals) rather than a real traced line.
+   */
+  final?: boolean;
 }
 
 /** A runtime error raised by the user's code. */
