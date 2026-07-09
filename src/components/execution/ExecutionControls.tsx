@@ -74,7 +74,7 @@ export function ExecutionControls() {
           onClick={() => run()}
           disabled={isRunning || !engineReady}
           size="sm"
-          className="gap-2"
+          className="gap-2 rounded-full bg-void-violet text-white shadow-[0_0_18px_rgba(102,58,243,0.35)] hover:bg-[#7248f5]"
           title={engineReady ? undefined : "Waiting for the Python runtime to finish loading…"}
         >
           {isRunning || !engineReady ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import Link from "next/link";
 import { ScanSearch } from "lucide-react";
 
 import {
@@ -45,22 +46,24 @@ export function Workspace() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <header className="flex items-center gap-3 border-b px-4 py-3">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <ScanSearch className="size-5" />
-        </div>
-        <div className="flex min-w-0 flex-col leading-tight">
-          <span className="font-semibold tracking-tight">RunX</span>
-          <span className="truncate text-xs text-muted-foreground">
-            Run Python step-by-step and watch your variables change.
+      <header className="flex items-center gap-3 border-b border-[rgba(186,215,247,0.08)] bg-[rgba(5,6,15,0.6)] px-4 py-3 backdrop-blur-xl">
+        <Link href="/" className="flex items-center gap-3" title="Back to home">
+          <span className="ak-glass ak-hairline flex size-8 shrink-0 items-center justify-center rounded-md text-frost">
+            <ScanSearch className="size-5" />
           </span>
-        </div>
+          <span className="flex min-w-0 flex-col leading-tight">
+            <span className="font-display font-medium tracking-tight text-frost">RunX</span>
+            <span className="truncate text-xs text-fog">
+              Run Python line by line and watch your variables change.
+            </span>
+          </span>
+        </Link>
         <div className="ml-auto shrink-0">
           <ShareButton />
         </div>
       </header>
 
-      <div className="border-b px-4 py-2.5">
+      <div className="border-b border-[rgba(186,215,247,0.08)] px-4 py-2.5">
         <ExecutionControls />
       </div>
 
@@ -150,7 +153,7 @@ function ResultTabs() {
 
 function PanelHeader({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+    <div className="flex items-center justify-between border-b border-[rgba(186,215,247,0.08)] bg-[rgba(186,214,247,0.02)] px-3 py-1.5 text-xs font-medium text-muted-foreground">
       {children}
     </div>
   );
