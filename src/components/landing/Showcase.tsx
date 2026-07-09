@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 
 import { SectionHeading } from "./authkit/SectionHeading";
 import { GlassCard } from "./authkit/GlassCard";
+import { Reveal } from "./authkit/Reveal";
 
 const GROUPS: { icon: LucideIcon; label: string; items: string[] }[] = [
   {
@@ -32,21 +33,24 @@ export function Showcase() {
   return (
     <section id="showcase" className="scroll-mt-8 border-y border-[rgba(186,215,247,0.08)]">
       <div className="mx-auto max-w-6xl px-6 py-28">
-        <SectionHeading
-          eyebrow="Every structure"
-          title={
-            <>
-              Paste any algorithm.
-              <br />
-              RunX picks the right view.
-            </>
-          }
-          body="A classifier reads your code and its trace, then opens the visualizer that fits. No annotations, no configuration, nothing to set up."
-        />
+        <Reveal>
+          <SectionHeading
+            eyebrow="Every structure"
+            title={
+              <>
+                Paste any algorithm.
+                <br />
+                RunX picks the right view.
+              </>
+            }
+            body="A classifier reads your code and its trace, then opens the visualizer that fits. No annotations, no configuration, nothing to set up."
+          />
+        </Reveal>
 
         <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {GROUPS.map(({ icon: Icon, label, items }) => (
-            <GlassCard key={label} className="p-5">
+          {GROUPS.map(({ icon: Icon, label, items }, i) => (
+            <Reveal key={label} delay={i * 0.08} className="h-full">
+              <GlassCard className="h-full p-5 transition-transform duration-300 hover:-translate-y-1">
               <div className="flex items-center gap-2.5">
                 <Icon className="size-4 text-[#b8a9fb]" strokeWidth={1.5} />
                 <h3 className="font-display text-sm font-medium tracking-tight text-frost">{label}</h3>
@@ -61,7 +65,8 @@ export function Showcase() {
                   </li>
                 ))}
               </ul>
-            </GlassCard>
+              </GlassCard>
+            </Reveal>
           ))}
         </div>
 

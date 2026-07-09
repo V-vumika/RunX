@@ -1,6 +1,7 @@
 import { LaunchButton } from "./LaunchButton";
 import { GridBackdrop } from "./authkit/GridBackdrop";
 import { Eyebrow } from "./authkit/Eyebrow";
+import { Reveal } from "./authkit/Reveal";
 
 /**
  * Hero in the AuthKit "frosted glass cathedral" style: a spotlight beam over a
@@ -14,21 +15,29 @@ export function Hero() {
       <GridBackdrop spotlight />
 
       <div className="relative mx-auto max-w-5xl px-6 pt-24 text-center sm:pt-28">
-        <Eyebrow>Now running in your browser</Eyebrow>
+        <Reveal>
+          <Eyebrow>Now running in your browser</Eyebrow>
+        </Reveal>
 
-        <h1 className="ak-skywash mt-8 font-display font-medium leading-[0.9] tracking-tight text-[clamp(4.5rem,15vw,11rem)]">
-          RunX
-        </h1>
+        <Reveal delay={0.08}>
+          <h1 className="ak-skywash mt-8 font-display font-medium leading-[0.9] tracking-tight text-[clamp(4.5rem,15vw,11rem)]">
+            RunX
+          </h1>
+        </Reveal>
 
-        <p className="mx-auto mt-6 max-w-xl text-pretty text-lg leading-relaxed text-mist">
-          See how your code actually runs. Every line, every variable, every step,
-          drawn as it happens instead of hidden behind a single answer.
-        </p>
+        <Reveal delay={0.16}>
+          <p className="mx-auto mt-6 max-w-xl text-pretty text-lg leading-relaxed text-mist">
+            See how your code actually runs. Every line, every variable, every step,
+            drawn as it happens instead of hidden behind a single answer.
+          </p>
+        </Reveal>
 
-        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-          <LaunchButton />
-          <LaunchButton variant="ghost" href="#showcase" label="See what it shows" withArrow={false} />
-        </div>
+        <Reveal delay={0.24}>
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+            <LaunchButton />
+            <LaunchButton variant="ghost" href="#showcase" label="See what it shows" withArrow={false} />
+          </div>
+        </Reveal>
       </div>
 
       <FloatingPlates />
@@ -38,22 +47,28 @@ export function Hero() {
 
 function FloatingPlates() {
   return (
-    <div className="relative mx-auto mt-16 max-w-4xl px-6 pb-24">
+    <Reveal delay={0.32} className="relative mx-auto mt-16 max-w-4xl px-6 pb-24">
       <div className="relative h-[300px] sm:h-[360px]">
         {/* left plate: memory */}
         <div className="absolute left-1/2 top-8 hidden w-64 -translate-x-[122%] -rotate-[7deg] opacity-90 lg:block">
-          <MemoryPlate />
+          <div className="ak-float" style={{ animationDelay: "0.8s" }}>
+            <MemoryPlate />
+          </div>
         </div>
         {/* right plate: structure */}
         <div className="absolute left-1/2 top-8 hidden w-64 translate-x-[22%] rotate-[7deg] opacity-90 lg:block">
-          <StructurePlate />
+          <div className="ak-float" style={{ animationDelay: "1.6s" }}>
+            <StructurePlate />
+          </div>
         </div>
         {/* center plate: the stepping window */}
         <div className="absolute left-1/2 top-0 w-full max-w-[380px] -translate-x-1/2">
-          <StepperPlate />
+          <div className="ak-float">
+            <StepperPlate />
+          </div>
         </div>
       </div>
-    </div>
+    </Reveal>
   );
 }
 

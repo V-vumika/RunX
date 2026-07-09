@@ -3,6 +3,7 @@ import { ArrowRight, LayoutGrid } from "lucide-react";
 
 import { GridBackdrop } from "./authkit/GridBackdrop";
 import { Eyebrow } from "./authkit/Eyebrow";
+import { Reveal } from "./authkit/Reveal";
 
 /** Closing "get started" band with two glass cards, then a quiet footer. */
 export function CtaFooter() {
@@ -11,16 +12,20 @@ export function CtaFooter() {
       <section className="relative overflow-hidden">
         <GridBackdrop />
         <div className="relative mx-auto max-w-4xl px-6 py-28">
-          <div className="text-center">
+          <Reveal className="text-center">
             <Eyebrow>Get started</Eyebrow>
             <h2 className="ak-skywash mt-6 text-balance font-display text-[2.25rem] font-medium leading-[1.05] tracking-tight sm:text-[3rem]">
               Start visualizing today
             </h2>
-          </div>
+          </Reveal>
 
           <div className="mt-12 grid gap-4 sm:grid-cols-2">
-            <CtaCard href="/app" title="Launch RunX" sub="Open the workspace and paste your code." primary />
-            <CtaCard href="/app" title="Start from an example" sub="Six algorithms, ready to run in one click." />
+            <Reveal delay={0.08} className="h-full">
+              <CtaCard href="/app" title="Launch RunX" sub="Open the workspace and paste your code." primary />
+            </Reveal>
+            <Reveal delay={0.16} className="h-full">
+              <CtaCard href="/app" title="Start from an example" sub="Six algorithms, ready to run in one click." />
+            </Reveal>
           </div>
         </div>
       </section>
@@ -51,7 +56,7 @@ function CtaCard({
   return (
     <Link
       href={href}
-      className="group ak-glass ak-hairline relative overflow-hidden rounded-2xl p-8 transition-colors hover:bg-[rgba(186,214,247,0.05)]"
+      className="group ak-glass ak-hairline relative block h-full overflow-hidden rounded-2xl p-8 transition-all duration-300 hover:-translate-y-1 hover:bg-[rgba(186,214,247,0.05)]"
     >
       <div className="flex h-24 items-center justify-center">
         {primary ? (

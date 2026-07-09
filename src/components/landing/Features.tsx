@@ -1,8 +1,10 @@
+import { Fragment } from "react";
 import { StepForward, Boxes, Layers, Network, Gauge, Share2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { Eyebrow } from "./authkit/Eyebrow";
 import { GlassCard } from "./authkit/GlassCard";
+import { Reveal } from "./authkit/Reveal";
 
 const TILES: { icon: LucideIcon; label: string }[] = [
   { icon: StepForward, label: "Step" },
@@ -40,25 +42,26 @@ const CARDS: { icon: LucideIcon; title: string; body: string }[] = [
 export function Features() {
   return (
     <section className="mx-auto max-w-6xl px-6 py-28">
-      {/* icon-tile timeline */}
-      <div className="flex items-start justify-center gap-1 sm:gap-3">
+      {/* icon-tile timeline with marching-dash connectors */}
+      <div className="flex items-start justify-center gap-1.5 sm:gap-2">
         {TILES.map(({ icon: Icon, label }, i) => (
-          <div key={label} className="flex items-center gap-1 sm:gap-3">
-            <div className="flex flex-col items-center gap-2.5">
-              <div className="ak-glass ak-hairline flex size-13 items-center justify-center rounded-full text-frost sm:size-14">
-                <Icon className="size-5" strokeWidth={1.5} />
+          <Fragment key={label}>
+            <Reveal delay={i * 0.07} className="flex flex-col items-center gap-3">
+              <div className="ak-glass ak-hairline group/tile relative flex size-14 items-center justify-center rounded-full text-frost transition-colors hover:text-white sm:size-16">
+                <span className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(102,58,243,0.3),transparent_70%)] opacity-0 transition-opacity duration-300 group-hover/tile:opacity-100" />
+                <Icon className="relative size-5 sm:size-6" strokeWidth={1.5} />
               </div>
               <span className="font-mono text-[10px] text-mist sm:text-[11px]">{label}</span>
-            </div>
+            </Reveal>
             {i < TILES.length - 1 && (
-              <span className="mb-7 hidden h-px w-5 bg-[rgba(186,215,247,0.16)] sm:block" />
+              <span className="ak-connector mt-7 hidden w-7 shrink-0 sm:mt-8 sm:block sm:w-14" />
             )}
-          </div>
+          </Fragment>
         ))}
       </div>
 
       {/* heading */}
-      <div className="mx-auto mt-20 max-w-2xl text-center">
+      <Reveal className="mx-auto mt-20 max-w-2xl text-center">
         <Eyebrow>What you see</Eyebrow>
         <h2 className="mt-6 text-balance font-display text-[2rem] font-medium leading-[1.1] tracking-tight text-frost sm:text-[2.75rem]">
           Output tells you <span className="text-fog">what</span>.
@@ -68,18 +71,20 @@ export function Features() {
         <p className="mt-5 text-pretty text-base leading-relaxed text-mist sm:text-[17px]">
           Everything that happens between pressing Run and getting an answer, made visible.
         </p>
-      </div>
+      </Reveal>
 
       {/* detail cards */}
       <div className="mx-auto mt-14 grid max-w-4xl gap-4 sm:grid-cols-2">
-        {CARDS.map(({ icon: Icon, title, body }) => (
-          <GlassCard key={title} className="p-6">
-            <div className="ak-hairline flex size-11 items-center justify-center rounded-full bg-[rgba(102,58,243,0.12)] text-[#b8a9fb]">
-              <Icon className="size-5" strokeWidth={1.5} />
-            </div>
-            <h3 className="mt-4 font-display text-lg font-medium tracking-tight text-frost">{title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-mist">{body}</p>
-          </GlassCard>
+        {CARDS.map(({ icon: Icon, title, body }, i) => (
+          <Reveal key={title} delay={(i % 2) * 0.1}>
+            <GlassCard className="h-full p-6 transition-transform duration-300 hover:-translate-y-1">
+              <div className="ak-hairline flex size-11 items-center justify-center rounded-full bg-[rgba(102,58,243,0.12)] text-[#b8a9fb]">
+                <Icon className="size-5" strokeWidth={1.5} />
+              </div>
+              <h3 className="mt-4 font-display text-lg font-medium tracking-tight text-frost">{title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-mist">{body}</p>
+            </GlassCard>
+          </Reveal>
         ))}
       </div>
     </section>
