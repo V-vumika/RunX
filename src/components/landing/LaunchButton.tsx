@@ -1,31 +1,42 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
- * The single call-to-action that routes into the workspace (/app). Shared by the
- * landing sections and the app header so the entry point looks and reads the same
- * everywhere.
+ * The way into the workspace (/app). Two treatments in the AuthKit language:
+ * `primary` is the single violet action, `ghost` is a frosted pill for
+ * secondary and nav placements. Both are full pills.
  */
 export function LaunchButton({
   label = "Launch RunX",
+  href = "/app",
+  variant = "primary",
   size = "lg",
-  variant = "default",
+  withArrow = true,
   className,
 }: {
   label?: string;
-  size?: "default" | "sm" | "lg";
-  variant?: "default" | "outline" | "secondary";
+  href?: string;
+  variant?: "primary" | "ghost";
+  size?: "sm" | "lg";
+  withArrow?: boolean;
   className?: string;
 }) {
   return (
-    <Button asChild size={size} variant={variant} className={cn("group gap-2", className)}>
-      <Link href="/app">
-        {label}
-        <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-      </Link>
-    </Button>
+    <Link
+      href={href}
+      className={cn(
+        "group inline-flex items-center justify-center gap-2 rounded-full font-medium transition-colors",
+        size === "sm" ? "px-4 py-2 text-sm" : "px-6 py-3 text-[15px]",
+        variant === "primary"
+          ? "bg-void-violet text-white shadow-[0_0_24px_rgba(102,58,243,0.4)] hover:bg-[#7248f5]"
+          : "ak-hairline bg-[rgba(186,214,247,0.06)] text-frost hover:bg-[rgba(186,214,247,0.12)]",
+        className
+      )}
+    >
+      {label}
+      {withArrow && <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />}
+    </Link>
   );
 }
