@@ -39,7 +39,7 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: #05060f;
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
@@ -108,8 +108,18 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains);
+  --font-display: var(--font-space);
+
+  /* AuthKit "frosted glass cathedral" palette (landing + chrome accents) */
+  --color-midnight: #05060f;
+  --color-ice: #d8ecf8;
+  --color-frost: #d1e4fa;
+  --color-mist: #c7d3ea;
+  --color-fog: #9da7ba;
+  --color-void-violet: #663af3;
+  --color-hairline: rgba(186, 215, 247, 0.12);
 }
 
 @layer base {
@@ -139,4 +149,63 @@
    internal node positioning from outside. */
 .runx-animated-flow .react-flow__node {
   transition: transform 300ms ease;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   AuthKit "frosted glass cathedral" surfaces (landing + app chrome)
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Blueprint grid: 1px frost lines on the midnight canvas, faded at the edges. */
+.ak-grid {
+  background-image:
+    linear-gradient(to right, rgba(186, 215, 247, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(186, 215, 247, 0.06) 1px, transparent 1px);
+  background-size: 80px 80px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 30%, transparent 80%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 30%, transparent 80%);
+}
+
+/* Spotlight beam + soft halo above the hero wordmark. */
+.ak-spotlight {
+  background:
+    conic-gradient(
+      at 50% -8%,
+      transparent 44%,
+      rgba(124, 145, 182, 0.16) 48%,
+      rgba(124, 145, 182, 0.4) 50%,
+      rgba(124, 145, 182, 0.16) 52%,
+      transparent 56%
+    );
+}
+.ak-halo {
+  background: radial-gradient(ellipse 55% 45% at 50% 0%, rgba(139, 124, 246, 0.22), transparent 70%);
+}
+
+/* Glass plate: frost tint, no hard border, elevation from inset glow + dark halo. */
+.ak-glass {
+  background: rgba(186, 214, 247, 0.03);
+  box-shadow:
+    inset 0 1px 1px rgba(199, 211, 234, 0.12),
+    inset 0 24px 48px rgba(199, 211, 234, 0.05),
+    0 24px 32px rgba(6, 6, 14, 0.7);
+}
+/* Deeper glass used for the floating "product" plates in the hero. */
+.ak-glass-deep {
+  background: rgba(5, 6, 15, 0.72);
+  box-shadow:
+    inset 0 1px 1px rgba(216, 236, 248, 0.2),
+    inset 0 24px 48px rgba(168, 216, 245, 0.06),
+    0 16px 32px rgba(0, 0, 0, 0.35);
+}
+/* Universal frosted hairline, the system's only "border". */
+.ak-hairline {
+  box-shadow: inset 0 0 0 1px rgba(186, 215, 247, 0.12);
+}
+
+/* Skywash: the vertical fade that fills the wordmark and largest headings. */
+.ak-skywash {
+  background: linear-gradient(180deg, #d8ecf8 0%, #98c0ef 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

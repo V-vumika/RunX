@@ -209,7 +209,7 @@ export function CodeEditor() {
       options={{
         fontSize: 14,
         fontFamily:
-          "var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace",
+          "var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace",
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         automaticLayout: true,
