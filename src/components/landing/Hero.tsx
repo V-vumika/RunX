@@ -1,141 +1,169 @@
-import { Sparkles } from "lucide-react";
-
 import { LaunchButton } from "./LaunchButton";
+import { GridBackdrop } from "./authkit/GridBackdrop";
+import { Eyebrow } from "./authkit/Eyebrow";
 
 /**
- * Landing hero — the thesis of the product in one screen: RunX turns "code → a
- * number" into "code → watch it run". The mock on the right shows the actual
- * idea (a highlighted current line + live variables + an animating structure)
- * so the promise is visible, not just described.
+ * Hero in the AuthKit "frosted glass cathedral" style: a spotlight beam over a
+ * blueprint grid, a single luminous gradient wordmark, and three floating glass
+ * plates that show what RunX actually does (step through code, watch memory,
+ * animate a structure) fanned like prototypes in a dark studio.
  */
 export function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-border/60">
-      {/* violet glow + faint grid */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,rgba(139,124,246,0.18),transparent_70%)]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.04] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:36px_36px]"
-      />
+    <section className="relative overflow-hidden">
+      <GridBackdrop spotlight />
 
-      <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-6 pb-20 pt-20 md:pt-28 lg:grid-cols-2">
-        <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 font-mono text-xs text-violet-300">
-            <Sparkles className="size-3.5" />
-            Python · step-by-step
-          </span>
+      <div className="relative mx-auto max-w-5xl px-6 pt-24 text-center sm:pt-28">
+        <Eyebrow>Now running in your browser</Eyebrow>
 
-          <h1 className="mt-5 text-balance text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
-            See how your code{" "}
-            <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-              actually runs.
-            </span>
-          </h1>
+        <h1 className="ak-skywash mt-8 font-display font-medium leading-[0.9] tracking-tight text-[clamp(4.5rem,15vw,11rem)]">
+          RunX
+        </h1>
 
-          <p className="mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
-            RunX runs your Python one line at a time and shows the variables, memory,
-            call stack, data structures, and complexity as they change — not just the
-            final output.
-          </p>
+        <p className="mx-auto mt-6 max-w-xl text-pretty text-lg leading-relaxed text-mist">
+          See how your code actually runs. Every line, every variable, every step,
+          drawn as it happens instead of hidden behind a single answer.
+        </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <LaunchButton />
-            <a
-              href="#showcase"
-              className="rounded-md px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              See what it visualizes →
-            </a>
-          </div>
-
-          <p className="mt-5 font-mono text-xs text-muted-foreground/70">
-            No signup. Paste Python, press Run.
-          </p>
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <LaunchButton />
+          <LaunchButton variant="ghost" href="#showcase" label="See what it shows" withArrow={false} />
         </div>
-
-        <HeroMock />
       </div>
+
+      <FloatingPlates />
     </section>
   );
 }
 
-/** A stylized snapshot of the workspace: current line, a variable, an animating sort. */
-function HeroMock() {
-  const lines = [
-    "def bubble_sort(a):",
-    "    for i in range(len(a)):",
-    "        for j in range(len(a)-1-i):",
-    "            if a[j] > a[j+1]:",
-    "                a[j], a[j+1] = a[j+1], a[j]",
-    "    return a",
-  ];
-  const activeLine = 4;
-  const bars = [24, 40, 16, 52, 32]; // heights (%)
-  const comparing = [1, 2];
-
+function FloatingPlates() {
   return (
-    <div className="relative">
-      <div className="absolute -inset-4 -z-10 rounded-2xl bg-violet-500/10 blur-2xl" aria-hidden />
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
-        {/* window bar */}
-        <div className="flex items-center gap-2 border-b border-border/60 bg-muted/30 px-4 py-2.5">
-          <span className="size-3 rounded-full bg-rose-400/70" />
-          <span className="size-3 rounded-full bg-amber-400/70" />
-          <span className="size-3 rounded-full bg-emerald-400/70" />
-          <span className="ml-2 font-mono text-xs text-muted-foreground">main.py</span>
+    <div className="relative mx-auto mt-16 max-w-4xl px-6 pb-24">
+      <div className="relative h-[300px] sm:h-[360px]">
+        {/* left plate: memory */}
+        <div className="absolute left-1/2 top-8 hidden w-64 -translate-x-[122%] -rotate-[7deg] opacity-90 lg:block">
+          <MemoryPlate />
         </div>
-
-        <div className="grid gap-0 sm:grid-cols-[1.4fr_1fr]">
-          {/* code */}
-          <div className="border-b border-border/50 py-3 font-mono text-[12.5px] leading-relaxed sm:border-b-0 sm:border-r">
-            {lines.map((ln, i) => (
-              <div
-                key={i}
-                className={`flex gap-3 px-4 ${
-                  i === activeLine ? "bg-amber-300/15" : ""
-                }`}
-              >
-                <span className="w-4 select-none text-right text-muted-foreground/40">{i + 1}</span>
-                <span className={i === activeLine ? "text-foreground" : "text-muted-foreground"}>
-                  {ln || " "}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* live panel */}
-          <div className="flex flex-col gap-3 p-4">
-            <div className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
-              swapping
-            </div>
-            <div className="flex items-end gap-1.5">
-              {bars.map((h, i) => {
-                const on = comparing.includes(i);
-                return (
-                  <div key={i} className="flex flex-1 flex-col items-center gap-1">
-                    <div
-                      className={`w-full rounded-sm ${on ? "bg-amber-400" : "bg-violet-500/70"}`}
-                      style={{ height: `${h + 24}px` }}
-                    />
-                    <span className="font-mono text-[9px] text-muted-foreground/60">{i}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-1 rounded-md border border-violet-500/25 bg-violet-500/10 px-2.5 py-1.5">
-              <div className="font-mono text-[10px] text-muted-foreground">a[j], a[j+1]</div>
-              <div className="font-mono text-xs font-medium text-violet-200">52 ↔ 16</div>
-            </div>
-            <div className="rounded-md border border-border/50 bg-muted/20 px-2.5 py-1.5">
-              <div className="font-mono text-[10px] text-muted-foreground">complexity</div>
-              <div className="font-mono text-xs font-medium text-emerald-300">O(n²)</div>
-            </div>
-          </div>
+        {/* right plate: structure */}
+        <div className="absolute left-1/2 top-8 hidden w-64 translate-x-[22%] rotate-[7deg] opacity-90 lg:block">
+          <StructurePlate />
+        </div>
+        {/* center plate: the stepping window */}
+        <div className="absolute left-1/2 top-0 w-full max-w-[380px] -translate-x-1/2">
+          <StepperPlate />
         </div>
       </div>
     </div>
+  );
+}
+
+function PlateFrame({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="ak-glass-deep overflow-hidden rounded-2xl">
+      <div className="flex items-center gap-1.5 border-b border-[rgba(186,215,247,0.08)] px-3 py-2.5">
+        <span className="size-2 rounded-full bg-[rgba(228,109,76,0.7)]" />
+        <span className="size-2 rounded-full bg-[rgba(216,236,248,0.5)]" />
+        <span className="size-2 rounded-full bg-[rgba(38,150,132,0.7)]" />
+        <span className="ml-2 font-mono text-[10px] text-fog">{title}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function StepperPlate() {
+  const lines = [
+    "def bubble_sort(a):",
+    "  for i in range(len(a)):",
+    "    for j in range(len(a)-1-i):",
+    "      if a[j] > a[j+1]:",
+    "        a[j], a[j+1] = a[j+1], a[j]",
+  ];
+  const active = 3;
+  return (
+    <PlateFrame title="main.py">
+      <div className="py-3 font-mono text-[11px] leading-[1.7]">
+        {lines.map((ln, i) => (
+          <div key={i} className={`flex gap-2.5 px-3 ${i === active ? "bg-[rgba(250,204,21,0.12)]" : ""}`}>
+            <span className="w-3 select-none text-right text-fog/50">{i + 1}</span>
+            <span className={i === active ? "text-frost" : "text-fog"}>{ln}</span>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 border-t border-[rgba(186,215,247,0.08)] px-3 py-2.5">
+        <span className="rounded-full bg-void-violet px-2.5 py-1 text-[10px] font-medium text-white shadow-[0_0_16px_rgba(102,58,243,0.45)]">
+          Run
+        </span>
+        <span className="font-mono text-[10px] text-fog">step 4 of 42</span>
+        <span className="ml-auto font-mono text-[10px] text-[#7fd7c0]">O(n²)</span>
+      </div>
+    </PlateFrame>
+  );
+}
+
+function MemoryPlate() {
+  return (
+    <PlateFrame title="memory">
+      <div className="flex flex-col gap-2 p-3">
+        {[
+          ["a[j]", "52"],
+          ["a[j+1]", "16"],
+          ["j", "2"],
+        ].map(([k, v]) => (
+          <div key={k} className="flex items-center justify-between rounded-md bg-[rgba(199,211,234,0.05)] px-2.5 py-1.5">
+            <span className="font-mono text-[10px] text-mist">{k}</span>
+            <span className="font-mono text-[11px] font-medium text-frost">{v}</span>
+          </div>
+        ))}
+        <div className="mt-1 flex items-end gap-1">
+          {[26, 40, 18, 52, 30].map((h, i) => (
+            <div
+              key={i}
+              className={`flex-1 rounded-sm ${i === 3 ? "bg-[#efb54a]" : "bg-[rgba(102,58,243,0.6)]"}`}
+              style={{ height: `${h}px` }}
+            />
+          ))}
+        </div>
+      </div>
+    </PlateFrame>
+  );
+}
+
+function StructurePlate() {
+  const nodes = [
+    { x: 50, y: 22 },
+    { x: 24, y: 60 },
+    { x: 76, y: 60 },
+    { x: 88, y: 92 },
+  ];
+  const edges: [number, number][] = [
+    [0, 1],
+    [0, 2],
+    [2, 3],
+  ];
+  return (
+    <PlateFrame title="structure">
+      <div className="p-3">
+        <svg viewBox="0 0 100 110" className="h-32 w-full">
+          {edges.map(([a, b], i) => (
+            <line
+              key={i}
+              x1={nodes[a].x}
+              y1={nodes[a].y}
+              x2={nodes[b].x}
+              y2={nodes[b].y}
+              stroke="rgba(186,215,247,0.25)"
+              strokeWidth={1.2}
+            />
+          ))}
+          {nodes.map((n, i) => (
+            <g key={i}>
+              <circle cx={n.x} cy={n.y} r={9} fill="rgba(102,58,243,0.18)" stroke="#9b8cf7" strokeWidth={1.2} />
+            </g>
+          ))}
+        </svg>
+        <p className="mt-1 text-center font-mono text-[10px] text-fog">binary tree</p>
+      </div>
+    </PlateFrame>
   );
 }
