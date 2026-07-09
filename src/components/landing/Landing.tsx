@@ -1,5 +1,6 @@
 import { Hero } from "./Hero";
 import { Features } from "./Features";
+import { Showcase } from "./Showcase";
 
 /**
  * The marketing landing page shown at "/". Composed of independent sections so
@@ -10,6 +11,7 @@ export function Landing() {
     <div className="min-h-screen bg-background text-foreground">
       <Hero />
       <Features />
+      <Showcase />
     </div>
   );
 }
