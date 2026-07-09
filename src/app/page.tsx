@@ -1,5 +1,12 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
+
+import { LaunchButton } from "@/components/landing/LaunchButton";
+
+export const metadata: Metadata = {
+  title: "RunX — See how your code actually runs",
+  description:
+    "A visual Python playground for students: step through every line, watch variables and data structures change, see the algorithm animate, and get the complexity — not just the output.",
+};
 
 // Landing lives at "/"; the interactive workspace moved to "/app". The rich
 // landing sections are composed in src/components/landing (built out separately);
@@ -11,9 +18,7 @@ export default function Home() {
       <p className="max-w-md text-muted-foreground">
         Run Python step-by-step and watch your variables, data structures, and complexity come to life.
       </p>
-      <Button asChild size="lg">
-        <Link href="/app">Launch RunX</Link>
-      </Button>
+      <LaunchButton />
     </main>
   );
 }
