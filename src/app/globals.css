@@ -209,3 +209,56 @@
   background-clip: text;
   color: transparent;
 }
+
+/* Marching-dash connector between the feature-timeline tiles. */
+@keyframes ak-march {
+  to {
+    background-position-x: -17px;
+  }
+}
+.ak-connector {
+  height: 1px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(186, 215, 247, 0.32) 0 5px,
+    transparent 5px 17px
+  );
+  background-size: 17px 1px;
+  animation: ak-march 0.9s linear infinite;
+}
+
+/* Gentle continuous float for the hero glass plates. */
+@keyframes ak-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+.ak-float {
+  animation: ak-float 6s ease-in-out infinite;
+}
+
+/* Soft pulsing glow used on hover / active accents. */
+@keyframes ak-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+.ak-pulse {
+  animation: ak-pulse 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ak-connector,
+  .ak-float,
+  .ak-pulse {
+    animation: none;
+  }
+}
