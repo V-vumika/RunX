@@ -33,13 +33,13 @@ export function ParticleField() {
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const count = Math.min(150, Math.floor((w * h) / 13000));
+      const count = Math.min(120, Math.floor((w * h) / 17000));
       dots = Array.from({ length: count }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
-        r: Math.random() * 1.1 + 0.3,
+        r: Math.random() * 1 + 0.25,
         s: Math.random() * 0.22 + 0.05, // upward speed
-        o: Math.random() * 0.5 + 0.15, // base opacity
+        o: Math.random() * 0.26 + 0.04, // base opacity (dim)
         t: Math.random() * Math.PI * 2, // twinkle phase
         tw: Math.random() * 0.028 + 0.008, // twinkle speed
       }));

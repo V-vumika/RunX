@@ -158,11 +158,13 @@
 /* Blueprint grid: 1px frost lines on the midnight canvas, faded at the edges. */
 .ak-grid {
   background-image:
-    linear-gradient(to right, rgba(186, 215, 247, 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(186, 215, 247, 0.06) 1px, transparent 1px);
-  background-size: 80px 80px;
-  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 30%, transparent 80%);
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 30%, transparent 80%);
+    linear-gradient(to right, rgba(186, 215, 247, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(186, 215, 247, 0.07) 1px, transparent 1px);
+  /* Few, large cells, like the reference, instead of a dense mesh. */
+  background-size: 220px 220px;
+  background-position: center top;
+  -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 38%, #000 25%, transparent 78%);
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 38%, #000 25%, transparent 78%);
 }
 
 /* Spotlight beam + soft halo above the hero wordmark. */
