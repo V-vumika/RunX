@@ -167,20 +167,48 @@
   mask-image: radial-gradient(ellipse 70% 55% at 50% 38%, #000 25%, transparent 78%);
 }
 
-/* Spotlight beam + soft halo above the hero wordmark. */
-.ak-spotlight {
-  background:
-    conic-gradient(
-      at 50% -8%,
-      transparent 44%,
-      rgba(124, 145, 182, 0.16) 48%,
-      rgba(124, 145, 182, 0.4) 50%,
-      rgba(124, 145, 182, 0.16) 52%,
-      transparent 56%
-    );
+/* Wide, diffused light cone descending onto the wordmark. A real triangle
+   (narrow apex at top, widening downward) filled with a top-bright gradient and
+   heavily blurred, so it reads as a soft volumetric shaft rather than a blob. */
+.ak-beam {
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  background: linear-gradient(
+    to bottom,
+    rgba(216, 234, 250, 0.32) 0%,
+    rgba(200, 218, 244, 0.1) 34%,
+    transparent 72%
+  );
+  filter: blur(18px);
+}
+/* The small bright source at the very top the cone appears to fall from. */
+.ak-beam-source {
+  background: radial-gradient(circle at 50% 50%, rgba(224, 240, 252, 0.55), transparent 68%);
+  filter: blur(4px);
 }
 .ak-halo {
-  background: radial-gradient(ellipse 55% 45% at 50% 0%, rgba(139, 124, 246, 0.22), transparent 70%);
+  background:
+    radial-gradient(ellipse 30% 34% at 50% 6%, rgba(198, 214, 240, 0.14), transparent 64%),
+    radial-gradient(ellipse 52% 40% at 50% 2%, rgba(139, 124, 246, 0.13), transparent 72%);
+}
+
+/* Corner falloff so the lit center reads as the focus and the edges recede. */
+.ak-vignette {
+  background: radial-gradient(ellipse 78% 62% at 50% 34%, transparent 45%, rgba(5, 6, 15, 0.6) 100%);
+}
+
+/* Top edge catches the spotlight, the way the reference login cards do. A
+   hairline that is bright at the top and fades to nothing down the sides. */
+.ak-rimlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(180deg, rgba(216, 236, 248, 0.4), rgba(216, 236, 248, 0) 42%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 /* Glass plate: frost tint, no hard border, elevation from inset glow + dark halo. */
