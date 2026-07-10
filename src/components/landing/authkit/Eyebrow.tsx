@@ -13,9 +13,9 @@ export function Eyebrow({
 }) {
   return (
     <div className={cn("flex items-center justify-center gap-4", className)}>
-      <span className="h-px w-12 bg-gradient-to-r from-transparent to-[rgba(186,215,247,0.2)]" />
+      <span className="h-px w-12 bg-linear-to-r from-transparent to-[rgba(186,215,247,0.2)]" />
       <span className="font-mono text-[13px] uppercase tracking-[0.2em] text-mist">{children}</span>
-      <span className="h-px w-12 bg-gradient-to-l from-transparent to-[rgba(186,215,247,0.2)]" />
+      <span className="h-px w-12 bg-linear-to-l from-transparent to-[rgba(186,215,247,0.2)]" />
     </div>
   );
 }

@@ -3,10 +3,10 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Ambient starfield behind the whole landing: faint white dots that drift upward
- * while twinkling, on a fixed full-viewport canvas. Sits above the midnight base
- * and below the content. Honours prefers-reduced-motion by drawing a single
- * static frame instead of animating.
+ * Ambient starfield for the hero, in the particle-hero style: a dense field of
+ * thin vertical streaks that drift upward, each twinkling and fading out after a
+ * random delay before respawning. Fills its nearest positioned ancestor. Honours
+ * prefers-reduced-motion by drawing a single static frame.
  */
 export function ParticleField() {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -24,8 +24,17 @@ export function ParticleField() {
     let w = 0;
     let h = 0;
     let raf = 0;
-    type P = { x: number; y: number; r: number; s: number; o: number; t: number; tw: number };
-    let dots: P[] = [];
+    type Streak = { x: number; y: number; speed: number; opacity: number; fadeStart: number; fadingOut: boolean };
+    let streaks: Streak[] = [];
+
+    function reset(s: Streak) {
+      s.x = Math.random() * w;
+      s.y = Math.random() * h;
+      s.speed = Math.random() / 5 + 0.1;
+      s.opacity = 1;
+      s.fadeStart = Date.now() + Math.random() * 600 + 100;
+      s.fadingOut = false;
+    }
 
     function init() {
       w = canvas.clientWidth;
@@ -33,37 +42,32 @@ export function ParticleField() {
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const count = Math.min(120, Math.floor((w * h) / 17000));
-      dots = Array.from({ length: count }, () => ({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        r: Math.random() * 1 + 0.25,
-        s: Math.random() * 0.22 + 0.05, // upward speed
-        o: Math.random() * 0.26 + 0.04, // base opacity (dim)
-        t: Math.random() * Math.PI * 2, // twinkle phase
-        tw: Math.random() * 0.028 + 0.008, // twinkle speed
-      }));
+      const count = Math.min(380, Math.floor((w * h) / 7000));
+      streaks = [];
+      for (let i = 0; i < count; i++) {
+        const s: Streak = { x: 0, y: 0, speed: 0, opacity: 1, fadeStart: 0, fadingOut: false };
+        reset(s);
+        streaks.push(s);
+      }
     }
 
     function paint(animate: boolean) {
       c.clearRect(0, 0, w, h);
-      for (const p of dots) {
+      const now = Date.now();
+      for (const s of streaks) {
         if (animate) {
-          p.y -= p.s;
-          p.t += p.tw;
-          if (p.y < -2) {
-            p.y = h + 2;
-            p.x = Math.random() * w;
+          s.y -= s.speed;
+          if (s.y < 0) reset(s);
+          if (!s.fadingOut && now > s.fadeStart) s.fadingOut = true;
+          if (s.fadingOut) {
+            s.opacity -= 0.008;
+            if (s.opacity <= 0) reset(s);
           }
         }
-        const twinkle = animate ? 0.45 + 0.55 * Math.sin(p.t) : 1;
-        c.globalAlpha = p.o * twinkle;
-        c.beginPath();
-        c.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        c.fillStyle = "#dbe7fb";
-        c.fill();
+        // Cool white-to-cyan streak, like the reference particles.
+        c.fillStyle = `rgba(${Math.floor(255 - Math.random() * 128)}, 255, 255, ${s.opacity})`;
+        c.fillRect(s.x, s.y, 0.5, Math.random() * 2 + 1);
       }
-      c.globalAlpha = 1;
     }
 
     function loop() {
@@ -86,5 +90,5 @@ export function ParticleField() {
     };
   }, []);
 
-  return <canvas ref={ref} aria-hidden className="pointer-events-none fixed inset-0 -z-10 h-full w-full" />;
+  return <canvas ref={ref} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />;
 }

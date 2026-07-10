@@ -15,7 +15,13 @@ export function GlassCard({
   deep?: boolean;
 }) {
   return (
-    <div className={cn("rounded-2xl", deep ? "ak-glass-deep" : "ak-glass", className)}>
+    <div
+      className={cn(
+        "rounded-2xl transition-transform duration-300 ease-out will-change-transform hover:-translate-y-1",
+        deep ? "ak-glass-deep" : "ak-glass",
+        className
+      )}
+    >
       {children}
     </div>
   );

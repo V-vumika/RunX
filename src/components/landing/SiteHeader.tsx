@@ -2,11 +2,16 @@ import Link from "next/link";
 
 import { LaunchButton } from "./LaunchButton";
 
-/** Frosted, translucent landing nav that floats over the midnight canvas. */
+/**
+ * Landing nav rendered as part of the hero: transparent, borderless, sitting
+ * directly on the midnight canvas so the hero's blueprint grid runs up behind
+ * it (like the AuthKit reference). Absolutely positioned so the hero starts at
+ * the very top of the page.
+ */
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-30 border-b border-[rgba(186,215,247,0.08)] bg-[rgba(5,6,15,0.55)] backdrop-blur-xl">
-      <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-3.5">
+    <header className="absolute inset-x-0 top-0 z-30">
+      <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-5">
         <Link href="/" className="font-display text-lg font-medium tracking-tight text-frost">
           RunX
         </Link>
@@ -20,7 +25,7 @@ export function SiteHeader() {
           </a>
         </nav>
 
-        <LaunchButton variant="ghost" size="sm" label="Launch" withArrow={false} className="ml-auto sm:ml-0" />
+        <LaunchButton size="sm" label="Launch" withArrow={false} className="ml-auto sm:ml-0" />
       </div>
     </header>
   );
