@@ -1,21 +1,28 @@
-import { SiteHeader } from "./SiteHeader";
-import { Hero } from "./Hero";
+import RunXHero from "@/components/ui/hero";
+import { SiteNav } from "./SiteNav";
+import { HowItWorks } from "./HowItWorks";
 import { Features } from "./Features";
-import { Showcase } from "./Showcase";
+import { VisualizerShowcase } from "./VisualizerShowcase";
+import { Languages } from "./Languages";
+import { Faq } from "./Faq";
 import { CtaFooter } from "./CtaFooter";
 
 /**
- * The marketing landing page shown at "/". The starfield lives inside the hero
- * (like the reference), so the sections below sit on the plain midnight canvas.
- * Composed of independent sections; the workspace lives at "/app".
+ * The marketing landing page shown at "/". A persistent nav overlays a
+ * full-viewport shader hero (with a self-playing product demo); the product
+ * story then unfolds section by section on one black canvas, every block
+ * animating in on scroll. The workspace lives at "/app".
  */
 export function Landing() {
   return (
-    <div className="relative min-h-screen text-foreground">
-      <SiteHeader />
-      <Hero />
+    <div className="relative min-h-screen bg-black text-white">
+      <SiteNav />
+      <RunXHero />
+      <HowItWorks />
       <Features />
-      <Showcase />
+      <VisualizerShowcase />
+      <Languages />
+      <Faq />
       <CtaFooter />
     </div>
   );
