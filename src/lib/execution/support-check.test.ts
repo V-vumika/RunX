@@ -29,6 +29,40 @@ describe("preflightCheck", () => {
   });
 });
 
+describe("preflightCheck (javascript)", () => {
+  it("warns on browser APIs", () => {
+    const issues = preflightCheck("document.title = 'x'", "javascript");
+    expect(issues.some((i) => /browser/i.test(i.title))).toBe(true);
+  });
+
+  it("warns on networking and modules", () => {
+    expect(preflightCheck("fetch('/api')", "javascript").some((i) => /network/i.test(i.title))).toBe(true);
+    expect(preflightCheck("const x = require('fs')", "javascript").some((i) => /module/i.test(i.title))).toBe(true);
+  });
+
+  it("ignores // comments and passes clean code", () => {
+    expect(preflightCheck("// document.write('x')\nconsole.log(1)", "javascript")).toHaveLength(0);
+    expect(preflightCheck("console.log([1, 2].map(x => x * 2))", "javascript")).toHaveLength(0);
+  });
+
+  it("does not apply Python rules to JS (and vice versa)", () => {
+    expect(preflightCheck("import requests", "javascript").some((i) => /network/i.test(i.title))).toBe(false);
+    expect(preflightCheck("fetch('/api')", "python")).toHaveLength(0);
+  });
+});
+
+describe("usesStdin (javascript)", () => {
+  it("detects prompt() and readline()", () => {
+    expect(usesStdin("const n = prompt('n?')", "javascript")).toBe(true);
+    expect(usesStdin("const line = readline()", "javascript")).toBe(true);
+  });
+
+  it("is false for plain code and does not use Python signals", () => {
+    expect(usesStdin("console.log(1)", "javascript")).toBe(false);
+    expect(usesStdin("input()", "javascript")).toBe(false);
+  });
+});
+
 describe("usesStdin", () => {
   it("detects input() and sys.stdin", () => {
     expect(usesStdin("n = int(input())")).toBe(true);

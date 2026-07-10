@@ -29,6 +29,20 @@ Everything the UI shows comes from here. The worker **produces** it, the UI
   for aliasing/shared-reference detection), `value` (primitives), `items`
   (list/tuple/set), `entries` (dict), `attributes` (object), `length`, `truncated`.
 
+## Execution providers — `src/lib/execution/providers.ts`
+
+One engine per language, one interface. `getExecutionClient(language)` returns an
+`ExecutionClient` (status subscription + watchdog-guarded `run()`); the store
+never touches a concrete client.
+
+- `python` → Pyodide worker client (below) — full per-line tracing.
+- `javascript` → `js-client.ts` + `public/workers/js.worker.js` — executes via
+  `AsyncFunction` inside a plain worker (never main-thread eval), captures
+  console output + `prompt()`/`readline()` stdin, returns a `RunResult` with
+  ONE synthetic `final` snapshot carrying stdout. No per-line tracer yet
+  (Phase 9); Explain/Complexity show a Python-only notice meanwhile.
+- `java` / `cpp` → future Judge0 CE client registers here; no store/UI change.
+
 ## The engine — `public/workers/pyodide.worker.js`
 
 - Classic Web Worker; loads Pyodide from CDN (`PYODIDE_VERSION` const).
@@ -45,9 +59,11 @@ Singleton. Owns the worker, tracks engine status, `run(code) → Promise<RunResu
 
 ## The store — `src/lib/store/execution-store.ts`
 
-State: `code, snapshots, currentStep, isRunning, result, engineStatus`.
-Actions: `setCode, initEngine, run, stepForward, stepBackward, goToStep, reset`.
-Selector: `selectCurrentSnapshot(state)`.
+State: `code, language, snapshots, currentStep, isRunning, result, engineStatus`
+(+ per-language code buffers, so switching languages never loses work).
+Actions: `setCode, setLanguage, initEngine, run, stepForward, stepBackward,
+goToStep, reset`. Selector: `selectCurrentSnapshot(state)`. `initEngine`/`run`
+resolve the engine through `getExecutionClient(language)`.
 
 ## Adding a visualizer (the common future task)
 

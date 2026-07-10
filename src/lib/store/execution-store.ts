@@ -2,9 +2,9 @@ import { create } from "zustand";
 
 import type { RunResult, Snapshot } from "@/types/snapshot";
 import {
-  getPyodideClient,
+  getExecutionClient,
   type EngineStatus,
-} from "@/lib/execution/pyodide-client";
+} from "@/lib/execution/providers";
 import {
   getEntryRunner,
   type EntryPoint,
@@ -31,6 +31,25 @@ result = factorial(4)
 print("sum:", total)
 print("4! =", result)
 `;
+
+/** JS starter — mirrors the Python default so the two feel like one product. */
+export const DEFAULT_JS_CODE = `function factorial(n) {
+  if (n <= 1) return 1;
+  return n * factorial(n - 1);
+}
+
+const numbers = [5, 2, 9, 1, 7];
+let total = 0;
+for (const x of numbers) total += x;
+
+console.log("sum:", total);
+console.log("4! =", factorial(4));
+`;
+
+const DEFAULT_CODE_BY_LANGUAGE: Partial<Record<Language, string>> = {
+  python: DEFAULT_CODE,
+  javascript: DEFAULT_JS_CODE,
+};
 
 /** Detected entry point + free-form driver for the current code. */
 const NO_ENTRY: EntryPoint = { kind: "has-driver", params: [] };
@@ -81,7 +100,10 @@ interface ExecutionState {
 
   engineStatus: EngineStatus;
   engineError?: string;
-  engineSubscribed: boolean;
+  /** Unsubscribe from the current language's engine-status stream (internal). */
+  _engineUnsub: (() => void) | null;
+  /** Per-language code buffers so switching languages doesn't lose work (internal). */
+  _codeByLang: Partial<Record<Language, string>>;
 
   /** Auto-play state */
   isPlaying: boolean;
@@ -89,6 +111,7 @@ interface ExecutionState {
   _playTimer: ReturnType<typeof setInterval> | null;
 
   setCode: (code: string) => void;
+  setLanguage: (language: Language) => void;
   setInput: (name: string, value: string) => void;
   setStdin: (stdin: string) => void;
   initEngine: () => void;
@@ -120,7 +143,8 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
 
   engineStatus: "uninitialized",
   engineError: undefined,
-  engineSubscribed: false,
+  _engineUnsub: null,
+  _codeByLang: {},
 
   isPlaying: false,
   playSpeed: 1,
@@ -135,21 +159,55 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
         state.snapshots.length > 0
           ? { snapshots: [], currentStep: 0, result: null, runError: null, supportWarnings: [] }
           : {};
-      return { code, ...derived, ...cleared };
+      return {
+        code,
+        ...derived,
+        ...cleared,
+        _codeByLang: { ...state._codeByLang, [state.language]: code },
+      };
     }),
+
+  // Switching languages swaps the whole working context: the code buffer
+  // (per-language, so nothing is lost), the detected entry, the trace, and the
+  // engine-status subscription — the engines themselves stay alive, so
+  // switching back is instant.
+  setLanguage: (language) => {
+    const state = get();
+    if (language === state.language) return;
+    state.pause();
+    const cache = { ...state._codeByLang, [state.language]: state.code };
+    const code = cache[language] ?? DEFAULT_CODE_BY_LANGUAGE[language] ?? "";
+    const derived = deriveEntry(language, code, {});
+    set({
+      language,
+      code,
+      ...derived,
+      _codeByLang: cache,
+      snapshots: [],
+      currentStep: 0,
+      result: null,
+      runError: null,
+      supportWarnings: [],
+    });
+    get().initEngine();
+  },
 
   setInput: (name, value) =>
     set((state) => ({ inputs: { ...state.inputs, [name]: value } })),
 
   setStdin: (stdin) => set({ stdin }),
 
+  // (Re)points the status subscription at the current language's engine and
+  // starts loading it. Called on mount and after every language switch.
   initEngine: () => {
-    if (get().engineSubscribed || typeof window === "undefined") return;
-    set({ engineSubscribed: true });
-    const client = getPyodideClient();
-    client.subscribe((status, error) =>
+    if (typeof window === "undefined") return;
+    const client = getExecutionClient(get().language);
+    if (!client) return; // language without an engine yet (selector disables these)
+    get()._engineUnsub?.();
+    const unsub = client.subscribe((status, error) =>
       set({ engineStatus: status, engineError: error })
     );
+    set({ _engineUnsub: unsub });
     client.init();
   },
 
@@ -160,9 +218,15 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
 
     const { code, language, entry, inputs } = get();
 
-    // Pre-flight: some code can't run in the sandbox. Block the hang cases
-    // (input()), keep the rest as warnings shown alongside the trace.
-    const issues = preflightCheck(code);
+    const client = getExecutionClient(language);
+    if (!client) {
+      set({ runError: `${language} execution isn't available yet.` });
+      return;
+    }
+
+    // Pre-flight: some code can't run in the sandbox. Block the hang cases,
+    // keep the rest as warnings shown alongside the trace.
+    const issues = preflightCheck(code, language);
     const blocking = issues.find((i) => i.severity === "block");
     const warnings = issues.filter((i) => i.severity === "warn");
     if (blocking) {
@@ -200,8 +264,10 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
         : code;
       // Nested structures (linked lists, tries, trees) live several attribute
       // hops deep — the default depth of 5 truncates them mid-chain. 12 lets a
-      // typical demo list/trie serialize fully; breadth is still capped by maxItems.
-      const result = await getPyodideClient().run(source, {
+      // typical demo list/trie serialize fully; breadth is still capped by
+      // maxItems. (The JS engine ignores the trace-shaping options it doesn't
+      // use — only stdin matters to it today.)
+      const result = await client.run(source, {
         maxDepth: 12,
         maxSteps: stepBudget(source),
         stdin: get().stdin,

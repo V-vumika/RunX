@@ -12,6 +12,7 @@ import { measureRun } from "@/lib/explain/measure";
 export function ComplexityPanel() {
   const snapshots = useExecutionStore((s) => s.snapshots);
   const code = useExecutionStore((s) => s.code);
+  const language = useExecutionStore((s) => s.language);
   const result = useExecutionStore((s) => s.result);
 
   const hasTrace = snapshots.length > 0;
@@ -29,6 +30,24 @@ export function ComplexityPanel() {
     () => (hasTrace ? measureRun(snapshots, result?.truncated ?? false) : null),
     [snapshots, hasTrace, result?.truncated]
   );
+
+  // The complexity classifier reads Python AST facts + Python-shaped source
+  // heuristics — it has nothing honest to say about other languages yet.
+  // (After the hooks above, so hook order never changes with language.)
+  if (language !== "python") {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-center">
+        <div className="max-w-sm">
+          <TrendingUp className="mx-auto mb-3 size-7 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            Complexity analysis is available for{" "}
+            <span className="font-medium text-foreground">Python</span> only for now — it reads
+            the Python AST. Support for other languages arrives with their tracers.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!hasTrace || !summary) {
     return (

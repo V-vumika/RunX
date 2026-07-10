@@ -48,8 +48,13 @@ const MonacoEditor = dynamic(
 export function CodeEditor() {
   const code = useExecutionStore((s) => s.code);
   const setCode = useExecutionStore((s) => s.setCode);
+  const language = useExecutionStore((s) => s.language);
   const snapshot = useExecutionStore(selectCurrentSnapshot);
   const hasTrace = useExecutionStore((s) => s.snapshots.length > 0);
+
+  // Monaco language id for syntax highlighting; only runnable languages appear
+  // in the selector, so this stays a simple two-way map for now.
+  const monacoLanguage = language === "javascript" ? "javascript" : "python";
 
   const editorRef = useRef<MonacoEditorNS.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
@@ -201,7 +206,7 @@ export function CodeEditor() {
       </div>
       <MonacoEditor
       height="100%"
-      defaultLanguage="python"
+      language={monacoLanguage}
       theme="vs-dark"
       value={code}
       onChange={(value) => setCode(value ?? "")}

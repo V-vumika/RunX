@@ -38,7 +38,7 @@ export function GenericViz({ snapshots, step }: { snapshots: Snapshot[]; step: n
         </span>
       </div>
 
-      <div className="max-h-[360px] space-y-1.5 overflow-auto bg-[#0b0b16] p-2.5">
+      <div className="max-h-90 space-y-1.5 overflow-auto bg-[#0b0b16] p-2.5">
         {vars.map((v) => {
           const isNew = !prev.has(v.name);
           const changed = !isNew && prev.get(v.name) !== v.value.repr;

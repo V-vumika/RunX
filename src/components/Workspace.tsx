@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeEditor } from "@/components/editor/CodeEditor";
+import { LanguageSelector } from "@/components/editor/LanguageSelector";
 import { ShareButton } from "@/components/ShareButton";
 import { decodeShare } from "@/lib/share";
 import { ExecutionControls } from "@/components/execution/ExecutionControls";
@@ -25,24 +26,29 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 export function Workspace() {
   const initEngine = useExecutionStore((s) => s.initEngine);
   const setCode = useExecutionStore((s) => s.setCode);
+  const setLanguage = useExecutionStore((s) => s.setLanguage);
   const setStdin = useExecutionStore((s) => s.setStdin);
+  const language = useExecutionStore((s) => s.language);
   const isMobile = useIsMobile();
 
-  // Spin up the Pyodide worker as soon as the workspace mounts.
+  // Spin up the current language's engine as soon as the workspace mounts.
   useEffect(() => {
     initEngine();
   }, [initEngine]);
 
-  // Restore code + stdin from a shared link (#s=…), if present.
+  // Restore language + code + stdin from a shared link (#s=…), if present.
+  // Language first — setLanguage swaps the code buffer, so it must run before
+  // setCode writes the shared source into it.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const hash = window.location.hash;
     if (!hash.startsWith("#s=")) return;
     const payload = decodeShare(hash.slice(3));
     if (!payload) return;
+    if (payload.language) setLanguage(payload.language);
     if (payload.stdin) setStdin(payload.stdin);
     setCode(payload.code);
-  }, [setCode, setStdin]);
+  }, [setCode, setLanguage, setStdin]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -54,7 +60,9 @@ export function Workspace() {
           <span className="flex min-w-0 flex-col leading-tight">
             <span className="font-display font-medium tracking-tight text-frost">RunX</span>
             <span className="truncate text-xs text-fog">
-              Run Python line by line and watch your variables change.
+              {language === "javascript"
+                ? "Run JavaScript in a sandboxed worker and see its output."
+                : "Run Python line by line and watch your variables change."}
             </span>
           </span>
         </Link>
@@ -74,10 +82,7 @@ export function Workspace() {
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel defaultSize={55} minSize={30}>
               <div className="flex h-full flex-col">
-                <PanelHeader>
-                  <span>main.py</span>
-                  <span className="font-normal text-muted-foreground/70">paste any Python code</span>
-                </PanelHeader>
+                <EditorPanelHeader />
                 <div className="min-h-0 flex-1">
                   <CodeEditor />
                 </div>
@@ -104,10 +109,7 @@ function MobileLayout() {
   return (
     <div className="flex h-full flex-col overflow-y-auto">
       <div className="flex h-[50vh] shrink-0 flex-col border-b">
-        <PanelHeader>
-          <span>main.py</span>
-          <span className="font-normal text-muted-foreground/70">paste any Python code</span>
-        </PanelHeader>
+        <EditorPanelHeader />
         <div className="min-h-0 flex-1">
           <CodeEditor />
         </div>
@@ -148,6 +150,23 @@ function ResultTabs() {
         <OutputPanel />
       </TabsContent>
     </Tabs>
+  );
+}
+
+/** Editor panel header: language picker + language-appropriate filename/hint. */
+function EditorPanelHeader() {
+  const language = useExecutionStore((s) => s.language);
+  const isJs = language === "javascript";
+  return (
+    <PanelHeader>
+      <span className="flex items-center gap-2">
+        <LanguageSelector />
+        <span>{isJs ? "main.js" : "main.py"}</span>
+      </span>
+      <span className="font-normal text-muted-foreground/70">
+        {isJs ? "paste any JavaScript code" : "paste any Python code"}
+      </span>
+    </PanelHeader>
   );
 }
 

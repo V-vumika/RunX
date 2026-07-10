@@ -27,4 +27,17 @@ describe("share encode/decode", () => {
     expect(decodeShare("!!!not-base64!!!")).toBeNull();
     expect(decodeShare("")).toBeNull();
   });
+
+  it("round-trips a non-Python language", () => {
+    const token = encodeShare({ code: "console.log(1)", language: "javascript" });
+    expect(decodeShare(token)?.language).toBe("javascript");
+  });
+
+  it("omits python (the default) and ignores unknown languages", () => {
+    const py = decodeShare(encodeShare({ code: "print(1)", language: "python" }));
+    expect(py?.language).toBeUndefined();
+    // A forged/future token with an unknown language falls back to undefined.
+    const forged = encodeShare({ code: "x" }).replace(/^/, "");
+    expect(decodeShare(forged)?.language).toBeUndefined();
+  });
 });

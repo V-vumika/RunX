@@ -8,7 +8,8 @@ import { narrateAll, shortRepr, type StepKind } from "@/lib/explain/narrate";
 import { classifyProgram, type AlgoKind } from "@/lib/explain/classify";
 import { explainException } from "@/lib/explain/exceptions";
 import { ExampleGallery } from "@/components/explain/ExampleGallery";
-import type { Snapshot, Variable, ValueNode } from "@/types/snapshot";
+import type { ExecutionError, Snapshot, Variable, ValueNode } from "@/types/snapshot";
+import type { SupportIssue } from "@/lib/execution/support-check";
 
 import { SortViz }         from "@/components/visualizers/SortViz";
 import { RecursionViz }    from "@/components/visualizers/RecursionViz";
@@ -154,11 +155,95 @@ function AutoViz({ kind, snapshots, step }: { kind: AlgoKind; snapshots: Snapsho
   }
 }
 
+// ── non-Python view ───────────────────────────────────────────────────────────
+
+/**
+ * Shown when a language without a step tracer is selected (JavaScript today).
+ * Execution works — output goes to the Output tab — but there is no per-line
+ * trace for the Explain machinery, so say so instead of misclassifying.
+ */
+function NonPythonNotice({
+  hasRun,
+  error,
+  runError,
+  warnings,
+}: {
+  hasRun: boolean;
+  error: ExecutionError | null;
+  runError: string | null;
+  warnings: SupportIssue[];
+}) {
+  return (
+    <ScrollArea className="h-full">
+      <div className="flex flex-col gap-2.5 p-3">
+        {warnings.length > 0 && (
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5">
+            {warnings.map((w) => (
+              <div key={w.title} className="flex items-start gap-1.5 text-xs">
+                <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
+                <span>
+                  <span className="font-medium text-amber-300">{w.title}</span>
+                  <span className="text-muted-foreground"> — {w.detail}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {runError && (
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3">
+            <div className="flex items-start gap-1.5 text-xs">
+              <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
+              <p className="leading-relaxed text-foreground/90">{runError}</p>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3">
+            <div className="flex items-center gap-1.5 text-sm font-semibold text-destructive">
+              <TriangleAlert className="size-4" />
+              {error.type}
+              {error.line != null && (
+                <span className="font-mono text-xs font-normal opacity-70">· line {error.line}</span>
+              )}
+            </div>
+            <p className="mt-1 font-mono text-xs text-destructive/80 whitespace-pre-wrap">{error.message}</p>
+          </div>
+        )}
+
+        <div className="rounded-md border border-border/50 bg-card/60 p-4 text-center">
+          <Lightbulb className="mx-auto mb-2 size-5 text-muted-foreground/40" />
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {hasRun ? (
+              <>
+                Your program ran — see its console output in the{" "}
+                <span className="font-medium text-foreground">Output</span> tab.
+              </>
+            ) : (
+              <>
+                Press <span className="font-medium text-foreground">Run</span> to execute your
+                code in a sandboxed worker. Output appears in the{" "}
+                <span className="font-medium text-foreground">Output</span> tab.
+              </>
+            )}
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground/70">
+            Step-by-step visualization is Python-only for now — the JavaScript tracer is on the
+            roadmap. Switch to Python to watch code run line by line.
+          </p>
+        </div>
+      </div>
+    </ScrollArea>
+  );
+}
+
 // ── main panel ────────────────────────────────────────────────────────────────
 
 export function ExplainPanel() {
   const snapshots   = useExecutionStore((s) => s.snapshots);
   const code        = useExecutionStore((s) => s.code);
+  const language    = useExecutionStore((s) => s.language);
   const currentStep = useExecutionStore((s) => s.currentStep);
   const result      = useExecutionStore((s) => s.result);
   const runError    = useExecutionStore((s) => s.runError);
@@ -180,6 +265,22 @@ export function ExplainPanel() {
     () => (hasTrace ? detectLiveStructures(snapshots[currentStep], snapshots[currentStep - 1], code) : []),
     [snapshots, currentStep, code, hasTrace]
   );
+
+  // The classifier / narrator / structure detectors are Python-only today —
+  // running them on another language would produce confident nonsense. Until
+  // the per-language tracers land (Phase 9), non-Python gets an honest notice
+  // plus its errors; output lives in the Output tab. (Placed after the hooks
+  // above so the hook order never changes with language.)
+  if (language !== "python") {
+    return (
+      <NonPythonNotice
+        hasRun={hasTrace}
+        error={error}
+        runError={runError}
+        warnings={warnings}
+      />
+    );
+  }
 
   if (!hasTrace && runError) {
     return (

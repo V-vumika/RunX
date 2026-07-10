@@ -28,6 +28,8 @@ The end-to-end execution pipeline is working:
 - **Editor:** Monaco (`@monaco-editor/react`)
 - **State:** Zustand
 - **Python execution:** Pyodide (loaded from CDN, run in a classic Web Worker)
+- **JavaScript execution:** a dedicated classic Web Worker (`AsyncFunction`,
+  console/stdin/error capture — output-only for now, per-line tracing later)
 - Later: Framer Motion (animation), React Flow + D3 (graphs/trees), Supabase
   (db/auth), OpenAI/Gemini (AI layer)
 
@@ -71,16 +73,16 @@ variables, call stack, and output update at each step.
 ## Project structure
 
 ```
-public/workers/        Pyodide execution worker (classic worker)
+public/workers/        Execution workers (Pyodide for Python, plain worker for JS)
 src/app/               Next.js App Router entry + global styles
 src/components/
-  editor/              Monaco code editor
+  editor/              Monaco code editor + language selector
   execution/           Run/step controls, call stack, output
   inspector/           Variable inspector + recursive value renderer
   visualizers/         DSA visualizers (Phase 3+)
   ui/                  shadcn/ui primitives
 src/lib/
-  execution/           Typed worker client
+  execution/           Typed worker clients + per-language provider registry
   store/               Zustand execution store
   ai/                  AI provider interface (Phase 7+)
   supabase/            DB/auth client (later)

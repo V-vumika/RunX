@@ -16,8 +16,8 @@ export function ShareButton() {
   const [copied, setCopied] = useState(false);
 
   const share = () => {
-    const { code, stdin } = useExecutionStore.getState();
-    const token = encodeShare({ code, stdin });
+    const { code, stdin, language } = useExecutionStore.getState();
+    const token = encodeShare({ code, stdin, language });
     const url = `${location.origin}${location.pathname}#s=${token}`;
     history.replaceState(null, "", url);
     navigator.clipboard?.writeText(url).catch(() => {});

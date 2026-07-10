@@ -7,17 +7,21 @@ import { useExecutionStore } from "@/lib/store/execution-store";
 import { usesStdin } from "@/lib/execution/support-check";
 
 /**
- * Standard-input editor. Shown only when the code reads stdin (`input()` /
- * `sys.stdin`). The text here is fed to the program line by line, so
- * input()-based / competitive-style programs run instead of hanging.
+ * Standard-input editor. Shown only when the code reads stdin (Python:
+ * `input()` / `sys.stdin`; JavaScript: `prompt()` / `readline()`). The text
+ * here is fed to the program line by line, so input-reading programs run
+ * instead of hanging.
  */
 export function StdinPanel() {
   const code = useExecutionStore((s) => s.code);
+  const language = useExecutionStore((s) => s.language);
   const stdin = useExecutionStore((s) => s.stdin);
   const setStdin = useExecutionStore((s) => s.setStdin);
   const [open, setOpen] = useState(true);
 
-  if (!usesStdin(code)) return null;
+  if (!usesStdin(code, language)) return null;
+
+  const readFn = language === "javascript" ? "prompt()" : "input()";
 
   const rows = Math.min(8, Math.max(3, stdin.split("\n").length));
 
@@ -31,13 +35,13 @@ export function StdinPanel() {
         {open ? <ChevronDown className="size-3.5 shrink-0" /> : <ChevronRight className="size-3.5 shrink-0" />}
         <Terminal className="size-3.5 shrink-0 text-sky-400" />
         <span className="shrink-0">Standard input</span>
-        <span className="ml-1 truncate font-normal text-muted-foreground/50">this code reads input()</span>
+        <span className="ml-1 truncate font-normal text-muted-foreground/50">this code reads {readFn}</span>
       </button>
 
       {open && (
         <div className="px-3 pb-3">
           <p className="mb-1.5 text-[11px] leading-relaxed text-muted-foreground">
-            One value per line — each <code className="rounded bg-muted px-1 py-0.5 font-mono">input()</code> call
+            One value per line — each <code className="rounded bg-muted px-1 py-0.5 font-mono">{readFn}</code> call
             reads the next line.
           </p>
           <textarea

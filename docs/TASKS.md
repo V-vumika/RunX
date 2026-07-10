@@ -66,6 +66,30 @@ Live status. Update as we go. Assignees: 🟣 **Vumi** (owner) · 🔵 **Shiv** 
 - 🔵 **Trie never dispatched.** `classify.ts` now detects a trie (high-confidence: a node object with a `children` **dict** attr, the `_snapshot` dict, or a dict with a `children` key — narrow enough not to fire on ordinary trees) and emits new `AlgoKind` `"trie"`, so `AutoViz` actually selects `TrieViz`.
 - 🔵 **LinkedListViz rebuilt — it never showed the list.** Old version drew the *pointer variables* (head/prev/curr…) as boxes with arrows between them, implying they were consecutive nodes (they're separate pointers). New version walks the real chain from `head` via `.next` (cycle-safe, depth-capped), renders `[val|next] → … → null`, and overlays each named pointer (`head↓`/`curr↓`/…) above the node it references (matched by object `id`). Handles empty list, cycles, and depth-truncated chains.
 
+## ✅ Done (2026-07-10) — JavaScript execution (first second language)
+- 🔵 **Execution-provider seam.** `src/lib/execution/providers.ts` — `ExecutionClient` interface +
+  `getExecutionClient(language)` registry (python → Pyodide client, javascript → JS worker client; Java/C++
+  slot in later as a Judge0 CE client with the same interface). The store no longer imports the Pyodide
+  client directly; `pyodide-client.ts` / `pyodide.worker.js` are byte-identical (Python untouched).
+- 🔵 **JS engine.** `public/workers/js.worker.js` (same message protocol as the Pyodide worker) +
+  `src/lib/execution/js-client.ts` (same watchdog pattern, 10s load / 12s exec). Runs code via
+  `AsyncFunction` **inside the worker** (never main-thread eval): fresh scope per run, top-level `await`
+  works, console.log/info/warn/error captured Node-style, `prompt()`/`readline()` read the stdin panel's
+  text, errors mapped back to source lines. **No per-line tracer yet** — the result carries one synthetic
+  `final` snapshot holding stdout so OutputPanel/controls work unchanged; real JS tracing is still the
+  Phase 9 lift (needs a JS parser → ask-before-adding dependency).
+- 🔵 **Language selector.** `src/components/editor/LanguageSelector.tsx` in the editor panel header:
+  🐍 Python / 🟨 JavaScript selectable; ⚡ C / ⚡ C++ / ☕ Java visible but disabled ("Coming Soon").
+  Store `setLanguage` keeps per-language code buffers (switching never loses work), clears the trace, and
+  re-points the engine-status subscription. Monaco language + main.py/main.js header follow.
+- 🔵 **Language-aware plumbing.** `support-check.ts` takes a language (Python rules unchanged; JS rules warn
+  on modules/browser APIs/fetch; `usesStdin` detects `prompt`/`readline`); share links carry an optional
+  language field (old links still decode as Python); Explain/Complexity tabs show an honest "Python-only
+  for now" notice for JS instead of running the Python classifier on it.
+- 🔵 **Tests.** `js-worker.test.ts` runs the real worker file under Node via a shimmed `self` (console
+  capture, stdin, error line mapping, async, scope isolation, contract shape) + JS support-check + share
+  language round-trip. 125 tests green; build + lint clean.
+
 ## ⚠️ Known gap — remaining dead dispatch (dp / hashmap / heap)
 - `AutoViz` still has `case "dp"/"hashmap"/"heap"` that `classifyProgram` never emits (only trie was wired above). **DPTableViz / HashMapViz / HeapViz remain unreachable** until `classify.ts` gets detection for those kinds (heap = `heapq` usage in source; dp = 2D `matrix` structure + dp/memo/table hints; hashmap = tightest, needs a real signal to avoid firing on incidental dicts). 🔵 engine lane, unstarted — each should be verified against a live sample when wired, so the viz doesn't light up and then render poorly.
 
