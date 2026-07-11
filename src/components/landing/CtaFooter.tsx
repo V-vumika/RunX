@@ -80,7 +80,7 @@ export function CtaFooter() {
             <FooterCol
               title="Resources"
               links={[
-                ["GitHub", "https://github.com"],
+                ["GitHub", "https://github.com/V-vumika/RunX"],
                 ["How it works", "#features"],
                 ["Questions", "#faq"],
               ]}

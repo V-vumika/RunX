@@ -52,7 +52,7 @@ export function SiteNav() {
             <NavLink href="/app">Examples</NavLink>
           </nav>
           <a
-            href="https://github.com"
+            href="https://github.com/V-vumika/RunX"
             target="_blank"
             rel="noreferrer"
             aria-label="GitHub"

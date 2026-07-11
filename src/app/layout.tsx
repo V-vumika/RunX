@@ -22,6 +22,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  // Resolves relative OG/Twitter image URLs; falls back to localhost until
+  // NEXT_PUBLIC_SITE_URL is set to the deployed domain.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: {
     default: "RunX · See how your code actually runs",
     template: "%s · RunX",
