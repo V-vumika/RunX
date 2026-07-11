@@ -56,15 +56,16 @@ function boolV(b: boolean): V {
 
 // ── tokenizer ───────────────────────────────────────────────────────────────
 interface Tok { t: string; v: string; s: number; e: number }
-const MULTI = ["**", "//", "<=", ">=", "==", "!="];
-const SINGLE = "+-*/%()[],.<>=";
+const THREE = ["===", "!=="]; // JS strict equality
+const MULTI = ["**", "//", "<=", ">=", "==", "!=", "&&", "||"];
+const SINGLE = "+-*/%()[],.<>=!";
 
 function tokenize(src: string): Tok[] {
   const out: Tok[] = [];
   let i = 0;
   while (i < src.length) {
     const c = src[i];
-    if (c === " " || c === "\t") { i++; continue; }
+    if (c === " " || c === "\t" || c === ";") { i++; continue; }
     if (c === "'" || c === '"') {
       const start = i; i++;
       while (i < src.length && src[i] !== c) i++;
@@ -84,6 +85,8 @@ function tokenize(src: string): Tok[] {
       out.push({ t: "name", v: src.slice(start, i), s: start, e: i });
       continue;
     }
+    const three = src.slice(i, i + 3);
+    if (THREE.includes(three)) { out.push({ t: "op", v: three, s: i, e: i + 3 }); i += 3; continue; }
     const two = src.slice(i, i + 2);
     if (MULTI.includes(two)) { out.push({ t: "op", v: two, s: i, e: i + 2 }); i += 2; continue; }
     if (SINGLE.includes(c)) { out.push({ t: "op", v: c, s: i, e: i + 1 }); i++; continue; }
@@ -118,18 +121,18 @@ class Ev {
 
   private or(): V {
     let v = this.and();
-    while (this.peek()?.v === "or") { this.eat(); const b = this.and(); v = boolV(truthy(v) || truthy(b)); }
+    while (this.peek()?.v === "or" || this.peek()?.v === "||") { this.eat(); const b = this.and(); v = boolV(truthy(v) || truthy(b)); }
     return v;
   }
   private and(): V {
     let v = this.cmp();
-    while (this.peek()?.v === "and") { this.eat(); const b = this.cmp(); v = boolV(truthy(v) && truthy(b)); }
+    while (this.peek()?.v === "and" || this.peek()?.v === "&&") { this.eat(); const b = this.cmp(); v = boolV(truthy(v) && truthy(b)); }
     return v;
   }
   private cmp(): V {
     const start = this.peek()?.s ?? 0;
     let v = this.add();
-    while (["<", "<=", ">", ">=", "==", "!="].includes(this.peek()?.v)) {
+    while (["<", "<=", ">", ">=", "==", "!=", "===", "!=="].includes(this.peek()?.v)) {
       const op = this.eat().v;
       const b = this.add();
       const end = this.toks[this.pos - 1].e;
@@ -164,7 +167,7 @@ class Ev {
   private unary(): V {
     if (this.peek()?.v === "-") { this.eat(); return numV(-num(this.unary())); }
     if (this.peek()?.v === "+") { this.eat(); return this.unary(); }
-    if (this.peek()?.v === "not") { this.eat(); return boolV(!truthy(this.unary())); }
+    if (this.peek()?.v === "not" || this.peek()?.v === "!") { this.eat(); return boolV(!truthy(this.unary())); }
     return this.power();
   }
   private power(): V {
@@ -211,9 +214,10 @@ class Ev {
     }
     if (t.t === "name") {
       this.eat();
-      if (t.v === "True") return boolV(true);
-      if (t.v === "False") return boolV(false);
+      if (t.v === "True" || t.v === "true") return boolV(true);
+      if (t.v === "False" || t.v === "false") return boolV(false);
       if (t.v === "None") return { repr: "None", none: true };
+      if (t.v === "null" || t.v === "undefined") return { repr: t.v, none: true };
       // builtin call?
       if (this.peek()?.v === "(") return this.call(t);
       const node = this.scope.get(t.v);
@@ -265,8 +269,8 @@ function compare(a: V, op: string, b: V): boolean {
     case "<=": return x <= y;
     case ">": return x > y;
     case ">=": return x >= y;
-    case "==": return x === y;
-    case "!=": return x !== y;
+    case "==": case "===": return x === y;
+    case "!=": case "!==": return x !== y;
   }
   return false;
 }
@@ -285,6 +289,13 @@ function subscript(base: V, idx: V): V {
     const e = (node.entries ?? []).find((en) => en.key.repr === key || en.key.repr === String(idx.num));
     if (!e) throw new Error("key");
     return fromNode(e.value);
+  }
+  if (node && node.kind === "object") {
+    // JS objects used as maps: `seen[need]` → attribute by key name.
+    const key = idx.str !== undefined ? idx.str : idx.repr;
+    const a = (node.attributes ?? []).find((x) => x.name === key);
+    if (!a) throw new Error("key");
+    return fromNode(a.value);
   }
   if (base.str !== undefined) {
     let i = num(idx);
@@ -354,16 +365,21 @@ function reduceComprehension(expr: string): string {
 
 /** Extract the primary expression from a statement line (RHS / condition / iterable). */
 function expressionFromLine(line: string): string | null {
-  const t = line.trim();
-  if (!t || t.startsWith("#")) return null;
+  // Drop JS statement punctuation (a trailing `;` and/or a block-opening `{`)
+  // so a line like `arr[i] = arr[i] * 2;` reduces cleanly. Harmless for Python.
+  const t = line.trim().replace(/[;{]+\s*$/, "").trim();
+  if (!t || t.startsWith("#") || t.startsWith("//")) return null;
   let candidate: string;
   let m: RegExpMatchArray | null;
   if ((m = t.match(/^return\s+(.+)$/))) candidate = m[1];
+  else if ((m = t.match(/^(?:const|let|var)\s+[\w$]+\s*=\s*(.+)$/))) candidate = m[1];
   else if ((m = t.match(/^(?:if|elif|while)\s+(.+?):?\s*$/))) candidate = m[1];
   else if ((m = t.match(/^for\s+.+?\s+in\s+(.+?):?\s*$/))) candidate = m[1];
   else if (
-    !/^(def|class|import|from|for|while|if|elif|else|try|except|with|return)\b/.test(t) &&
-    (m = t.match(/^[\w.[\]]+\s*(?:[+\-*/%]|\/\/|\*\*)?=(?!=)\s*(.+)$/))
+    !/^(def|class|import|from|for|while|if|elif|else|try|except|with|return|function|const|let|var|switch|case|break|continue)\b/.test(
+      t
+    ) &&
+    (m = t.match(/^[\w.[\]$]+\s*(?:[+\-*/%]|\/\/|\*\*)?=(?!=)\s*(.+)$/))
   ) {
     candidate = m[1];
   } else {
