@@ -16,17 +16,22 @@ function runInstrumented(code: string) {
     return out;
   };
 
+  const returns: unknown[] = [];
   const $rx_trace = (line: number, scope: Record<string, unknown>) =>
     trace.push({ line, depth: stack.length, scope: snap(scope) });
   const $rx_enter = (name: string) => stack.push(name);
   const $rx_exit = () => {
     if (stack.length > 1) stack.pop();
   };
+  const $rx_ret = (value: unknown) => {
+    returns.push(value);
+    return value;
+  };
 
   // eslint-disable-next-line @typescript-eslint/no-implied-eval
-  const fn = new Function("$rx_trace", "$rx_enter", "$rx_exit", "console", '"use strict";\n' + code);
-  fn($rx_trace, $rx_enter, $rx_exit, console);
-  return { trace, finalDepth: stack.length };
+  const fn = new Function("$rx_trace", "$rx_enter", "$rx_exit", "$rx_ret", "console", '"use strict";\n' + code);
+  fn($rx_trace, $rx_enter, $rx_exit, $rx_ret, console);
+  return { trace, finalDepth: stack.length, returns };
 }
 
 describe("instrument", () => {
@@ -55,12 +60,14 @@ describe("instrument", () => {
   });
 
   it("tracks call frames and parameter scope, then unwinds", () => {
-    const { trace, finalDepth } = runInstrumented(
+    const { trace, finalDepth, returns } = runInstrumented(
       instrument("function f(n) {\n  return n * 2;\n}\nconst r = f(5);").code
     );
     const inside = trace.find((t) => t.depth === 2);
     expect(inside).toBeDefined();
     expect(inside!.scope.n).toBe(5);
+    // The return value flows through $rx_ret unchanged.
+    expect(returns).toContain(10);
     // Frame is popped again by the end (finally runs $rx_exit).
     expect(finalDepth).toBe(1);
   });
