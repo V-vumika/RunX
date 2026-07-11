@@ -40,8 +40,28 @@ never touches a concrete client.
   `AsyncFunction` inside a plain worker (never main-thread eval), captures
   console output + `prompt()`/`readline()` stdin, returns a `RunResult` with
   ONE synthetic `final` snapshot carrying stdout. No per-line tracer yet
-  (Phase 9); Explain/Complexity show a Python-only notice meanwhile.
+  (Phase 9); Explain shows a Python-only notice meanwhile. Complexity DOES
+  work for JS: `src/lib/explain/lang/` (per-language profiles) statically
+  analyzes the source and the store fills `result.complexity` from it.
 - `java` / `cpp` → future Judge0 CE client registers here; no store/UI change.
+
+## Complexity analysis — `src/lib/explain/lang/`
+
+`ComplexityInfo` facts (scaling-loop nesting + recursion shape) decide the
+Big-O class, always by rules (project rule — never the LLM). Two sources:
+
+- **Python** — the tracer's AST pass (`__runx_analyze_complexity` in the
+  worker) attaches the facts to `RunResult.complexity`.
+- **Tracerless languages (JS today)** — a `LanguageProfile` in
+  `src/lib/explain/lang/` provides `analyzeComplexity(code)` (a rules-based
+  lexical scanner) plus the source signals `classify.ts` needs
+  (`definedFunctions`, `usesHeap`, `halvesRange`, `fallbackLoopNesting`,
+  `scriptTitle`). The store fills `result.complexity` from
+  `staticComplexity(language, source)` when the worker didn't emit it;
+  `ComplexityPanel` gates on `hasComplexityAnalysis(language)`.
+
+Adding a language to the Complexity tab = one new profile file registered in
+`lang/index.ts` — classifier, store, and panel stay untouched.
 
 ## The engine — `public/workers/pyodide.worker.js`
 

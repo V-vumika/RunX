@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useExecutionStore } from "@/lib/store/execution-store";
 import { classifyProgram, deriveSpaceComplexity } from "@/lib/explain/classify";
+import { hasComplexityAnalysis } from "@/lib/explain/lang";
 import { measureRun } from "@/lib/explain/measure";
 
 export function ComplexityPanel() {
@@ -17,32 +18,34 @@ export function ComplexityPanel() {
 
   const hasTrace = snapshots.length > 0;
   const complexity = result?.complexity;
+  // A real per-line trace (not just the synthetic final snapshot a tracerless
+  // language emits) — the "Measured this run" card is only honest with one.
+  const hasRealTrace = useMemo(() => snapshots.some((s) => !s.final), [snapshots]);
 
   const summary = useMemo(
-    () => (hasTrace ? classifyProgram(code, snapshots, complexity) : null),
-    [snapshots, code, hasTrace, complexity]
+    () => (hasTrace ? classifyProgram(code, snapshots, complexity, language) : null),
+    [snapshots, code, hasTrace, complexity, language]
   );
   const space = useMemo(
     () => (summary ? deriveSpaceComplexity(summary, complexity) : null),
     [summary, complexity]
   );
   const measured = useMemo(
-    () => (hasTrace ? measureRun(snapshots, result?.truncated ?? false) : null),
-    [snapshots, hasTrace, result?.truncated]
+    () => (hasRealTrace ? measureRun(snapshots, result?.truncated ?? false) : null),
+    [snapshots, hasRealTrace, result?.truncated]
   );
 
-  // The complexity classifier reads Python AST facts + Python-shaped source
-  // heuristics — it has nothing honest to say about other languages yet.
-  // (After the hooks above, so hook order never changes with language.)
-  if (language !== "python") {
+  // Languages without a registered analysis profile (see lib/explain/lang)
+  // have nothing honest to show yet. (After the hooks above, so hook order
+  // never changes with language.)
+  if (!hasComplexityAnalysis(language)) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-center">
         <div className="max-w-sm">
           <TrendingUp className="mx-auto mb-3 size-7 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            Complexity analysis is available for{" "}
-            <span className="font-medium text-foreground">Python</span> only for now — it reads
-            the Python AST. Support for other languages arrives with their tracers.
+            Complexity analysis isn&apos;t available for this language yet — it arrives
+            together with the language&apos;s execution engine.
           </p>
         </div>
       </div>

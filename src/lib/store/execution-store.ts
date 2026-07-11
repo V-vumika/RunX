@@ -13,6 +13,7 @@ import {
 } from "@/lib/execution/entry";
 import { preflightCheck, type SupportIssue } from "@/lib/execution/support-check";
 import { stepBudget } from "@/lib/execution/step-budget";
+import { staticComplexity } from "@/lib/explain/lang";
 
 /** Starter program: a loop accumulator + recursion, to exercise the visualizer. */
 export const DEFAULT_CODE = `def factorial(n):
@@ -267,11 +268,18 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       // typical demo list/trie serialize fully; breadth is still capped by
       // maxItems. (The JS engine ignores the trace-shaping options it doesn't
       // use — only stdin matters to it today.)
-      const result = await client.run(source, {
+      let result = await client.run(source, {
         maxDepth: 12,
         maxSteps: stepBudget(source),
         stdin: get().stdin,
       });
+      // Languages whose tracer doesn't emit complexity facts (JavaScript
+      // today) get them from the client-side static analyzer, so the
+      // Complexity tab works identically across languages.
+      if (result.complexity == null) {
+        const facts = staticComplexity(language, source);
+        if (facts) result = { ...result, complexity: facts };
+      }
       set({
         snapshots: result.snapshots,
         result,

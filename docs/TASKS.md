@@ -90,6 +90,27 @@ Live status. Update as we go. Assignees: 🟣 **Vumi** (owner) · 🔵 **Shiv** 
   capture, stdin, error line mapping, async, scope isolation, contract shape) + JS support-check + share
   language round-trip. 125 tests green; build + lint clean.
 
+## ✅ Done (2026-07-11) — JS complexity analysis (same experience as Python)
+- 🔵 **Per-language analysis profiles.** New `src/lib/explain/lang/` — a `LanguageProfile` registry
+  (`types.ts` + `python.ts` + `javascript.ts` + `index.ts`) supplying the source signals `classify.ts`
+  needs (`definedFunctions`, `usesHeap`, `halvesRange`, `fallbackLoopNesting`, `scriptTitle`) and, for
+  tracerless languages, static `ComplexityInfo`. The Python profile is the old classify.ts code moved
+  verbatim (behavior unchanged); `classifyProgram` gained an optional `language` param (default python).
+- 🔵 **JS static analyzer** (`lang/javascript.ts`) — rules-based lexical scanner, NO parser dependency:
+  sanitizes comments/strings, counts *scaling*-loop nesting (constant-bound `for`s excluded, braceless
+  bodies handled), and detects recursion (function/const-fn/arrow/method declarations, self-call count,
+  half/decrement shrink shape) — the same rules the Pyodide worker's AST pass applies to Python.
+- 🔵 **Wiring.** The store fills `result.complexity` via `staticComplexity(language, source)` when a
+  worker doesn't emit it; `ComplexityPanel` now gates on `hasComplexityAnalysis(language)` instead of
+  `language === "python"` (java/cpp keep the honest notice until their profiles land). Same card,
+  layout, and styling — time + space class, loop depth, recursion details, patterns, key idea all work
+  for JS. "Measured this run" is hidden when the trace is only the synthetic `final` snapshot (counting
+  it as 1 operation would be dishonest); it returns with the Phase 9 JS tracer.
+- 🔵 **Tests.** `lang/javascript.test.ts` — 24 new (sanitizer, loop nesting incl. braceless chains and
+  constant-loop exclusion, recursion shapes, declaration finding, registry, JS classification for
+  sort/binary-search/fib/iterative/script). 149 total green; build clean; lint issues are pre-existing
+  (hero.tsx / CodeStepper.tsx / worker directives), untouched by this change.
+
 ## ⚠️ Known gap — remaining dead dispatch (dp / hashmap / heap)
 - `AutoViz` still has `case "dp"/"hashmap"/"heap"` that `classifyProgram` never emits (only trie was wired above). **DPTableViz / HashMapViz / HeapViz remain unreachable** until `classify.ts` gets detection for those kinds (heap = `heapq` usage in source; dp = 2D `matrix` structure + dp/memo/table hints; hashmap = tightest, needs a real signal to avoid firing on incidental dicts). 🔵 engine lane, unstarted — each should be verified against a live sample when wired, so the viz doesn't light up and then render poorly.
 

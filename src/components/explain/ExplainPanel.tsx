@@ -230,7 +230,8 @@ function NonPythonNotice({
           </p>
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground/70">
             Step-by-step visualization is Python-only for now — the JavaScript tracer is on the
-            roadmap. Switch to Python to watch code run line by line.
+            roadmap. Switch to Python to watch code run line by line. Time and space complexity
+            for this code are in the <span className="font-medium text-foreground/80">Complexity</span> tab.
           </p>
         </div>
       </div>
@@ -254,8 +255,8 @@ export function ExplainPanel() {
   const complexity = result?.complexity;
 
   const summary = useMemo(
-    () => (hasTrace ? classifyProgram(code, snapshots, complexity) : null),
-    [snapshots, code, hasTrace, complexity]
+    () => (hasTrace ? classifyProgram(code, snapshots, complexity, language) : null),
+    [snapshots, code, hasTrace, complexity, language]
   );
   const explanations = useMemo(
     () => (hasTrace ? narrateAll(snapshots, code, summary?.kind) : []),

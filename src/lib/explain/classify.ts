@@ -7,15 +7,19 @@
  * always decided here (loop nesting + recursion shape + known signatures),
  * never by the LLM. The LLM only ever writes prose on top of these facts.
  *
- * Complexity facts come from Python's `ast` module (computed in the worker,
- * arrives as ComplexityInfo) — accurate loop nesting and recursion shape,
- * unlike the old indentation heuristic. We fall back to a textual heuristic
- * only when AST analysis is unavailable (e.g. the program failed to parse).
+ * Complexity facts arrive as ComplexityInfo — for Python from the tracer's
+ * `ast` pass in the worker, for JavaScript from the client-side static
+ * analyzer (src/lib/explain/lang/javascript.ts). Language-specific source
+ * signals (defined functions, heap usage, halving idioms, fallback loop
+ * nesting) come from the per-language profile in src/lib/explain/lang/ — the
+ * classification rules below are shared by every language.
  */
 
 import type { ComplexityInfo, RecursionInfo, Snapshot, ValueNode } from "@/types/snapshot";
+import type { Language } from "@/lib/execution/entry";
 import { detectStructure } from "@/lib/visualizers/structure-detect";
 import { describeSeqChange } from "@/lib/explain/narrate";
+import { profileFor } from "@/lib/explain/lang";
 
 export type AlgoKind =
   | "sort"
@@ -47,31 +51,6 @@ export interface ProgramSummary {
   keyIdea?: string;
   /** Short bullet observations shown under the summary. */
   signals: string[];
-}
-
-// ── Source-level fallback (used only when AST analysis is unavailable) ───────
-
-/** Max simultaneously-open *loop* headers by indentation — a rough fallback. */
-function maxLoopNesting(code: string): number {
-  const stack: { indent: number; loop: boolean }[] = [];
-  let max = 0;
-  for (const raw of code.split("\n")) {
-    const line = raw.replace(/\t/g, "    ");
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const indent = line.length - line.trimStart().length;
-    while (stack.length && stack[stack.length - 1].indent >= indent) stack.pop();
-    if (trimmed.endsWith(":")) stack.push({ indent, loop: /^(for|while)\b/.test(trimmed) });
-    const depth = stack.filter((s) => s.loop).length;
-    if (depth > max) max = depth;
-  }
-  return max;
-}
-
-function definedFunctions(code: string): string[] {
-  const names: string[] = [];
-  for (const m of code.matchAll(/^\s*def\s+([A-Za-z_]\w*)\s*\(/gm)) names.push(m[1]);
-  return names;
 }
 
 // ── Runtime signals ─────────────────────────────────────────────────────────
@@ -204,10 +183,12 @@ function recursionComplexity(
 export function classifyProgram(
   code: string,
   snapshots: Snapshot[],
-  astInfo?: ComplexityInfo | null
+  astInfo?: ComplexityInfo | null,
+  language: Language = "python"
 ): ProgramSummary {
-  const fns = definedFunctions(code);
-  const nesting = astInfo?.maxLoopDepth ?? maxLoopNesting(code);
+  const profile = profileFor(language);
+  const fns = profile.definedFunctions(code);
+  const nesting = astInfo?.maxLoopDepth ?? profile.fallbackLoopNesting(code);
   const astRec = astInfo?.recursion ?? [];
   const rt = analyzeTrace(snapshots);
   const rec = primaryRecursion(astRec);
@@ -229,7 +210,7 @@ export function classifyProgram(
 
   // Dijkstra — a graph + a min-heap + a running distance map. Checked before
   // BFS/DFS: it uses a graph too, but the heap + distances make it distinct.
-  const usesHeap = /\bheapq\b|\bheappush\b|\bheappop\b/.test(code);
+  const usesHeap = profile.usesHeap(code);
   const usesDist = /\bdist(ance)?s?\b/.test(code);
   if (
     nameMatches(fns, /dijkstra|shortest.?path/i) ||
@@ -348,7 +329,7 @@ export function classifyProgram(
   }
 
   // Binary search
-  if (nameMatches(fns, /binary.?search|bisect/i) || (/\bmid\b/.test(code) && /\/\/\s*2/.test(code) && nesting >= 1)) {
+  if (nameMatches(fns, /binary.?search|bisect/i) || (/\bmid\b/.test(code) && profile.halvesRange(code) && nesting >= 1)) {
     return {
       title: "Binary Search",
       kind: "binary-search",
@@ -429,7 +410,7 @@ export function classifyProgram(
   }
 
   return {
-    title: "Python script",
+    title: profile.scriptTitle,
     kind: "script",
     complexity: "O(1)",
     complexityReason: "no loops or recursion over an input",
