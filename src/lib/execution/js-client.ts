@@ -1,5 +1,10 @@
 import type { RunResult } from "@/types/snapshot";
 import type { EngineStatus, RunOptions } from "@/lib/execution/pyodide-client";
+import { instrument } from "@/lib/execution/js-tracer/instrument";
+
+/** Above this source size we skip instrumentation and run plain (keeps the
+ *  main-thread parse cheap; huge inputs are rare and rarely need stepping). */
+const MAX_TRACE_SOURCE = 40_000;
 
 /**
  * Browser-side client for the JavaScript execution worker.
@@ -21,7 +26,7 @@ type StatusListener = (status: EngineStatus, error?: string) => void;
 
 // The `?v=` tag busts the browser's aggressive Web Worker cache — bump it when
 // the worker changes so the new version is fetched instead of a stale one.
-const WORKER_URL = "/workers/js.worker.js?v=20260710-initial";
+const WORKER_URL = "/workers/js.worker.js?v=20260712-tracer";
 
 /** Budget for the first run (just fetching + parsing the tiny worker script). */
 const LOAD_TIMEOUT_MS = 10_000;
@@ -159,13 +164,24 @@ class JsClient {
         new Error(this.initError || "Execution engine failed to initialize.")
       );
     }
+    // Instrument on the main thread so the worker can emit a full per-line
+    // trace. On parse failure or oversized input we send the original source
+    // with traced=false and the worker runs it plain (errors still surface).
+    let source = code;
+    let traced = false;
+    if (code.length <= MAX_TRACE_SOURCE) {
+      const result = instrument(code);
+      source = result.code;
+      traced = result.traced;
+    }
+
     const id = this.nextId++;
     return new Promise<RunResult>((resolve, reject) => {
       this.pending.set(id, { resolve, reject, timer: null });
       // Start with the load budget; the worker's "running" message swaps it for
       // the exec budget once user code is about to execute.
       this.armTimer(id, LOAD_TIMEOUT_MS);
-      this.worker!.postMessage({ type: "run", id, code, options });
+      this.worker!.postMessage({ type: "run", id, code: source, traced, options });
     });
   }
 
