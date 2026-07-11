@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { RunResult } from "@/types/snapshot";
+import { instrument } from "@/lib/execution/js-tracer/instrument";
 
 /**
  * Executes the REAL JavaScript worker (public/workers/js.worker.js) under Node
@@ -37,6 +38,20 @@ function bootWorker() {
 async function run(code: string, options?: { stdin?: string }): Promise<RunResult> {
   const { messages, self } = bootWorker();
   await self.onmessage({ data: { type: "run", id: 1, code, options } });
+  const result = messages.find((m) => m.type === "result");
+  expect(result, `no result message; got: ${JSON.stringify(messages)}`).toBeDefined();
+  return result!.result!;
+}
+
+/** Instrument the source (as js-client does) and run it through the traced path. */
+async function runTraced(
+  code: string,
+  options?: { stdin?: string; maxSteps?: number; maxDepth?: number }
+): Promise<RunResult> {
+  const { messages, self } = bootWorker();
+  const inst = instrument(code);
+  expect(inst.traced, `instrumentation failed: ${inst.error}`).toBe(true);
+  await self.onmessage({ data: { type: "run", id: 1, code: inst.code, traced: true, options } });
   const result = messages.find((m) => m.type === "result");
   expect(result, `no result message; got: ${JSON.stringify(messages)}`).toBeDefined();
   return result!.result!;
@@ -108,5 +123,40 @@ describe("js worker", () => {
     const r = await run("const o = { n: 1 };\no.self = o;\nconsole.log(o);");
     expect(r.error).toBeNull();
     expect(r.stdout).toContain("[Circular]");
+  });
+});
+
+describe("js worker (traced)", () => {
+  it("emits a per-line trace with serialized locals", async () => {
+    const r = await runTraced(
+      "const arr = [3, 1, 2];\nfor (let i = 0; i < arr.length; i++) {\n  arr[i] = arr[i] * 2;\n}\nconsole.log(arr);"
+    );
+    expect(r.error).toBeNull();
+    expect(r.snapshots.length).toBeGreaterThan(3);
+    // Every snapshot carries a stack whose module frame is present.
+    expect(r.snapshots[0].stack[0].functionName).toBe("<module>");
+    // A late snapshot sees `arr` as a ValueNode list.
+    const withArr = r.snapshots
+      .flatMap((s) => s.stack[s.stack.length - 1].locals)
+      .find((v) => v.name === "arr");
+    expect(withArr?.value.kind).toBe("list");
+    expect(r.stdout).toBe("[ 6, 2, 4 ]\n");
+  });
+
+  it("emits call and return events with the captured return value", async () => {
+    const r = await runTraced("function f(n) {\n  return n * 2;\n}\nconsole.log(f(5));");
+    const call = r.snapshots.find((s) => s.event === "call");
+    const ret = r.snapshots.find((s) => s.event === "return");
+    expect(call, "expected a call event").toBeDefined();
+    expect(ret, "expected a return event").toBeDefined();
+    expect(ret!.returnValue?.repr).toBe("10");
+    expect(call!.stack[call!.stack.length - 1].functionName).toBe("f");
+  });
+
+  it("honors a small maxSteps budget and marks the run truncated", async () => {
+    const r = await runTraced("let x = 0;\nwhile (true) {\n  x = x + 1;\n}", { maxSteps: 50 });
+    expect(r.truncated).toBe(true);
+    expect(r.snapshots.length).toBeGreaterThan(0);
+    expect(r.snapshots.length).toBeLessThan(200);
   });
 });
