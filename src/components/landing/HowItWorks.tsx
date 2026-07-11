@@ -33,18 +33,22 @@ export function HowItWorks() {
       <SectionGlow />
       <div className="mx-auto max-w-6xl px-6 py-28 sm:py-32">
         <motion.div
-          className="mx-auto max-w-2xl text-center"
+          className="grid gap-6 lg:grid-cols-2 lg:items-end"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.6 }}
         >
-          <div className="flex justify-center">
+          <div>
             <Pill>How it works</Pill>
+            <h2 className="mt-6 font-display text-4xl font-medium leading-[1.1] tracking-tight text-frost sm:text-5xl">
+              From code to <GradientText className="font-medium">clarity</GradientText> in three steps
+            </h2>
           </div>
-          <h2 className="mt-6 font-display text-4xl font-medium leading-[1.1] tracking-tight text-frost sm:text-5xl">
-            From code to <GradientText className="font-medium">clarity</GradientText> in three steps
-          </h2>
+          <p className="text-base leading-relaxed text-mist lg:pb-2 lg:text-right">
+            No setup, no accounts, no annotations. Paste a snippet, press run, and RunX turns it into a
+            step-by-step picture of exactly how it executes.
+          </p>
         </motion.div>
 
         <div className="relative mt-16">

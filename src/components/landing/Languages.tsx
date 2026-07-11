@@ -40,7 +40,7 @@ export function Languages() {
               key={name}
               className={`group relative overflow-hidden rounded-2xl border p-6 text-center backdrop-blur-sm transition-colors ${
                 status === "live"
-                  ? "border-[rgba(155,140,247,0.28)] bg-[rgba(102,58,243,0.07)] hover:border-[rgba(155,140,247,0.45)]"
+                  ? "border-[rgba(127,215,192,0.28)] bg-[rgba(127,215,192,0.06)] hover:border-[rgba(127,215,192,0.45)]"
                   : "border-[rgba(186,215,247,0.1)] bg-[rgba(186,214,247,0.03)]"
               }`}
               initial={{ opacity: 0, y: 20 }}
@@ -51,7 +51,7 @@ export function Languages() {
             >
               <div
                 className={`mx-auto flex size-12 items-center justify-center rounded-xl font-mono text-sm font-semibold ${
-                  status === "live" ? "bg-[rgba(102,58,243,0.16)] text-[#b8a9fb]" : "bg-[rgba(199,211,234,0.05)] text-fog"
+                  status === "live" ? "bg-[rgba(127,215,192,0.14)] text-[#7fd7c0]" : "bg-[rgba(199,211,234,0.05)] text-fog"
                 }`}
               >
                 {glyph}
@@ -59,10 +59,10 @@ export function Languages() {
               <p className="mt-3 text-sm font-medium text-frost">{name}</p>
               <span
                 className={`mt-2 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.15em] ${
-                  status === "live" ? "text-[#b8a9fb]" : "text-fog/70"
+                  status === "live" ? "text-[#7fd7c0]" : "text-fog/70"
                 }`}
               >
-                {status === "live" && <span className="size-1.5 animate-pulse rounded-full bg-[#9b8cf7]" />}
+                {status === "live" && <span className="size-1.5 animate-pulse rounded-full bg-[#7fd7c0]" />}
                 {status === "live" ? "Live" : "Coming soon"}
               </span>
             </motion.div>

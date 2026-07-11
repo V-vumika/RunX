@@ -33,7 +33,7 @@ export function Faq() {
   const [open, setOpen] = useState(0);
 
   return (
-    <section className="relative border-t border-[rgba(186,215,247,0.07)]">
+    <section id="faq" className="relative scroll-mt-20 border-t border-[rgba(186,215,247,0.07)]">
       <SectionGlow />
       <div className="mx-auto max-w-3xl px-6 py-28 sm:py-32">
         <motion.div

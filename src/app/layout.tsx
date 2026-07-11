@@ -22,9 +22,37 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RunX · Visualize Code Execution",
+  title: {
+    default: "RunX · See how your code actually runs",
+    template: "%s · RunX",
+  },
   description:
-    "Run code step by step, visualize data structures and algorithms, and read the complexity. Built for students.",
+    "Run code step by step in your browser — watch every line, variable, data structure and the measured complexity animate as it executes. Python & JavaScript today, Java & C++ coming. Built for students.",
+  keywords: [
+    "code visualizer",
+    "algorithm visualizer",
+    "data structure visualizer",
+    "code execution",
+    "Big O complexity",
+    "Python visualizer",
+    "JavaScript visualizer",
+    "DSA",
+    "learn to code",
+  ],
+  applicationName: "RunX",
+  openGraph: {
+    title: "RunX · See how your code actually runs",
+    description:
+      "Watch code execute line by line — variables, data structures, the call stack and complexity, drawn as it happens. Runs in your browser.",
+    siteName: "RunX",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "RunX · See how your code actually runs",
+    description:
+      "Watch code execute line by line — variables, data structures and complexity, drawn as it happens. Runs in your browser.",
+  },
 };
 
 export default function RootLayout({

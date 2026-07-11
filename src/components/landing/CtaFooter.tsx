@@ -58,15 +58,81 @@ export function CtaFooter() {
       </section>
 
       <footer className="border-t border-[rgba(186,215,247,0.07)]">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 sm:flex-row">
-          <span className="font-display text-base font-medium tracking-tight text-frost">
-            Run<span className="text-[#b8a9fb]">X</span>
-          </span>
-          <span className="text-center font-mono text-[12px] text-fog">
-            Built for students. Runs Python &amp; JavaScript in your browser.
-          </span>
+        <div className="mx-auto max-w-6xl px-6 py-14">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="max-w-xs lg:col-span-2">
+              <span className="font-display text-lg font-medium tracking-tight text-frost">
+                Run<span className="text-[#b8a9fb]">X</span>
+              </span>
+              <p className="mt-3 text-sm leading-relaxed text-mist">
+                See how your code actually runs. Built for students — Python &amp; JavaScript in your browser,
+                Java &amp; C++ on the way.
+              </p>
+            </div>
+            <FooterCol
+              title="Product"
+              links={[
+                ["Workspace", "/app"],
+                ["Visualizers", "#showcase"],
+                ["Complexity", "#features"],
+              ]}
+            />
+            <FooterCol
+              title="Resources"
+              links={[
+                ["GitHub", "https://github.com"],
+                ["How it works", "#features"],
+                ["Questions", "#faq"],
+              ]}
+            />
+          </div>
+
+          <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-[rgba(186,215,247,0.06)] pt-6 sm:flex-row">
+            <span className="font-mono text-[11px] text-fog">
+              © {new Date().getFullYear()} RunX. Built for students.
+            </span>
+            <div className="flex items-center gap-5 font-mono text-[11px] text-fog">
+              <Link href="#" className="transition-colors hover:text-frost">
+                Privacy
+              </Link>
+              <Link href="#" className="transition-colors hover:text-frost">
+                Terms
+              </Link>
+            </div>
+          </div>
         </div>
       </footer>
     </>
+  );
+}
+
+function FooterCol({ title, links }: { title: string; links: [string, string][] }) {
+  return (
+    <div>
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-fog/70">{title}</p>
+      <ul className="mt-4 space-y-2.5">
+        {links.map(([label, href]) => {
+          const external = href.startsWith("http");
+          return (
+            <li key={label}>
+              {external ? (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-mist transition-colors hover:text-frost"
+                >
+                  {label}
+                </a>
+              ) : (
+                <Link href={href} className="text-sm text-mist transition-colors hover:text-frost">
+                  {label}
+                </Link>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
