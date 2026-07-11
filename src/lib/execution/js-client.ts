@@ -26,7 +26,7 @@ type StatusListener = (status: EngineStatus, error?: string) => void;
 
 // The `?v=` tag busts the browser's aggressive Web Worker cache — bump it when
 // the worker changes so the new version is fetched instead of a stale one.
-const WORKER_URL = "/workers/js.worker.js?v=20260712-tracer";
+const WORKER_URL = "/workers/js.worker.js?v=20260712-events";
 
 /** Budget for the first run (just fetching + parsing the tiny worker script). */
 const LOAD_TIMEOUT_MS = 10_000;
