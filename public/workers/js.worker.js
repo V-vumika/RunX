@@ -109,7 +109,8 @@ function isTypedArray(v) {
 }
 
 /** Build a JS-value → ValueNode serializer with run-stable ids (for aliasing). */
-function makeSerializer() {
+function makeSerializer(maxDepth) {
+  var limit = maxDepth || MAX_DEPTH;
   var idMap = new Map();
   var nextId = 1;
   function idOf(o) {
@@ -135,7 +136,7 @@ function makeSerializer() {
 
     var oid = idOf(v);
     if (seen.indexOf(v) !== -1) return { kind: "circular", pyType: typeName(v), repr: "[Circular]", id: oid };
-    if (depth >= MAX_DEPTH)
+    if (depth >= limit)
       return { kind: "truncated", pyType: typeName(v), repr: Array.isArray(v) ? "[Array]" : "[Object]", id: oid };
     var seen2 = seen.concat([v]);
 
@@ -242,7 +243,11 @@ async function executeTraced(code, options) {
   var started = Date.now();
   var io = makeIO(opts);
   var lines = io.lines;
-  var ser = makeSerializer();
+  var ser = makeSerializer(opts.maxDepth);
+
+  // Honor the store's per-run step budget (clamped so a bad value can't wedge
+  // the worker); snapshots stay capped for memory regardless.
+  var maxSteps = opts.maxSteps ? Math.min(opts.maxSteps, 500000) : MAX_STEPS;
 
   var snapshots = [];
   var stack = [{ functionName: "<module>", line: 0, locals: [] }];
@@ -250,6 +255,9 @@ async function executeTraced(code, options) {
   var truncated = false;
   var lastLine = 0;
 
+  function budgetLeft() {
+    return steps <= maxSteps && snapshots.length < MAX_SNAPSHOTS;
+  }
   function currentStdout() {
     return lines.length ? lines.join("\n") + "\n" : "";
   }
@@ -269,7 +277,7 @@ async function executeTraced(code, options) {
 
   function $rx_trace(line, scope) {
     steps++;
-    if (steps > MAX_STEPS || snapshots.length >= MAX_SNAPSHOTS) {
+    if (steps > maxSteps || snapshots.length >= MAX_SNAPSHOTS) {
       truncated = true;
       throw { $rxBudget: true };
     }
@@ -281,6 +289,29 @@ async function executeTraced(code, options) {
   }
   function $rx_enter(name, line) {
     stack.push({ functionName: name || "<anonymous>", line: line || 0, locals: [] });
+    // Emit a "call" event (frame just pushed; locals fill on its first line).
+    if (budgetLeft()) {
+      steps++;
+      snapshots.push({ step: snapshots.length, line: line || 0, event: "call", stack: cloneStack(), stdout: currentStdout() });
+    }
+  }
+  function $rx_ret(value) {
+    // Record the returned value as a "return" event before the frame is popped
+    // by $rx_exit in the function's finally block. Never throws (would corrupt
+    // the return path) — over budget just skips the snapshot.
+    if (budgetLeft()) {
+      steps++;
+      var top = stack[stack.length - 1];
+      snapshots.push({
+        step: snapshots.length,
+        line: top.line,
+        event: "return",
+        stack: cloneStack(),
+        stdout: currentStdout(),
+        returnValue: ser(value, 0, []),
+      });
+    }
+    return value;
   }
   function $rx_exit() {
     if (stack.length > 1) stack.pop();
@@ -296,9 +327,10 @@ async function executeTraced(code, options) {
       "$rx_trace",
       "$rx_enter",
       "$rx_exit",
+      "$rx_ret",
       '"use strict";\n' + code
     );
-    await fn.call(undefined, io.console, io.readline, io.readline, $rx_trace, $rx_enter, $rx_exit);
+    await fn.call(undefined, io.console, io.readline, io.readline, $rx_trace, $rx_enter, $rx_exit, $rx_ret);
   } catch (e) {
     if (e && e.$rxBudget) {
       truncated = true;
