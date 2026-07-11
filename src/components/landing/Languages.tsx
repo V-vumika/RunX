@@ -13,7 +13,7 @@ const LANGS: { name: string; status: "live" | "soon"; glyph: string }[] = [
 
 export function Languages() {
   return (
-    <section className="relative border-t border-white/5 bg-black">
+    <section className="relative border-t border-[rgba(186,215,247,0.07)]">
       <SectionGlow />
       <div className="mx-auto max-w-6xl px-6 py-28 sm:py-32">
         <motion.div
@@ -26,10 +26,10 @@ export function Languages() {
           <div className="flex justify-center">
             <Pill>One engine, many languages</Pill>
           </div>
-          <h2 className="mt-6 text-4xl font-light leading-[1.1] tracking-tight text-white sm:text-5xl">
-            Python and JavaScript today. <GradientText className="font-semibold">More next</GradientText>.
+          <h2 className="mt-6 font-display text-4xl font-medium leading-[1.1] tracking-tight text-frost sm:text-5xl">
+            Python and JavaScript today. <GradientText className="font-medium">More next</GradientText>.
           </h2>
-          <p className="mx-auto mt-5 max-w-xl text-base font-light leading-relaxed text-white/50 sm:text-lg">
+          <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-mist sm:text-lg">
             Every language is just another tracer feeding the same visual engine, so the views you learn never change.
           </p>
         </motion.div>
@@ -40,8 +40,8 @@ export function Languages() {
               key={name}
               className={`group relative overflow-hidden rounded-2xl border p-6 text-center backdrop-blur-sm transition-colors ${
                 status === "live"
-                  ? "border-cyan-400/25 bg-cyan-500/5 hover:border-cyan-400/40"
-                  : "border-white/10 bg-white/3"
+                  ? "border-[rgba(155,140,247,0.28)] bg-[rgba(102,58,243,0.07)] hover:border-[rgba(155,140,247,0.45)]"
+                  : "border-[rgba(186,215,247,0.1)] bg-[rgba(186,214,247,0.03)]"
               }`}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -51,18 +51,18 @@ export function Languages() {
             >
               <div
                 className={`mx-auto flex size-12 items-center justify-center rounded-xl font-mono text-sm font-semibold ${
-                  status === "live" ? "bg-cyan-500/15 text-cyan-300" : "bg-white/5 text-white/40"
+                  status === "live" ? "bg-[rgba(102,58,243,0.16)] text-[#b8a9fb]" : "bg-[rgba(199,211,234,0.05)] text-fog"
                 }`}
               >
                 {glyph}
               </div>
-              <p className="mt-3 text-sm font-medium text-white">{name}</p>
+              <p className="mt-3 text-sm font-medium text-frost">{name}</p>
               <span
                 className={`mt-2 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.15em] ${
-                  status === "live" ? "text-cyan-300" : "text-white/35"
+                  status === "live" ? "text-[#b8a9fb]" : "text-fog/70"
                 }`}
               >
-                {status === "live" && <span className="size-1.5 animate-pulse rounded-full bg-cyan-400" />}
+                {status === "live" && <span className="size-1.5 animate-pulse rounded-full bg-[#9b8cf7]" />}
                 {status === "live" ? "Live" : "Coming soon"}
               </span>
             </motion.div>

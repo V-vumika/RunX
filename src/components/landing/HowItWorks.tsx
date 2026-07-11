@@ -29,7 +29,7 @@ const STEPS: { icon: LucideIcon; step: string; title: string; body: string }[] =
 
 export function HowItWorks() {
   return (
-    <section className="relative border-t border-white/5 bg-black">
+    <section className="relative border-t border-[rgba(186,215,247,0.07)]">
       <SectionGlow />
       <div className="mx-auto max-w-6xl px-6 py-28 sm:py-32">
         <motion.div
@@ -42,8 +42,8 @@ export function HowItWorks() {
           <div className="flex justify-center">
             <Pill>How it works</Pill>
           </div>
-          <h2 className="mt-6 text-4xl font-light leading-[1.1] tracking-tight text-white sm:text-5xl">
-            From code to <GradientText className="font-semibold">clarity</GradientText> in three steps
+          <h2 className="mt-6 font-display text-4xl font-medium leading-[1.1] tracking-tight text-frost sm:text-5xl">
+            From code to <GradientText className="font-medium">clarity</GradientText> in three steps
           </h2>
         </motion.div>
 
@@ -51,7 +51,7 @@ export function HowItWorks() {
           {/* Animated connecting line (desktop). */}
           <motion.div
             aria-hidden
-            className="absolute left-0 right-0 top-8 hidden h-px origin-left bg-linear-to-r from-cyan-400/0 via-cyan-400/40 to-cyan-400/0 lg:block"
+            className="absolute left-0 right-0 top-8 hidden h-px origin-left bg-linear-to-r from-[rgba(155,140,247,0)] via-[rgba(155,140,247,0.4)] to-[rgba(155,140,247,0)] lg:block"
             initial={{ scaleX: 0 }}
             whileInView={{ scaleX: 1 }}
             viewport={{ once: true }}
@@ -68,14 +68,14 @@ export function HowItWorks() {
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{ duration: 0.6, delay: idx * 0.15, ease: [0.22, 1, 0.36, 1] }}
               >
-                <div className="mx-auto flex size-16 items-center justify-center rounded-2xl border border-cyan-400/20 bg-[#070b14] text-cyan-300 shadow-lg shadow-cyan-500/10 lg:mx-0">
+                <div className="mx-auto flex size-16 items-center justify-center rounded-2xl border border-[rgba(155,140,247,0.25)] bg-[#0b1020] text-[#b8a9fb] shadow-lg shadow-[rgba(102,58,243,0.12)] lg:mx-0">
                   <Icon className="size-7" strokeWidth={1.5} />
                 </div>
                 <div className="mt-5 flex items-center justify-center gap-2 lg:justify-start">
-                  <span className="font-mono text-xs text-cyan-400/70">{step}</span>
-                  <h3 className="text-lg font-medium tracking-tight text-white">{title}</h3>
+                  <span className="font-mono text-xs text-[#9b8cf7]/80">{step}</span>
+                  <h3 className="font-display text-lg font-medium tracking-tight text-frost">{title}</h3>
                 </div>
-                <p className="mt-2 text-sm font-light leading-relaxed text-white/55">{body}</p>
+                <p className="mt-2 text-sm leading-relaxed text-mist">{body}</p>
               </motion.div>
             ))}
           </div>

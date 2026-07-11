@@ -33,7 +33,7 @@ export function Faq() {
   const [open, setOpen] = useState(0);
 
   return (
-    <section className="relative border-t border-white/5 bg-black">
+    <section className="relative border-t border-[rgba(186,215,247,0.07)]">
       <SectionGlow />
       <div className="mx-auto max-w-3xl px-6 py-28 sm:py-32">
         <motion.div
@@ -46,12 +46,12 @@ export function Faq() {
           <div className="flex justify-center">
             <Pill>Questions</Pill>
           </div>
-          <h2 className="mt-6 text-4xl font-light leading-[1.1] tracking-tight text-white sm:text-5xl">
+          <h2 className="mt-6 font-display text-4xl font-medium leading-[1.1] tracking-tight text-frost sm:text-5xl">
             Good to know
           </h2>
         </motion.div>
 
-        <div className="mt-12 divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/3 backdrop-blur-sm">
+        <div className="mt-12 divide-y divide-[rgba(186,215,247,0.1)] overflow-hidden rounded-2xl border border-[rgba(186,215,247,0.1)] bg-[rgba(186,214,247,0.03)] backdrop-blur-sm">
           {ITEMS.map((item, i) => {
             const isOpen = open === i;
             return (
@@ -59,17 +59,17 @@ export function Faq() {
                 <button
                   type="button"
                   onClick={() => setOpen(isOpen ? -1 : i)}
-                  className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-white/3"
+                  className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-[rgba(199,211,234,0.03)]"
                   aria-expanded={isOpen}
                 >
-                  <span className={`text-[15px] font-medium transition-colors ${isOpen ? "text-cyan-200" : "text-white"}`}>
+                  <span className={`text-[15px] font-medium transition-colors ${isOpen ? "text-[#cdbffb]" : "text-frost"}`}>
                     {item.q}
                   </span>
                   <motion.span
                     animate={{ rotate: isOpen ? 45 : 0 }}
                     transition={{ duration: 0.25 }}
                     className={`flex size-6 shrink-0 items-center justify-center rounded-full border ${
-                      isOpen ? "border-cyan-400/40 text-cyan-300" : "border-white/15 text-white/50"
+                      isOpen ? "border-[rgba(155,140,247,0.4)] text-[#b8a9fb]" : "border-[rgba(186,215,247,0.15)] text-fog"
                     }`}
                   >
                     <Plus className="size-3.5" strokeWidth={2} />
@@ -84,7 +84,7 @@ export function Faq() {
                       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                       className="overflow-hidden"
                     >
-                      <p className="px-6 pb-5 text-sm font-light leading-relaxed text-white/55">{item.a}</p>
+                      <p className="px-6 pb-5 text-sm leading-relaxed text-mist">{item.a}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>

@@ -1,4 +1,4 @@
-import RunXHero from "@/components/ui/hero";
+import { Hero } from "./Hero";
 import { SiteNav } from "./SiteNav";
 import { HowItWorks } from "./HowItWorks";
 import { Features } from "./Features";
@@ -15,9 +15,9 @@ import { CtaFooter } from "./CtaFooter";
  */
 export function Landing() {
   return (
-    <div className="relative min-h-screen bg-black text-white">
+    <div className="relative min-h-screen bg-[#080b17] text-frost">
       <SiteNav />
-      <RunXHero />
+      <Hero />
       <HowItWorks />
       <Features />
       <VisualizerShowcase />

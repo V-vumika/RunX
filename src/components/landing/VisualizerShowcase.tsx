@@ -15,7 +15,7 @@ import { Pill, GradientText, SectionGlow } from "./kit";
  */
 export function VisualizerShowcase() {
   return (
-    <section id="showcase" className="relative scroll-mt-20 border-t border-white/5 bg-black">
+    <section id="showcase" className="relative scroll-mt-20 border-t border-[rgba(186,215,247,0.07)]">
       <SectionGlow />
       <div className="mx-auto max-w-6xl px-6 py-28 sm:py-32">
         <motion.div
@@ -28,10 +28,10 @@ export function VisualizerShowcase() {
           <div className="flex justify-center">
             <Pill>Every structure</Pill>
           </div>
-          <h2 className="mt-6 text-4xl font-light leading-[1.1] tracking-tight text-white sm:text-5xl">
-            Paste any algorithm. RunX picks the <GradientText className="font-semibold">right view</GradientText>.
+          <h2 className="mt-6 font-display text-4xl font-medium leading-[1.1] tracking-tight text-frost sm:text-5xl">
+            Paste any algorithm. RunX picks the <GradientText className="font-medium">right view</GradientText>.
           </h2>
-          <p className="mx-auto mt-5 max-w-xl text-base font-light leading-relaxed text-white/50 sm:text-lg">
+          <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-mist sm:text-lg">
             A classifier reads your code and its trace, then opens the visualizer that fits — no annotations, no setup.
           </p>
         </motion.div>
@@ -44,12 +44,12 @@ export function VisualizerShowcase() {
           transition={{ duration: 0.6 }}
         >
           <Tabs defaultValue="sort" className="items-center gap-8">
-            <TabsList className="h-auto rounded-full border border-white/10 bg-white/5 p-1 backdrop-blur-sm">
+            <TabsList className="h-auto rounded-full border border-hairline bg-[rgba(186,214,247,0.04)] p-1 backdrop-blur-sm">
               {TAB_META.map(({ value, label, icon: Icon }) => (
                 <TabsTrigger
                   key={value}
                   value={value}
-                  className="gap-1.5 rounded-full px-4 py-2 text-white/60 data-[state=active]:border-cyan-400/30 data-[state=active]:bg-cyan-500/15 data-[state=active]:text-cyan-200 data-[state=active]:shadow-none"
+                  className="gap-1.5 rounded-full px-4 py-2 text-mist data-[state=active]:border-[rgba(155,140,247,0.3)] data-[state=active]:bg-[rgba(102,58,243,0.16)] data-[state=active]:text-[#cdbffb] data-[state=active]:shadow-none"
                 >
                   <Icon className="size-4" strokeWidth={1.5} />
                   <span className="hidden sm:inline">{label}</span>
@@ -95,9 +95,9 @@ const TAB_META = [
 
 function PreviewShell({ children, caption }: { children: React.ReactNode; caption: string }) {
   return (
-    <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-white/10 bg-[#070b14]/70 backdrop-blur-sm">
+    <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-[rgba(186,215,247,0.1)] bg-[#0a0e1c]/70 backdrop-blur-sm">
       <div className="flex h-64 items-center justify-center px-6">{children}</div>
-      <p className="border-t border-white/10 bg-white/3 px-5 py-3 text-center font-mono text-[12px] text-white/45">
+      <p className="border-t border-[rgba(186,215,247,0.08)] bg-[rgba(199,211,234,0.03)] px-5 py-3 text-center font-mono text-[12px] text-fog">
         {caption}
       </p>
     </div>
@@ -150,7 +150,7 @@ function SortPreview() {
             key={it.id}
             layout
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className={`w-6 rounded-t-md ${active ? "bg-linear-to-t from-cyan-500 to-sky-400" : "bg-white/15"}`}
+            className={`w-6 rounded-t-md ${active ? "bg-linear-to-t from-void-violet to-[#9b8cf7]" : "bg-[rgba(199,211,234,0.14)]"}`}
             style={{ height: `${it.v * 1.6}px` }}
           />
         );
@@ -214,7 +214,7 @@ function TraversalPreview({ nodes, edges, order }: { nodes: N[]; edges: [number,
             y1={na.y}
             x2={nb.x}
             y2={nb.y}
-            stroke={on ? "rgba(34,211,238,0.55)" : "rgba(255,255,255,0.12)"}
+            stroke={on ? "rgba(155,140,247,0.6)" : "rgba(186,215,247,0.14)"}
             strokeWidth={on ? 2 : 1}
             className="transition-all duration-300"
           />
@@ -231,7 +231,7 @@ function TraversalPreview({ nodes, edges, order }: { nodes: N[]; edges: [number,
                 cy={n.y}
                 r={14}
                 fill="none"
-                stroke="rgba(34,211,238,0.6)"
+                stroke="rgba(155,140,247,0.65)"
                 initial={{ r: 12, opacity: 0.7 }}
                 animate={{ r: 20, opacity: 0 }}
                 transition={{ duration: 1, repeat: Infinity, ease: "easeOut" }}
@@ -242,15 +242,15 @@ function TraversalPreview({ nodes, edges, order }: { nodes: N[]; edges: [number,
               cy={n.y}
               r={12}
               className="transition-colors duration-300"
-              fill={isVisited ? "rgba(34,211,238,0.18)" : "rgba(255,255,255,0.05)"}
-              stroke={isCurrent ? "#22d3ee" : isVisited ? "rgba(34,211,238,0.5)" : "rgba(255,255,255,0.18)"}
+              fill={isVisited ? "rgba(102,58,243,0.22)" : "rgba(199,211,234,0.05)"}
+              stroke={isCurrent ? "#9b8cf7" : isVisited ? "rgba(155,140,247,0.5)" : "rgba(186,215,247,0.2)"}
               strokeWidth={isCurrent ? 2 : 1}
             />
             <text
               x={n.x}
               y={n.y + 3.5}
               textAnchor="middle"
-              className="fill-white/70 font-mono"
+              className="fill-mist font-mono"
               style={{ fontSize: 9 }}
             >
               {n.id}
@@ -296,12 +296,12 @@ function SearchPreview() {
             transition={{ type: "spring", stiffness: 400, damping: 22 }}
             className={`flex size-8 items-center justify-center rounded-md border text-[12px] font-medium transition-colors duration-300 ${
               found
-                ? "border-emerald-400/70 bg-emerald-400/20 text-emerald-200"
+                ? "border-[#7fd7c0]/70 bg-[#7fd7c0]/20 text-[#a9ecd8]"
                 : isMid
-                  ? "border-cyan-400/70 bg-cyan-400/20 text-cyan-100"
+                  ? "border-[rgba(155,140,247,0.7)] bg-[rgba(102,58,243,0.2)] text-[#cdbffb]"
                   : inWin
-                    ? "border-white/15 bg-white/6 text-white/70"
-                    : "border-white/5 bg-transparent text-white/20"
+                    ? "border-[rgba(186,215,247,0.15)] bg-[rgba(199,211,234,0.06)] text-mist"
+                    : "border-[rgba(186,215,247,0.06)] bg-transparent text-fog/60"
             }`}
           >
             {n}
