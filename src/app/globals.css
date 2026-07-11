@@ -157,9 +157,9 @@
 
 /* Blueprint grid: 1px frost lines on the midnight canvas, faded at the edges. */
 .ak-grid {
-  background-image:
-    linear-gradient(to right, rgba(186, 215, 247, 0.07) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(186, 215, 247, 0.07) 1px, transparent 1px);
+  /* Horizontal rules only — the vertical framing lines are drawn explicitly in
+     HeroBackdrop so we can show just the four that hug the wordmark. */
+  background-image: linear-gradient(to bottom, rgba(186, 215, 247, 0.07) 1px, transparent 1px);
   /* Few, large cells, like the reference, instead of a dense mesh. */
   background-size: 220px 220px;
   background-position: center top;
@@ -175,20 +175,26 @@
 .ak-beam {
   background: conic-gradient(
     from 0deg at 50% 0%,
-    transparent 150deg,
-    rgba(200, 218, 245, 0.07) 162deg,
-    rgba(224, 238, 255, 0.42) 180deg,
-    rgba(200, 218, 245, 0.07) 198deg,
-    transparent 210deg
+    transparent 139deg,
+    rgba(206, 224, 250, 0.04) 155deg,
+    rgba(232, 243, 255, 0.32) 180deg,
+    rgba(206, 224, 250, 0.04) 205deg,
+    transparent 221deg
   );
-  -webkit-mask-image: linear-gradient(to bottom, #000 2%, rgba(0, 0, 0, 0.55) 42%, transparent 80%);
-  mask-image: linear-gradient(to bottom, #000 2%, rgba(0, 0, 0, 0.55) 42%, transparent 80%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.5) 40%, transparent 74%);
+  mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.5) 40%, transparent 74%);
   filter: blur(7px);
 }
-/* The bright source at the very top the cone appears to fall from. */
+/* The point the cone falls from — a soft glow at the same brightness as the
+   beam, NOT a bright spotlight orb. */
 .ak-beam-source {
-  background: radial-gradient(circle at 50% 50%, rgba(240, 248, 255, 0.95), transparent 58%);
-  filter: blur(5px);
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(226, 240, 255, 0.5) 0%,
+    rgba(188, 210, 247, 0.26) 40%,
+    transparent 70%
+  );
+  filter: blur(6px);
 }
 /* Broad blue bloom that lifts the upper-center into a lit atmosphere. */
 .ak-halo {

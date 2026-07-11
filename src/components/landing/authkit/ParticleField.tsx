@@ -3,10 +3,10 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Ambient starfield behind the whole landing: faint white dots that drift upward
- * while twinkling, on a fixed full-viewport canvas. Sits above the midnight base
- * and below the content. Honours prefers-reduced-motion by drawing a single
- * static frame instead of animating.
+ * Ambient starfield scoped to the hero: small faint dots that drift upward while
+ * twinkling, on a canvas that fills the hero section (absolute inset-0, clipped
+ * by the section's overflow-hidden) and sits above the navy base but below the
+ * content. Honours prefers-reduced-motion by drawing a single static frame.
  */
 export function ParticleField() {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -33,13 +33,13 @@ export function ParticleField() {
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const count = Math.min(120, Math.floor((w * h) / 17000));
+      const count = Math.min(280, Math.floor((w * h) / 6000));
       dots = Array.from({ length: count }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
-        r: Math.random() * 1 + 0.25,
-        s: Math.random() * 0.22 + 0.05, // upward speed
-        o: Math.random() * 0.26 + 0.04, // base opacity (dim)
+        r: Math.random() * 0.9 + 0.25, // small, star-like
+        s: Math.random() * 0.2 + 0.04, // upward speed
+        o: Math.random() * 0.34 + 0.12, // base opacity (a little brighter)
         t: Math.random() * Math.PI * 2, // twinkle phase
         tw: Math.random() * 0.028 + 0.008, // twinkle speed
       }));
@@ -66,25 +66,39 @@ export function ParticleField() {
       c.globalAlpha = 1;
     }
 
+    let running = false;
     function loop() {
       paint(true);
       raf = requestAnimationFrame(loop);
     }
-
-    init();
-    if (reduce) {
-      paint(false);
-    } else {
+    function start() {
+      if (running || reduce) return;
+      running = true;
       raf = requestAnimationFrame(loop);
     }
+    function stop() {
+      running = false;
+      cancelAnimationFrame(raf);
+    }
+
+    init();
+    paint(!reduce); // draw a first frame immediately
+
+    // Animate only while the hero canvas is actually on screen.
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) start();
+      else stop();
+    });
+    io.observe(canvas);
 
     const onResize = () => init();
     window.addEventListener("resize", onResize);
     return () => {
-      cancelAnimationFrame(raf);
+      stop();
+      io.disconnect();
       window.removeEventListener("resize", onResize);
     };
   }, []);
 
-  return <canvas ref={ref} aria-hidden className="pointer-events-none fixed inset-0 -z-10 h-full w-full" />;
+  return <canvas ref={ref} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />;
 }

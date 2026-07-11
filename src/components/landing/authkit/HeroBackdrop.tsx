@@ -8,33 +8,44 @@
 export function HeroBackdrop() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      {/* Faint tiled blueprint grid, masked to fade out toward the edges. */}
-      <div className="absolute inset-0 ak-grid" />
+      {/* The blueprint frame is pixel-tuned to the capped desktop wordmark, so
+          it only shows at lg and up — below that the type scales with the
+          viewport and the lines would drift off the glyphs. */}
+      <div className="hidden lg:block">
+        {/* Four framing verticals: the two symmetric pairs that hug the wordmark
+            (±245px inner / ±305px from center). The inner pair is brighter. */}
+        <VLine left="calc(50% - 245px)" strong />
+        <VLine left="calc(50% + 245px)" strong />
+        <VLine left="calc(50% - 305px)" />
+        <VLine left="calc(50% + 305px)" />
 
-      {/* Brighter framing lines: inner verticals hug the heading, outers and
-          horizontals frame the composition. Each fades out at its ends. */}
-      <VLine left="27%" strong />
-      <VLine left="73%" strong />
-      <VLine left="9%" />
-      <VLine left="91%" />
-      <HLine top="15%" />
-      <HLine top="54%" />
+        {/* Horizontals: 100/148/196 are the three lines above the wordmark;
+            196/372 top and bottom the wordmark rectangle; 454 brackets the
+            subcopy. The eyebrow sits in the 148→196 band with its own broken
+            rule (rendered with the text in Hero). */}
+        <HLine top="100px" />
+        <HLine top="148px" />
+        <HLine top="196px" />
+        <HLine top="372px" />
+        <HLine top="454px" />
 
-      {/* Registration marks: two crosses at the eyebrow shoulders, small dots
-          where the inner verticals cross the framing horizontals. */}
-      <Cross left="27%" top="22%" />
-      <Cross left="73%" top="22%" />
-      <Dot left="27%" top="15%" />
-      <Dot left="73%" top="15%" />
-      <Dot left="27%" top="54%" />
-      <Dot left="73%" top="54%" />
-      <Dot left="9%" top="15%" />
-      <Dot left="91%" top="15%" />
+        {/* Crosses centered in the eyebrow-band side squares (between 148 and 196). */}
+        <Cross left="calc(50% - 275px)" top="172px" />
+        <Cross left="calc(50% + 275px)" top="172px" />
+
+        {/* Registration dots on the inner verticals at the three lower horizontals. */}
+        <Dot left="calc(50% - 245px)" top="196px" />
+        <Dot left="calc(50% + 245px)" top="196px" />
+        <Dot left="calc(50% - 245px)" top="372px" />
+        <Dot left="calc(50% + 245px)" top="372px" />
+        <Dot left="calc(50% - 245px)" top="454px" />
+        <Dot left="calc(50% + 245px)" top="454px" />
+      </div>
 
       {/* Bright source at the apex, then a wide diffused cone falling from it,
           then a soft halo bloom behind the wordmark. */}
-      <div className="absolute left-1/2 top-[-3%] size-32 -translate-x-1/2 ak-beam-source" />
-      <div className="absolute left-1/2 top-[-2%] h-[74vh] w-[42rem] -translate-x-1/2 ak-beam" />
+      <div className="absolute left-1/2 top-[-2%] size-20 -translate-x-1/2 ak-beam-source" />
+      <div className="absolute left-1/2 top-[-1%] h-[70vh] w-[52rem] -translate-x-1/2 ak-beam" />
       <div className="absolute inset-x-0 top-0 h-[60vh] ak-halo" />
 
       {/* Corners recede so the lit center is the focus. */}

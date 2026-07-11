@@ -1,27 +1,38 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useInView, useReducedMotion } from "framer-motion";
+import { Play, SkipBack, SkipForward } from "lucide-react";
+
 import { HeroBackdrop } from "./authkit/HeroBackdrop";
 import { ParticleField } from "./authkit/ParticleField";
 import { Reveal } from "./authkit/Reveal";
 
 /**
- * Hero reverse-engineered from the AuthKit reference: a framed blueprint grid
- * lit by a wide diffused beam, a single luminous gradient wordmark, and a fan of
- * frosted product cards that emerge from behind the content and bleed off the
- * bottom of the frame. The center card is forward and rim-lit; the two behind it
- * recede with scale, blur and opacity. All content stays RunX.
+ * Hero reverse-engineered from the AuthKit reference: a framed blueprint grid lit
+ * by a wide diffused beam and a single luminous gradient wordmark. Below the
+ * headline sits a large, self-playing execution dashboard — the product shot that
+ * proves the "watch your code run" promise.
  */
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-[#080b17]">
+    <section className="relative overflow-hidden bg-[#080b17] pb-24 sm:pb-28">
       <ParticleField />
       <HeroBackdrop />
 
       <div className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-6 pt-32 text-center sm:pt-40">
         <Reveal>
-          <p className="text-sm font-medium tracking-[0.02em] text-fog">Now running in your browser</p>
+          <div className="flex items-center justify-center gap-5">
+            <span aria-hidden className="h-px w-14 bg-linear-to-l from-hairline to-transparent sm:w-24" />
+            <p className="whitespace-nowrap text-sm font-medium tracking-[0.02em] text-fog">
+              Now running in your browser
+            </p>
+            <span aria-hidden className="h-px w-14 bg-linear-to-r from-hairline to-transparent sm:w-24" />
+          </div>
         </Reveal>
 
         <Reveal delay={0.08}>
-          <h1 className="ak-skywash mt-8 font-display font-medium leading-[0.85] tracking-[-0.03em] text-[clamp(5rem,17vw,13rem)]">
+          <h1 className="ak-skywash mt-8 font-display font-medium leading-[0.85] tracking-[-0.03em] text-[clamp(4.5rem,14vw,11rem)]">
             RunX
           </h1>
         </Reveal>
@@ -31,188 +42,265 @@ export function Hero() {
             See how your code actually runs — every line, every variable, every step, drawn as it happens.
           </p>
         </Reveal>
+      </div>
 
-        <CardFan />
+      {/* The product shot: a big execution dashboard, in normal hero flow. */}
+      <div className="relative z-10 mt-16 px-6">
+        <ExecutionDashboard />
       </div>
     </section>
   );
 }
 
+/* ─────────────────────────── Execution dashboard ─────────────────────────── */
+
+const CODE = [
+  "def bubble_sort(a):",
+  "  for i in range(len(a)):",
+  "    for j in range(len(a)-1-i):",
+  "      if a[j] > a[j+1]:",
+  "        a[j], a[j+1] = a[j+1], a[j]",
+  "  return a",
+];
+
+const START = [46, 18, 72, 30, 60, 12, 52, 38];
+const MAXV = 72;
+const TOTAL = (START.length * (START.length - 1)) / 2; // comparisons per pass
+
+type Bar = { id: number; v: number };
+type Snap = { bars: Bar[]; cmp: [number, number]; active: number; step: number; i: number; va: number; vb: number };
+
+function makeBars(pass: number): Bar[] {
+  const vals = pass === 0 ? START : [...START].sort(() => Math.random() - 0.5);
+  return vals.map((v, k) => ({ id: pass * 100 + k, v }));
+}
+
+const REST: Snap = { bars: makeBars(0), cmp: [2, 3], active: 3, step: 6, i: 0, va: START[2], vb: START[3] };
+
 /**
- * Three cards fanned like the reference: the center one forward, sharp and
- * rim-lit; the two behind it tucked in, dimmer and blurred. The cluster is
- * anchored low and the cards are tall, so the section's clip lets them bleed off
- * the bottom and read as emerging from behind the hero.
+ * A wide, self-playing execution frame styled like the real RunX workspace. One
+ * bubble-sort trace drives everything on a single beat — the active code line,
+ * the comparing bars, the live variables, the complexity readout and the step
+ * timeline all advance together, so a visitor literally watches code run. Falls
+ * back to a static frame under prefers-reduced-motion.
  */
-function CardFan() {
+function ExecutionDashboard() {
+  const reduce = useReducedMotion();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(rootRef, { margin: "0px 0px -10% 0px" });
+  const [snap, setSnap] = useState<Snap>(REST);
+  const machine = useRef({ arr: makeBars(0), i: 0, j: 0, step: 1, pass: 0 });
+
+  useEffect(() => {
+    if (reduce || !inView) return;
+    const id = setInterval(() => {
+      const m = machine.current;
+      const { i, j } = m;
+      const va = m.arr[j].v;
+      const vb = m.arr[j + 1].v;
+      const willSwap = va > vb;
+      if (willSwap) [m.arr[j], m.arr[j + 1]] = [m.arr[j + 1], m.arr[j]];
+
+      setSnap({ bars: [...m.arr], cmp: [j, j + 1], active: willSwap ? 4 : 3, step: m.step, i, va, vb });
+
+      // Advance one comparison; wrap the loops, reshuffle when a pass finishes.
+      let nj = j + 1;
+      let ni = i;
+      if (nj >= m.arr.length - 1 - i) {
+        nj = 0;
+        ni = i + 1;
+      }
+      if (ni >= m.arr.length - 1) {
+        m.pass += 1;
+        m.arr = makeBars(m.pass);
+        m.i = 0;
+        m.j = 0;
+        m.step = 1;
+      } else {
+        m.i = ni;
+        m.j = nj;
+        m.step += 1;
+      }
+    }, 720);
+    return () => clearInterval(id);
+  }, [reduce, inView]);
+
+  const progress = Math.round((snap.step / TOTAL) * 100);
+  const vars: [string, number][] = [
+    ["i", snap.i],
+    ["j", snap.cmp[0]],
+    ["a[j]", snap.va],
+    ["a[j+1]", snap.vb],
+  ];
+
   return (
-    <Reveal
-      delay={0.28}
-      className="relative mt-14 hidden h-[380px] w-full overflow-hidden md:block [mask-image:linear-gradient(to_bottom,#000_78%,transparent)]"
-    >
-      <div className="relative mx-auto h-full w-[420px]">
-        {/* Shadow pool the cluster sits in. */}
-        <div className="absolute left-1/2 top-24 h-40 w-[720px] -translate-x-1/2 rounded-[50%] bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.6),transparent_70%)] blur-2xl" />
+    <Reveal delay={0.28} className="relative mx-auto w-full max-w-6xl">
+      {/* Violet bloom behind the frame. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-x-8 -top-12 bottom-8 -z-10 rounded-[44px] bg-[radial-gradient(ellipse_at_center,rgba(102,58,243,0.2),transparent_70%)] blur-2xl"
+      />
 
-        {/* Left card, tucked behind and receded. */}
-        <div className="absolute left-1/2 top-10 w-[360px] -translate-x-[122%] scale-[0.94] opacity-50 blur-[1.5px]">
-          <div className="ak-float" style={{ animationDelay: "0.9s" }}>
-            <MemoryCard />
+      <div
+        ref={rootRef}
+        className="ak-glass-deep ak-rimlight overflow-hidden rounded-2xl border border-[rgba(186,215,247,0.12)] shadow-[0_50px_130px_-40px_rgba(2,3,10,0.95)]"
+      >
+        {/* Window chrome */}
+        <div className="flex items-center gap-3 border-b border-[rgba(186,215,247,0.08)] bg-[rgba(199,211,234,0.02)] px-4 py-3">
+          <div className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-full bg-[rgba(228,109,76,0.7)]" />
+            <span className="size-2.5 rounded-full bg-[rgba(216,236,248,0.5)]" />
+            <span className="size-2.5 rounded-full bg-[rgba(38,150,132,0.7)]" />
+          </div>
+          <span className="ml-1 font-mono text-[11px] text-fog">bubble_sort.py — RunX</span>
+          <span className="ml-auto rounded-full border border-[rgba(155,140,247,0.28)] bg-[rgba(102,58,243,0.12)] px-2.5 py-1 font-mono text-[10px] text-[#b8a9fb]">
+            Python
+          </span>
+          <span className="hidden items-center gap-1.5 rounded-full bg-void-violet px-3 py-1 text-[11px] font-medium text-white shadow-[0_0_16px_rgba(102,58,243,0.45)] sm:inline-flex">
+            <span className="size-1.5 animate-pulse rounded-full bg-white/90" /> Running
+          </span>
+        </div>
+
+        {/* Body: code · visualization · inspector */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.25fr)_minmax(0,0.9fr)]">
+          {/* Code editor + live console output */}
+          <div className="flex flex-col border-b border-[rgba(186,215,247,0.08)] lg:border-b-0 lg:border-r">
+            <PanelLabel>main.py</PanelLabel>
+            <div className="py-4 font-mono text-[13px] leading-[2.3]">
+              {CODE.map((ln, idx) => {
+                const on = idx === snap.active;
+                return (
+                  <div key={idx} className={`relative flex gap-3 px-4 ${on ? "bg-[rgba(102,58,243,0.1)]" : ""}`}>
+                    {on && <span className="absolute inset-y-0 left-0 w-0.5 bg-[#9b8cf7]" />}
+                    <span className={`w-4 select-none text-right ${on ? "text-[#b8a9fb]" : "text-fog/60"}`}>
+                      {idx + 1}
+                    </span>
+                    <span className={`whitespace-pre transition-colors ${on ? "text-frost" : "text-fog"}`}>{ln}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Console fills the remaining height and mirrors the array as text. */}
+            <div className="mt-auto border-t border-[rgba(186,215,247,0.08)] bg-[rgba(199,211,234,0.02)] px-4 py-3.5 font-mono text-[11px] leading-relaxed">
+              <p className="text-fog/70">$ python bubble_sort.py</p>
+              <p className="mt-2 break-all text-mist">
+                <span className="text-fog/50">a = </span>[{snap.bars.map((b) => b.v).join(", ")}]
+              </p>
+              <p className="mt-2 flex items-center gap-1.5 text-[#7fd7c0]">
+                <span className="inline-block size-1.5 animate-pulse rounded-full bg-[#7fd7c0]" />
+                sorting… step {snap.step} / {TOTAL}
+              </p>
+            </div>
+          </div>
+
+          {/* Visualization */}
+          <div className="border-b border-[rgba(186,215,247,0.08)] lg:border-b-0 lg:border-r">
+            <PanelLabel>Visualization · sorting</PanelLabel>
+            <div className="flex h-[460px] flex-col px-5 pb-5 pt-4">
+              <div className="flex flex-1 items-end justify-center gap-2.5">
+                {snap.bars.map((b, idx) => {
+                  const active = idx === snap.cmp[0] || idx === snap.cmp[1];
+                  return (
+                    <motion.div
+                      key={b.id}
+                      layout
+                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                      className="flex w-8 flex-col items-center gap-1.5"
+                    >
+                      <div
+                        className={`w-full rounded-t-md ${
+                          active
+                            ? "bg-linear-to-t from-void-violet to-[#9b8cf7] shadow-[0_0_14px_rgba(102,58,243,0.55)]"
+                            : "bg-[rgba(199,211,234,0.16)]"
+                        }`}
+                        style={{ height: `${24 + (b.v / MAXV) * 330}px` }}
+                      />
+                      <span className={`font-mono text-[10px] ${active ? "text-[#cdbffb]" : "text-fog/70"}`}>{b.v}</span>
+                    </motion.div>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-center font-mono text-[11px] text-fog">
+                comparing a[{snap.cmp[0]}] and a[{snap.cmp[1]}]
+              </p>
+            </div>
+          </div>
+
+          {/* Inspector: variables + complexity */}
+          <div className="flex flex-col">
+            <PanelLabel>Variables</PanelLabel>
+            <div className="grid grid-cols-2 gap-2 px-4 py-3">
+              {vars.map(([k, v]) => (
+                <div
+                  key={k}
+                  className="flex items-center justify-between rounded-lg border border-[rgba(186,215,247,0.08)] bg-[rgba(199,211,234,0.04)] px-3 py-2"
+                >
+                  <span className="font-mono text-[11px] text-mist">{k}</span>
+                  <FlipValue value={v} />
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-auto border-t border-[rgba(186,215,247,0.08)] px-4 py-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-fog/70">Time complexity</p>
+              <div className="mt-1.5 flex items-baseline gap-2">
+                <span className="font-mono text-2xl font-semibold text-[#7fd7c0]">O(n²)</span>
+                <span className="font-mono text-[10px] text-fog">2 nested loops</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Right card, mirror. */}
-        <div className="absolute left-1/2 top-10 w-[360px] translate-x-[22%] scale-[0.94] opacity-50 blur-[1.5px]">
-          <div className="ak-float" style={{ animationDelay: "1.7s" }}>
-            <StructureCard />
+        {/* Timeline / playback */}
+        <div className="flex items-center gap-3 border-t border-[rgba(186,215,247,0.08)] bg-[rgba(199,211,234,0.02)] px-4 py-3">
+          <div className="flex items-center gap-1.5 text-fog">
+            <SkipBack className="size-3.5" strokeWidth={1.5} />
+            <span className="flex size-6 items-center justify-center rounded-full bg-[rgba(102,58,243,0.2)] text-[#b8a9fb]">
+              <Play className="size-3" fill="currentColor" strokeWidth={0} />
+            </span>
+            <SkipForward className="size-3.5" strokeWidth={1.5} />
           </div>
-        </div>
-
-        {/* Center card, forward and lit. */}
-        <div className="absolute left-1/2 top-0 z-10 w-[420px] -translate-x-1/2">
-          <div className="ak-float">
-            <StepperCard />
+          <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-[rgba(186,215,247,0.1)]">
+            <motion.div
+              className="absolute inset-y-0 left-0 rounded-full bg-linear-to-r from-void-violet to-[#9b8cf7]"
+              animate={{ width: `${progress}%` }}
+              transition={{ ease: "linear", duration: 0.3 }}
+            />
           </div>
+          <span className="whitespace-nowrap font-mono text-[10px] text-fog">
+            step {snap.step} / {TOTAL}
+          </span>
         </div>
       </div>
     </Reveal>
   );
 }
 
-function CardShell({
-  title,
-  children,
-  lit = false,
-}: {
-  title: string;
-  children: React.ReactNode;
-  lit?: boolean;
-}) {
+function PanelLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className={`ak-glass-deep relative overflow-hidden rounded-2xl ${lit ? "ak-rimlight" : ""}`}>
-      {lit && (
-        <>
-          <CornerDot className="left-2.5 top-2.5" />
-          <CornerDot className="right-2.5 top-2.5" />
-          <CornerDot className="bottom-2.5 left-2.5" />
-          <CornerDot className="bottom-2.5 right-2.5" />
-        </>
-      )}
-      <div className="flex items-center gap-1.5 border-b border-[rgba(186,215,247,0.08)] px-3.5 py-3">
-        <span className="size-2 rounded-full bg-[rgba(228,109,76,0.7)]" />
-        <span className="size-2 rounded-full bg-[rgba(216,236,248,0.5)]" />
-        <span className="size-2 rounded-full bg-[rgba(38,150,132,0.7)]" />
-        <span className="ml-2 font-mono text-[10px] text-fog">{title}</span>
-      </div>
+    <div className="border-b border-[rgba(186,215,247,0.06)] px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.16em] text-fog/70">
       {children}
     </div>
   );
 }
 
-function CornerDot({ className }: { className?: string }) {
+/** A numeric value that flips up when it changes. */
+function FlipValue({ value }: { value: number }) {
   return (
-    <span
-      aria-hidden
-      className={`absolute z-10 size-1 rounded-full bg-[rgba(186,215,247,0.35)] ${className ?? ""}`}
-    />
-  );
-}
-
-function StepperCard() {
-  const lines = [
-    "def bubble_sort(a):",
-    "  for i in range(len(a)):",
-    "    for j in range(len(a)-1-i):",
-    "      if a[j] > a[j+1]:",
-    "        a[j], a[j+1] = a[j+1], a[j]",
-    "  return a",
-  ];
-  const active = 3;
-  return (
-    <CardShell title="main.py" lit>
-      <div className="py-3.5 font-mono text-[11px] leading-[1.85]">
-        {lines.map((ln, i) => (
-          <div key={i} className={`flex gap-3 px-4 ${i === active ? "bg-[rgba(250,204,21,0.12)]" : ""}`}>
-            <span className="w-3 select-none text-right text-fog/50">{i + 1}</span>
-            <span className={i === active ? "text-frost" : "text-fog"}>{ln}</span>
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center gap-2 border-t border-[rgba(186,215,247,0.08)] px-4 py-3">
-        <span className="rounded-full bg-void-violet px-3 py-1 text-[10px] font-medium text-white shadow-[0_0_16px_rgba(102,58,243,0.45)]">
-          Run
-        </span>
-        <span className="font-mono text-[10px] text-fog">step 4 of 42</span>
-        <span className="ml-auto font-mono text-[10px] text-[#7fd7c0]">O(n²)</span>
-      </div>
-    </CardShell>
-  );
-}
-
-function MemoryCard() {
-  return (
-    <CardShell title="memory">
-      <div className="flex flex-col gap-2 p-4">
-        {[
-          ["a[j]", "52"],
-          ["a[j+1]", "16"],
-          ["i", "0"],
-          ["j", "2"],
-        ].map(([k, v]) => (
-          <div key={k} className="flex items-center justify-between rounded-md bg-[rgba(199,211,234,0.05)] px-3 py-2">
-            <span className="font-mono text-[10px] text-mist">{k}</span>
-            <span className="font-mono text-[11px] font-medium text-frost">{v}</span>
-          </div>
-        ))}
-        <div className="mt-2 flex items-end gap-1.5">
-          {[26, 40, 18, 52, 30, 44].map((h, i) => (
-            <div
-              key={i}
-              className={`flex-1 rounded-sm ${i === 3 ? "bg-[#efb54a]" : "bg-[rgba(102,58,243,0.6)]"}`}
-              style={{ height: `${h}px` }}
-            />
-          ))}
-        </div>
-      </div>
-    </CardShell>
-  );
-}
-
-function StructureCard() {
-  const nodes = [
-    { x: 50, y: 20 },
-    { x: 26, y: 55 },
-    { x: 74, y: 55 },
-    { x: 14, y: 90 },
-    { x: 86, y: 90 },
-  ];
-  const edges: [number, number][] = [
-    [0, 1],
-    [0, 2],
-    [1, 3],
-    [2, 4],
-  ];
-  return (
-    <CardShell title="structure">
-      <div className="p-4">
-        <svg viewBox="0 0 100 105" className="h-40 w-full">
-          {edges.map(([a, b], i) => (
-            <line
-              key={i}
-              x1={nodes[a].x}
-              y1={nodes[a].y}
-              x2={nodes[b].x}
-              y2={nodes[b].y}
-              stroke="rgba(186,215,247,0.25)"
-              strokeWidth={1.2}
-            />
-          ))}
-          {nodes.map((n, i) => (
-            <circle key={i} cx={n.x} cy={n.y} r={8} fill="rgba(102,58,243,0.18)" stroke="#9b8cf7" strokeWidth={1.2} />
-          ))}
-        </svg>
-        <p className="mt-1 text-center font-mono text-[10px] text-fog">binary tree</p>
-      </div>
-    </CardShell>
+    <span className="relative inline-flex min-w-[16px] justify-end overflow-hidden">
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={value}
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -10, opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="font-mono text-[12px] font-semibold text-frost"
+        >
+          {value}
+        </motion.span>
+      </AnimatePresence>
+    </span>
   );
 }
