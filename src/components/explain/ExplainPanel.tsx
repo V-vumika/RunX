@@ -158,9 +158,10 @@ function AutoViz({ kind, snapshots, step }: { kind: AlgoKind; snapshots: Snapsho
 // ── non-Python view ───────────────────────────────────────────────────────────
 
 /**
- * Shown when a language without a step tracer is selected (JavaScript today).
- * Execution works — output goes to the Output tab — but there is no per-line
- * trace for the Explain machinery, so say so instead of misclassifying.
+ * Shown when a language without a step tracer is selected (Java / C++ today).
+ * Execution isn't wired for those yet — but the copy holds for any future
+ * language whose tracer hasn't landed: there is no per-line trace for the
+ * Explain machinery, so say so instead of misclassifying.
  */
 function NonPythonNotice({
   hasRun,
@@ -229,9 +230,10 @@ function NonPythonNotice({
             )}
           </p>
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground/70">
-            Step-by-step visualization is Python-only for now — the JavaScript tracer is on the
-            roadmap. Switch to Python to watch code run line by line. Time and space complexity
-            for this code are in the <span className="font-medium text-foreground/80">Complexity</span> tab.
+            Step-by-step visualization isn&apos;t available for this language yet — it lands with
+            the per-language tracer. Switch to Python or JavaScript to watch code run line by line.
+            Time and space complexity for this code are in the{" "}
+            <span className="font-medium text-foreground/80">Complexity</span> tab.
           </p>
         </div>
       </div>
@@ -267,12 +269,13 @@ export function ExplainPanel() {
     [snapshots, currentStep, code, hasTrace]
   );
 
-  // The classifier / narrator / structure detectors are Python-only today —
-  // running them on another language would produce confident nonsense. Until
-  // the per-language tracers land (Phase 9), non-Python gets an honest notice
-  // plus its errors; output lives in the Output tab. (Placed after the hooks
+  // Python and JavaScript both emit the full per-line trace, so they run the
+  // shared trace-driven pipeline (the classifier is language-aware; the
+  // narrator and structure detectors read the language-agnostic ValueNode
+  // trace). Languages without a tracer yet (Java / C++) get an honest notice
+  // plus their errors; output lives in the Output tab. (Placed after the hooks
   // above so the hook order never changes with language.)
-  if (language !== "python") {
+  if (language !== "python" && language !== "javascript") {
     return (
       <NonPythonNotice
         hasRun={hasTrace}
