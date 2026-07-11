@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { BriefcaseBusiness, ScanSearch } from "lucide-react";
+import { BriefcaseBusiness } from "lucide-react";
 
 import {
   ResizableHandle,
@@ -12,70 +12,68 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeEditor } from "@/components/editor/CodeEditor";
 import { LanguageSelector } from "@/components/editor/LanguageSelector";
-import { ShareButton } from "@/components/ShareButton";
-import { decodeShare } from "@/lib/share";
 import { ExecutionControls } from "@/components/execution/ExecutionControls";
 import { OutputPanel } from "@/components/execution/OutputPanel";
 import { InputsPanel } from "@/components/execution/InputsPanel";
 import { StdinPanel } from "@/components/execution/StdinPanel";
 import { ExplainPanel } from "@/components/explain/ExplainPanel";
 import { ComplexityPanel } from "@/components/explain/ComplexityPanel";
+import { ProblemPanel } from "@/components/interview/ProblemPanel";
+import { ProblemPicker } from "@/components/interview/ProblemPicker";
+import { Timer } from "@/components/interview/Timer";
 import { useExecutionStore } from "@/lib/store/execution-store";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { INTERVIEW_PROBLEMS, getInterviewProblem } from "@/lib/interview/problems";
 
-export function Workspace() {
+/**
+ * Interview practice mode: the same execution engine and panels as the main
+ * workspace (Explain, Complexity, Output — all reused as-is), plus a Problem
+ * tab that swaps in a curated DSA prompt, examples you can run, progressive
+ * hints, and a rules-based grade of the measured complexity against the
+ * problem's target. Nothing in the execution path changes — a problem's
+ * starter is just a driverless function, so the existing entry-synthesis +
+ * InputsPanel + run pipeline does the rest.
+ */
+export function InterviewWorkspace() {
+  const [problemId, setProblemId] = useState(INTERVIEW_PROBLEMS[0].id);
+  const problem = getInterviewProblem(problemId) ?? INTERVIEW_PROBLEMS[0];
+
   const initEngine = useExecutionStore((s) => s.initEngine);
   const setCode = useExecutionStore((s) => s.setCode);
-  const setLanguage = useExecutionStore((s) => s.setLanguage);
-  const setStdin = useExecutionStore((s) => s.setStdin);
   const language = useExecutionStore((s) => s.language);
   const isMobile = useIsMobile();
 
-  // Spin up the current language's engine as soon as the workspace mounts.
   useEffect(() => {
     initEngine();
   }, [initEngine]);
 
-  // Restore language + code + stdin from a shared link (#s=…), if present.
-  // Language first — setLanguage swaps the code buffer, so it must run before
-  // setCode writes the shared source into it.
+  // Load the current problem's starter whenever the problem or the language
+  // changes (switching languages mid-problem re-loads that language's starter,
+  // same as picking a new problem — an in-progress solution isn't preserved
+  // across a language switch, which matches the main workspace's behavior).
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const hash = window.location.hash;
-    if (!hash.startsWith("#s=")) return;
-    const payload = decodeShare(hash.slice(3));
-    if (!payload) return;
-    if (payload.language) setLanguage(payload.language);
-    if (payload.stdin) setStdin(payload.stdin);
-    setCode(payload.code);
-  }, [setCode, setLanguage, setStdin]);
+    const starter = language === "javascript" ? problem.starter.javascript : problem.starter.python;
+    setCode(starter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [problemId, language]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <header className="flex items-center gap-3 border-b border-[rgba(186,215,247,0.08)] bg-[rgba(5,6,15,0.6)] px-4 py-3 backdrop-blur-xl">
-        <Link href="/" className="flex items-center gap-3" title="Back to home">
+      <header className="flex flex-wrap items-center gap-3 border-b border-[rgba(186,215,247,0.08)] bg-[rgba(5,6,15,0.6)] px-4 py-3 backdrop-blur-xl">
+        <Link href="/app" className="flex shrink-0 items-center gap-3" title="Exit interview mode">
           <span className="ak-glass ak-hairline flex size-8 shrink-0 items-center justify-center rounded-md text-frost">
-            <ScanSearch className="size-5" />
+            <BriefcaseBusiness className="size-5" />
           </span>
           <span className="flex min-w-0 flex-col leading-tight">
-            <span className="font-display font-medium tracking-tight text-frost">RunX</span>
-            <span className="truncate text-xs text-fog">
-              {language === "javascript"
-                ? "Run JavaScript in a sandboxed worker and see its output."
-                : "Run Python line by line and watch your variables change."}
-            </span>
+            <span className="font-display font-medium tracking-tight text-frost">Interview mode</span>
+            <span className="truncate text-xs text-fog">Exit to workspace</span>
           </span>
         </Link>
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          <Link
-            href="/app/interview"
-            className="flex h-8 items-center gap-1.5 rounded-md border border-[rgba(186,215,247,0.14)] bg-[rgba(199,211,234,0.05)] px-3 text-xs font-medium text-mist transition-colors hover:border-[rgba(155,140,247,0.4)] hover:text-frost"
-            title="Practice DSA problems against a target complexity"
-          >
-            <BriefcaseBusiness className="size-3.5" />
-            Interview mode
-          </Link>
-          <ShareButton />
+
+        <ProblemPicker activeId={problemId} onSelect={setProblemId} />
+
+        <div className="ml-auto shrink-0">
+          <Timer key={problemId} />
         </div>
       </header>
 
@@ -85,10 +83,10 @@ export function Workspace() {
 
       <div className="min-h-0 flex-1">
         {isMobile ? (
-          <MobileLayout />
+          <MobileLayout problem={problem} />
         ) : (
           <ResizablePanelGroup direction="horizontal">
-            <ResizablePanel defaultSize={55} minSize={30}>
+            <ResizablePanel defaultSize={50} minSize={28}>
               <div className="flex h-full flex-col">
                 <EditorPanelHeader />
                 <div className="min-h-0 flex-1">
@@ -101,8 +99,8 @@ export function Workspace() {
 
             <ResizableHandle withHandle />
 
-            <ResizablePanel defaultSize={45} minSize={25}>
-              <ResultTabs />
+            <ResizablePanel defaultSize={50} minSize={28}>
+              <ResultTabs problem={problem} />
             </ResizablePanel>
           </ResizablePanelGroup>
         )}
@@ -111,9 +109,7 @@ export function Workspace() {
   );
 }
 
-/** Below `md`: a single scrollable column instead of side-by-side resizable panels — the
- *  split layout has no room to breathe on a phone/small-tablet width and just clips. */
-function MobileLayout() {
+function MobileLayout({ problem }: { problem: (typeof INTERVIEW_PROBLEMS)[number] }) {
   return (
     <div className="flex h-full flex-col overflow-y-auto">
       <div className="flex h-[50vh] shrink-0 flex-col border-b">
@@ -126,17 +122,20 @@ function MobileLayout() {
       </div>
 
       <div className="h-[50vh] shrink-0">
-        <ResultTabs />
+        <ResultTabs problem={problem} />
       </div>
     </div>
   );
 }
 
-function ResultTabs() {
+function ResultTabs({ problem }: { problem: (typeof INTERVIEW_PROBLEMS)[number] }) {
   return (
-    <Tabs defaultValue="explain" className="flex h-full flex-col gap-0">
+    <Tabs defaultValue="problem" className="flex h-full flex-col gap-0">
       <div className="border-b px-3 py-1.5">
         <TabsList className="h-8 w-full justify-start">
+          <TabsTrigger value="problem" className="text-xs">
+            Problem
+          </TabsTrigger>
           <TabsTrigger value="explain" className="text-xs">
             Explain
           </TabsTrigger>
@@ -148,6 +147,9 @@ function ResultTabs() {
           </TabsTrigger>
         </TabsList>
       </div>
+      <TabsContent value="problem" className="min-h-0 flex-1 overflow-hidden">
+        <ProblemPanel problem={problem} />
+      </TabsContent>
       <TabsContent value="explain" className="min-h-0 flex-1 overflow-hidden">
         <ExplainPanel />
       </TabsContent>
@@ -161,7 +163,7 @@ function ResultTabs() {
   );
 }
 
-/** Editor panel header: language picker + language-appropriate filename/hint. */
+/** Editor panel header: language picker + language-appropriate filename hint. */
 function EditorPanelHeader() {
   const language = useExecutionStore((s) => s.language);
   const isJs = language === "javascript";
@@ -169,11 +171,9 @@ function EditorPanelHeader() {
     <PanelHeader>
       <span className="flex items-center gap-2">
         <LanguageSelector />
-        <span>{isJs ? "main.js" : "main.py"}</span>
+        <span>{isJs ? "solution.js" : "solution.py"}</span>
       </span>
-      <span className="font-normal text-muted-foreground/70">
-        {isJs ? "paste any JavaScript code" : "paste any Python code"}
-      </span>
+      <span className="font-normal text-muted-foreground/70">write your solution, then Run</span>
     </PanelHeader>
   );
 }
