@@ -31,6 +31,7 @@ type Node = any;
 export const TRACE = "$rx_trace";
 export const ENTER = "$rx_enter";
 export const EXIT = "$rx_exit";
+export const RET = "$rx_ret";
 
 export interface InstrumentResult {
   /** Instrumented source when `traced`, else the original source unchanged. */
@@ -256,6 +257,12 @@ function instrumentStatement(stmt: Node, accessible: Set<string>): void {
         if (c.test) instrumentExpressions(c.test, accessible);
         c.consequent = instrumentStatements(c.consequent, accessible);
       }
+      return;
+    case "ReturnStatement":
+      // Wrap the returned value so the runtime can record it as a "return"
+      // event: `return X` → `return $rx_ret(X)` (bare `return` → $rx_ret(undefined)).
+      if (stmt.argument) instrumentExpressions(stmt.argument, accessible);
+      stmt.argument = call(id(RET), [stmt.argument ?? id("undefined")]);
       return;
     case "LabeledStatement":
       instrumentStatement(stmt.body, accessible);
