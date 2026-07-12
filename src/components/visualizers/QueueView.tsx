@@ -1,21 +1,8 @@
 "use client";
 
 /**
- * QueueView — visualizes a list used as a FIFO queue.
- *
- * 🟣 Vumi: this is YOUR component to build out.
- *
- * Props: same as ArrayView — `node`, `name`, `diffState`.
- *
- * What to draw:
- *   A horizontal row of boxes where the LEFT side is the FRONT (next to dequeue)
- *   and the RIGHT side is the BACK (where new items enqueue).
- *   Add "FRONT →" label on the left and "← BACK" label on the right.
- *   Color the ring using `diffRingClass(diffState)`.
- *
- * Example layout (items = [1, 2, 3]):
- *   FRONT →  [ 1 ][ 2 ][ 3 ]  ← BACK
- *              out              in
+ * QueueView — visualizes a list used as a FIFO queue: a horizontal row with
+ * the front (next to dequeue) on the left and the back (enqueue side) on the right.
  */
 
 import type { ValueNode } from "@/types/snapshot";

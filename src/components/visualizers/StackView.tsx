@@ -1,27 +1,8 @@
 "use client";
 
 /**
- * StackView — visualizes a list used as a LIFO stack.
- *
- * 🟣 Vumi: this is YOUR component to build out.
- *
- * Props: same as ArrayView — `node`, `name`, `diffState`.
- *
- * What to draw:
- *   A vertical stack of cards, top of stack at the TOP of the visual.
- *   `node.items[last]` = top of stack, `node.items[0]` = bottom.
- *   Draw items in reverse order (last item first, visually on top).
- *   Add a small "TOP ↑" or "← top" label near the top item.
- *   Color the ring using `diffRingClass(diffState)`.
- *
- * Example layout (items = [1, 2, 3], top = 3):
- *   ┌─────────┐  ← TOP
- *   │    3    │
- *   ├─────────┤
- *   │    2    │
- *   ├─────────┤
- *   │    1    │
- *   └─────────┘
+ * StackView — visualizes a list used as a LIFO stack: a vertical stack of
+ * cards with the top of the stack (last item) drawn at the top.
  */
 
 import type { ValueNode } from "@/types/snapshot";

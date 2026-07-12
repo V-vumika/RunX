@@ -1,14 +1,11 @@
 /**
- * Enriches raw StackFrame[] data for the call-stack visualizer.
+ * Enriches raw StackFrame[] data for call-stack narration.
  *
  * The worker already orders frames outermost→innermost. This module adds
- * metadata Vumi's visual component needs without touching the store:
+ * metadata the step narrator needs without touching the store:
  *   - which frame is "active" (innermost = currently executing)
  *   - whether a function is in a recursive call chain
  *   - the recursion index (1st call / 2nd call / …)
- *
- * Vumi's CallStackPanel receives an `EnrichedFrame[]` from
- * `enrichFrames(snapshot.stack)` and renders each one.
  */
 
 import type { StackFrame, Variable } from "@/types/snapshot";

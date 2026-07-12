@@ -1,27 +1,9 @@
 "use client";
 
 /**
- * ArrayView — visualizes a flat list/tuple of scalars as an indexed row of cells.
- *
- * 🟣 Vumi: this is YOUR component to build out.
- *
- * Props:
- *   - `node`      — the ValueNode for the variable (kind: "list" or "tuple")
- *   - `name`      — the variable name (display as label)
- *   - `diffState` — "added" | "changed" | "unchanged" (use diffRingClass for the highlight ring)
- *
- * What to draw:
- *   A row of boxes, one per item in `node.items`. Each box shows:
- *     - the item's repr (inside the cell)
- *     - the index (below the cell, 0-based)
- *   If `node.truncated` is true, add a "…" cell at the end.
- *   Color the ring using `diffRingClass(diffState)` on the container.
- *
- * Reuse <ValueView node={item} /> inside each cell for color-coded text.
- *
- * Example layout:
- *   arr ──→  [ 5 ][ 2 ][ 9 ][ 1 ][ 7 ]
- *               0    1    2    3    4
+ * ArrayView — visualizes a flat list/tuple of scalars as an indexed row of
+ * cells, each showing the item's repr and its 0-based index. Supports a
+ * two-pointer / sliding-window overlay and a diff ring for the last change.
  */
 
 import type { ValueNode } from "@/types/snapshot";
