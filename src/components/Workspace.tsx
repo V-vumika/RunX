@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeEditor } from "@/components/editor/CodeEditor";
 import { LanguageSelector } from "@/components/editor/LanguageSelector";
 import { ShareButton } from "@/components/ShareButton";
+import { MobileSplitView } from "@/components/MobileSplitView";
 import { decodeShare } from "@/lib/share";
 import { ExecutionControls } from "@/components/execution/ExecutionControls";
 import { OutputPanel } from "@/components/execution/OutputPanel";
@@ -111,24 +112,24 @@ export function Workspace() {
   );
 }
 
-/** Below `md`: a single scrollable column instead of side-by-side resizable panels — the
- *  split layout has no room to breathe on a phone/small-tablet width and just clips. */
+/** Below `md`: a Code/Result focus toggle instead of side-by-side resizable
+ *  panels — the split layout has no room to breathe on a phone/small-tablet
+ *  width, and a fixed 50/50 split left both halves cramped. */
 function MobileLayout() {
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
-      <div className="flex h-[50vh] shrink-0 flex-col border-b">
-        <EditorPanelHeader />
-        <div className="min-h-0 flex-1">
-          <CodeEditor />
-        </div>
-        <InputsPanel />
-        <StdinPanel />
-      </div>
-
-      <div className="h-[50vh] shrink-0">
-        <ResultTabs />
-      </div>
-    </div>
+    <MobileSplitView
+      editor={
+        <>
+          <EditorPanelHeader />
+          <div className="min-h-0 flex-1">
+            <CodeEditor />
+          </div>
+          <InputsPanel />
+          <StdinPanel />
+        </>
+      }
+      result={<ResultTabs />}
+    />
   );
 }
 

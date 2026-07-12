@@ -8,6 +8,7 @@ import { narrateAll, shortRepr, type StepKind } from "@/lib/explain/narrate";
 import { classifyProgram, type AlgoKind } from "@/lib/explain/classify";
 import { explainException } from "@/lib/explain/exceptions";
 import { ExampleGallery } from "@/components/explain/ExampleGallery";
+import { EngineLoadingState } from "@/components/execution/EngineLoadingState";
 import type { ExecutionError, Snapshot, Variable, ValueNode } from "@/types/snapshot";
 import type { SupportIssue } from "@/lib/execution/support-check";
 
@@ -251,6 +252,7 @@ export function ExplainPanel() {
   const result      = useExecutionStore((s) => s.result);
   const runError    = useExecutionStore((s) => s.runError);
   const warnings    = useExecutionStore((s) => s.supportWarnings);
+  const engineStatus = useExecutionStore((s) => s.engineStatus);
 
   const hasTrace   = snapshots.length > 0;
   const error      = result?.error ?? null;
@@ -298,6 +300,7 @@ export function ExplainPanel() {
   }
 
   if (!hasTrace && !error) {
+    if (engineStatus === "loading") return <EngineLoadingState />;
     return (
       <ScrollArea className="h-full">
         <div className="flex flex-col gap-4 p-4">

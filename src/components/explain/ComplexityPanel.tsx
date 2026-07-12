@@ -9,12 +9,14 @@ import { useExecutionStore } from "@/lib/store/execution-store";
 import { classifyProgram, deriveSpaceComplexity } from "@/lib/explain/classify";
 import { hasComplexityAnalysis } from "@/lib/explain/lang";
 import { measureRun } from "@/lib/explain/measure";
+import { EngineLoadingState } from "@/components/execution/EngineLoadingState";
 
 export function ComplexityPanel() {
   const snapshots = useExecutionStore((s) => s.snapshots);
   const code = useExecutionStore((s) => s.code);
   const language = useExecutionStore((s) => s.language);
   const result = useExecutionStore((s) => s.result);
+  const engineStatus = useExecutionStore((s) => s.engineStatus);
 
   const hasTrace = snapshots.length > 0;
   const complexity = result?.complexity;
@@ -53,6 +55,7 @@ export function ComplexityPanel() {
   }
 
   if (!hasTrace || !summary) {
+    if (engineStatus === "loading") return <EngineLoadingState />;
     return (
       <div className="flex h-full items-center justify-center p-6 text-center">
         <div className="max-w-sm">

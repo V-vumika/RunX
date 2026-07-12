@@ -12,6 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeEditor } from "@/components/editor/CodeEditor";
 import { LanguageSelector } from "@/components/editor/LanguageSelector";
+import { MobileSplitView } from "@/components/MobileSplitView";
 import { ExecutionControls } from "@/components/execution/ExecutionControls";
 import { OutputPanel } from "@/components/execution/OutputPanel";
 import { InputsPanel } from "@/components/execution/InputsPanel";
@@ -111,20 +112,19 @@ export function InterviewWorkspace() {
 
 function MobileLayout({ problem }: { problem: (typeof INTERVIEW_PROBLEMS)[number] }) {
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
-      <div className="flex h-[50vh] shrink-0 flex-col border-b">
-        <EditorPanelHeader />
-        <div className="min-h-0 flex-1">
-          <CodeEditor />
-        </div>
-        <InputsPanel />
-        <StdinPanel />
-      </div>
-
-      <div className="h-[50vh] shrink-0">
-        <ResultTabs problem={problem} />
-      </div>
-    </div>
+    <MobileSplitView
+      editor={
+        <>
+          <EditorPanelHeader />
+          <div className="min-h-0 flex-1">
+            <CodeEditor />
+          </div>
+          <InputsPanel />
+          <StdinPanel />
+        </>
+      }
+      result={<ResultTabs problem={problem} />}
+    />
   );
 }
 
