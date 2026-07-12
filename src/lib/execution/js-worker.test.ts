@@ -153,6 +153,13 @@ describe("js worker (traced)", () => {
     expect(call!.stack[call!.stack.length - 1].functionName).toBe("f");
   });
 
+  it("emits a return event with undefined for a function with no explicit return", async () => {
+    const r = await runTraced("function log(n) {\n  console.log(n);\n}\nlog(7);");
+    const ret = r.snapshots.find((s) => s.event === "return");
+    expect(ret, "expected a return event even though the function never returns").toBeDefined();
+    expect(ret!.returnValue?.repr).toBe("undefined");
+  });
+
   it("honors a small maxSteps budget and marks the run truncated", async () => {
     const r = await runTraced("let x = 0;\nwhile (true) {\n  x = x + 1;\n}", { maxSteps: 50 });
     expect(r.truncated).toBe(true);

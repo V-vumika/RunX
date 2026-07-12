@@ -342,6 +342,14 @@ function visitFunction(fn: Node, closureBase: Set<string>, nameHint?: string): v
   const line = fn.loc ? fn.loc.start.line : 0;
   const instrumented = instrumentStatements(bodyStmts, inner);
 
+  // A function that falls off the end without an explicit `return` implicitly
+  // returns undefined — Python's tracer always fires a "return" event for
+  // this case (even `return None`), so without this JS would silently skip
+  // the "function finished" narration for void functions. This statement only
+  // runs when control reaches it, i.e. exactly the fall-through case: any
+  // earlier `return` (now wrapped above) already exits the function first.
+  instrumented.push(exprStmt(call(id(RET), [id("undefined")])));
+
   fn.body.body = [
     exprStmt(call(id(ENTER), [lit(name), lit(line)])),
     {

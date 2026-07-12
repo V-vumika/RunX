@@ -72,6 +72,23 @@ describe("instrument", () => {
     expect(finalDepth).toBe(1);
   });
 
+  it("fires an implicit undefined return when a function falls off the end", () => {
+    const { returns, finalDepth } = runInstrumented(
+      instrument("function log(n) {\n  console.log(n);\n}\nlog(5);").code
+    );
+    expect(returns).toEqual([undefined]);
+    expect(finalDepth).toBe(1);
+  });
+
+  it("does not double-fire the implicit return when an explicit return was hit", () => {
+    const { returns } = runInstrumented(
+      instrument("function f(n) {\n  if (n > 0) {\n    return n;\n  }\n  console.log('non-positive');\n}\nf(3);\nf(-1);").code
+    );
+    // f(3) hits the explicit return (3); f(-1) falls through (undefined) —
+    // exactly one $rx_ret call per invocation, never both for the same call.
+    expect(returns).toEqual([3, undefined]);
+  });
+
   it("handles recursion (frames nest and unwind)", () => {
     const { trace, finalDepth } = runInstrumented(
       instrument("function fac(n) {\n  if (n <= 1) return 1;\n  return n * fac(n - 1);\n}\nfac(4);").code
