@@ -39,24 +39,26 @@
 }
 
 .dark {
-  --background: #04060e;
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* AuthKit palette — matches the landing exactly, so the app doesn't look
+     like a different product once a user clicks through from it. */
+  --background: #080b17;
+  --foreground: #d1e4fa;
+  --card: #0a0e1c;
+  --card-foreground: #d1e4fa;
+  --popover: #0c1122;
+  --popover-foreground: #d1e4fa;
+  --primary: #9b8cf7;
+  --primary-foreground: #0a0e1c;
+  --secondary: rgba(186, 214, 247, 0.06);
+  --secondary-foreground: #d1e4fa;
+  --muted: rgba(186, 214, 247, 0.05);
+  --muted-foreground: #9da7ba;
+  --accent: rgba(102, 58, 243, 0.14);
+  --accent-foreground: #d1e4fa;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --border: rgba(186, 215, 247, 0.12);
+  --input: rgba(186, 215, 247, 0.14);
+  --ring: #9b8cf7;
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Check, ClipboardPaste, Copy, Trash2, X } from "lucide-react";
-import type { OnMount, Monaco } from "@monaco-editor/react";
+import type { BeforeMount, OnMount, Monaco } from "@monaco-editor/react";
 import type { editor as MonacoEditorNS } from "monaco-editor";
 
 import {
@@ -32,6 +32,45 @@ function legacyCopy(text: string): boolean {
     return false;
   }
 }
+
+/**
+ * Custom theme so the editor's chrome (background, gutter, selection, cursor)
+ * matches the app's navy/frost/periwinkle palette instead of Monaco's stock
+ * `vs-dark` (VS Code's own blue-gray) — the seam between "the editor" and
+ * "the rest of the product" was one of the more obvious visual mismatches.
+ * Syntax token colors are inherited from vs-dark (`base`/`inherit: true`) —
+ * only the surrounding chrome is restyled, so highlighting stays legible and
+ * familiar.
+ */
+const handleBeforeMount: BeforeMount = (monaco) => {
+  monaco.editor.defineTheme("runx-dark", {
+    base: "vs-dark",
+    inherit: true,
+    rules: [],
+    colors: {
+      "editor.background": "#0a0e1c",
+      "editor.foreground": "#d1e4fa",
+      "editorLineNumber.foreground": "#4a5578",
+      "editorLineNumber.activeForeground": "#9b8cf7",
+      "editorCursor.foreground": "#9b8cf7",
+      "editor.selectionBackground": "#663af359",
+      "editor.inactiveSelectionBackground": "#663af333",
+      "editor.lineHighlightBackground": "#bad7f70a",
+      "editorIndentGuide.background1": "#bad7f714",
+      "editorIndentGuide.activeBackground1": "#bad7f72e",
+      "editorGutter.background": "#0a0e1c",
+      "editorWidget.background": "#0c1122",
+      "editorWidget.border": "#bad7f71f",
+      "editorSuggestWidget.background": "#0c1122",
+      "editorSuggestWidget.border": "#bad7f71f",
+      "editorSuggestWidget.selectedBackground": "#663af326",
+      "scrollbarSlider.background": "#bad7f714",
+      "scrollbarSlider.hoverBackground": "#bad7f722",
+      "scrollbarSlider.activeBackground": "#bad7f733",
+      "minimap.background": "#0a0e1c",
+    },
+  });
+};
 
 const MonacoEditor = dynamic(
   () => import("@monaco-editor/react").then((m) => m.Editor),
@@ -170,12 +209,14 @@ export function CodeEditor() {
 
   return (
     <div className="relative h-full">
-      <div className="absolute right-3 top-2 z-10 flex gap-1">
+      {/* One cohesive frosted toolbar (divided, not three floating pills) —
+          matches the glass/hairline language used across the rest of the app. */}
+      <div className="ak-glass ak-hairline absolute right-3 top-2 z-10 flex overflow-hidden rounded-lg backdrop-blur-md">
         <button
           onClick={handleCopy}
           title="Copy all code"
-          className={`flex items-center gap-1 rounded bg-muted/70 px-2 py-1 text-[11px] backdrop-blur transition-colors hover:bg-muted hover:text-foreground ${
-            copyState === "fail" ? "text-destructive" : "text-muted-foreground"
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] transition-colors hover:bg-[rgba(186,214,247,0.08)] hover:text-frost ${
+            copyState === "fail" ? "text-destructive" : "text-mist"
           }`}
         >
           {copyState === "ok" ? (
@@ -187,18 +228,20 @@ export function CodeEditor() {
           )}
           {copyState === "ok" ? "Copied" : copyState === "fail" ? "Failed" : "Copy"}
         </button>
+        <span className="w-px shrink-0 bg-[rgba(186,215,247,0.1)]" />
         <button
           onClick={handlePaste}
           title="Paste from clipboard at the cursor"
-          className="flex items-center gap-1 rounded bg-muted/70 px-2 py-1 text-[11px] text-muted-foreground backdrop-blur transition-colors hover:bg-muted hover:text-foreground"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-mist transition-colors hover:bg-[rgba(186,214,247,0.08)] hover:text-frost"
         >
           <ClipboardPaste className="size-3" />
           {pasteHint ? "Press Ctrl+V" : "Paste"}
         </button>
+        <span className="w-px shrink-0 bg-[rgba(186,215,247,0.1)]" />
         <button
           onClick={handleClear}
           title="Clear all code"
-          className="flex items-center gap-1 rounded bg-muted/70 px-2 py-1 text-[11px] text-muted-foreground backdrop-blur transition-colors hover:bg-muted hover:text-foreground"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-mist transition-colors hover:bg-[rgba(186,214,247,0.08)] hover:text-frost"
         >
           <Trash2 className="size-3" />
           Clear
@@ -207,9 +250,10 @@ export function CodeEditor() {
       <MonacoEditor
       height="100%"
       language={monacoLanguage}
-      theme="vs-dark"
+      theme="runx-dark"
       value={code}
       onChange={(value) => setCode(value ?? "")}
+      beforeMount={handleBeforeMount}
       onMount={handleMount}
       options={{
         fontSize: 14,
