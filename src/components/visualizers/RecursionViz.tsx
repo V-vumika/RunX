@@ -2,6 +2,7 @@
 
 import type { Snapshot } from "@/types/snapshot";
 import { shortRepr } from "@/lib/explain/narrate";
+import { VIZ } from "@/lib/visualizers/palette";
 
 export function RecursionViz({ snapshots, step }: { snapshots: Snapshot[]; step: number }) {
   const snap = snapshots[step];
@@ -17,7 +18,7 @@ export function RecursionViz({ snapshots, step }: { snapshots: Snapshot[]; step:
       <div className="border-b border-border/40 bg-muted/40 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
         call stack · depth {snap.stack.length}
       </div>
-      <div className="bg-muted/10 flex justify-center py-2">
+      <div className="flex justify-center py-2" style={{ background: VIZ.canvasBg }}>
         <svg width={W} height={totalH} viewBox={`0 0 ${W} ${totalH}`}>
           {frames.map((f, i) => {
             const isActive  = i === frames.length - 1;
@@ -26,10 +27,10 @@ export function RecursionViz({ snapshots, step }: { snapshots: Snapshot[]; step:
             const fw        = W - 16 - indent;
             const argStr    = f.locals.slice(0, 2).map((v) => `${v.name}=${shortRepr(v.value, 7)}`).join(", ");
 
-            const fill   = isActive ? "#2D2A5A" : "#1a1a2e";
-            const stroke = isActive ? "#7F77DD" : "#2a2a3e";
-            const tc     = isActive ? "#C4C0F5" : "#555577";
-            const tagTc  = isActive ? "#9B96E8" : "#444466";
+            const fill   = isActive ? VIZ.activeFill : VIZ.idleFill;
+            const stroke = isActive ? VIZ.activeBorder : VIZ.idleBorder;
+            const tc     = isActive ? VIZ.activeText : VIZ.idleTextFaint;
+            const tagTc  = isActive ? VIZ.activeBar : VIZ.idleTextFaint;
 
             return (
               <g key={i}>
@@ -51,7 +52,7 @@ export function RecursionViz({ snapshots, step }: { snapshots: Snapshot[]; step:
                 {/* active glow */}
                 {isActive && (
                   <rect x={7 + indent} y={y - 1} width={fw + 2} height={frameH + 2} rx={6}
-                    fill="none" stroke="#7F77DD" strokeWidth={0.5} opacity={0.4} />
+                    fill="none" stroke={VIZ.activeBar} strokeWidth={0.5} opacity={0.4} />
                 )}
               </g>
             );
@@ -61,9 +62,9 @@ export function RecursionViz({ snapshots, step }: { snapshots: Snapshot[]; step:
           {isRet && snap.returnValue && (
             <g>
               <rect x={W / 2 - 60} y={totalH - 16} width={120} height={14} rx={7}
-                fill="#0F3D2E" stroke="#1D9E75" strokeWidth={1} />
+                fill={VIZ.doneFill} stroke={VIZ.doneBorder} strokeWidth={1} />
               <text x={W / 2} y={totalH - 5} textAnchor="middle" fontSize={9}
-                fontFamily="var(--font-mono)" fill="#5DCAA5">
+                fontFamily="var(--font-mono)" fill={VIZ.doneText}>
                 returns {shortRepr(snap.returnValue, 16)}
               </text>
             </g>

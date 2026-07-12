@@ -2,6 +2,7 @@
 
 import type { Snapshot, ValueNode } from "@/types/snapshot";
 import { shortRepr } from "@/lib/explain/narrate";
+import { VIZ } from "@/lib/visualizers/palette";
 
 interface TNode { val: string; left?: TNode; right?: TNode; id: number }
 interface Pos { x: number; y: number; node: TNode }
@@ -83,18 +84,26 @@ export function TreeViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
               const nv = f.locals.find((v) => ["node","root","curr","val"].includes(v.name));
               return (
                 <div key={i} className="flex items-center gap-1.5">
-                  <div className={`flex h-7 min-w-7 items-center justify-center rounded-full border px-1.5 font-mono text-[10px] font-semibold ${
-                    isActive ? "border-violet-500/50 bg-violet-500/20 text-violet-200" : "border-border/30 bg-muted/30 text-muted-foreground/40"
-                  }`}>{nv ? shortRepr(nv.value, 4) : i+1}</div>
+                  <div
+                    className="flex h-7 min-w-7 items-center justify-center rounded-full border px-1.5 font-mono text-[10px] font-semibold"
+                    style={
+                      isActive
+                        ? { borderColor: VIZ.activeBorder, background: VIZ.activeFill, color: VIZ.activeText }
+                        : { borderColor: VIZ.idleBorder, background: VIZ.idleFill, color: VIZ.idleTextFaint }
+                    }
+                  >{nv ? shortRepr(nv.value, 4) : i+1}</div>
                   {i < snap.stack.length-1 && <span className="text-muted-foreground/25 text-xs">›</span>}
                 </div>
               );
             })}
           </div>
           {currVar && (
-            <div className="flex items-center gap-2 rounded border border-violet-500/20 bg-violet-500/5 px-2.5 py-1.5">
+            <div
+              className="flex items-center gap-2 rounded border px-2.5 py-1.5"
+              style={{ borderColor: VIZ.activeFill, background: "rgba(102,58,243,0.06)" }}
+            >
               <span className="text-[10px] text-muted-foreground">current node</span>
-              <span className="font-mono text-[11px] font-medium text-violet-300">{shortRepr(currVar.value, 20)}</span>
+              <span className="font-mono text-[11px] font-medium" style={{ color: VIZ.activeText }}>{shortRepr(currVar.value, 20)}</span>
             </div>
           )}
         </div>
@@ -115,7 +124,7 @@ export function TreeViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
         binary tree · {positions.length} nodes
       </div>
 
-      <div className="bg-[#0d0d1a] flex justify-center">
+      <div className="flex justify-center" style={{ background: VIZ.canvasBg }}>
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
           {/* subtle grid */}
           {Array.from({length:5}).map((_,row) => Array.from({length:7}).map((_,col) => (
@@ -125,25 +134,25 @@ export function TreeViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
           {/* edges */}
           {edgeList.map((e) => (
             <line key={e.id} x1={e.px} y1={e.py} x2={e.cx} y2={e.cy}
-              stroke="#2a2a4a" strokeWidth={1.5} strokeOpacity={0.7} />
+              stroke={VIZ.idleLine} strokeWidth={1.5} />
           ))}
 
           {/* nodes */}
           {positions.map(({ x, y, node }) => {
             const isCurrent = node.val === currentVal;
             const isVisited = visitedVals.has(node.val) && !isCurrent;
-            const fill   = isCurrent ? "#4A3FB5" : isVisited ? "#0F5C3A" : "#12122a";
-            const stroke = isCurrent ? "#9B96E8" : isVisited ? "#1D9E75" : "#2a2a4a";
-            const tc     = (isCurrent || isVisited) ? "#fff" : "#555577";
+            const fill   = isCurrent ? VIZ.activeFill : isVisited ? VIZ.doneFill : VIZ.idleFill;
+            const stroke = isCurrent ? VIZ.activeBorder : isVisited ? VIZ.doneBorder : VIZ.idleBorder;
+            const tc     = isCurrent ? VIZ.activeText : isVisited ? VIZ.doneText : VIZ.idleTextFaint;
 
             return (
               <g key={node.id}>
                 {isCurrent && <>
-                  <circle cx={x} cy={y} r={nodeR+7} fill="#7F77DD" opacity={0.1} />
-                  <circle cx={x} cy={y} r={nodeR+4} fill="none" stroke="#9B96E8"
-                    strokeWidth={1} strokeDasharray="3 2" strokeOpacity={0.5} />
+                  <circle cx={x} cy={y} r={nodeR+7} fill={VIZ.activeBar} opacity={0.12} />
+                  <circle cx={x} cy={y} r={nodeR+4} fill="none" stroke={VIZ.activeBorder}
+                    strokeWidth={1} strokeDasharray="3 2" strokeOpacity={0.6} />
                 </>}
-                {isVisited && <circle cx={x} cy={y} r={nodeR+4} fill="#1D9E75" opacity={0.1} />}
+                {isVisited && <circle cx={x} cy={y} r={nodeR+4} fill={VIZ.doneBar} opacity={0.1} />}
                 <circle cx={x} cy={y} r={nodeR} fill={fill} stroke={stroke} strokeWidth={1.5} />
                 <text x={x} y={y+4} textAnchor="middle"
                   fontSize={10} fontFamily="var(--font-mono)" fontWeight="700" fill={tc}>
@@ -156,9 +165,9 @@ export function TreeViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
       </div>
 
       <div className="flex items-center gap-3 border-t border-border/40 px-3 py-1.5 text-[10px] text-muted-foreground">
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#9B96E8]" />current</span>
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#1D9E75]" />visited</span>
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full border border-[#2a2a4a] bg-[#12122a]" />unvisited</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: VIZ.activeBar }} />current</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: VIZ.doneBar }} />visited</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full border" style={{ borderColor: VIZ.idleBorder, background: VIZ.idleFill }} />unvisited</span>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import type { Snapshot, ValueNode } from "@/types/snapshot";
 import { shortRepr } from "@/lib/explain/narrate";
+import { VIZ } from "@/lib/visualizers/palette";
 
 export function HeapViz({ snapshots, step }: { snapshots: Snapshot[]; step: number }) {
   const snap  = snapshots[step];
@@ -58,19 +59,19 @@ export function HeapViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
       </div>
 
       {/* tree view */}
-      <div className="bg-[#0d0d1a] flex justify-center py-2">
+      <div className="flex justify-center py-2" style={{ background: VIZ.canvasBg }}>
         <svg width={W} height={treeH} viewBox={`0 0 ${W} ${treeH}`}>
           {edgesArr.map((e, idx) => (
             <line key={idx} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
-              stroke="#2a2a4a" strokeWidth={1.5} strokeOpacity={0.6} />
+              stroke={VIZ.idleLine} strokeWidth={1.5} />
           ))}
           {arr.map((val, idx) => {
             const p = posFor(idx);
             const isActive = idx === i1 || idx === i2;
             const isRoot = idx === 0;
-            const fill   = isActive ? "#3D2A00" : isRoot ? "#1e1e35" : "#12122a";
-            const stroke = isActive ? "#EF9F27" : isRoot ? "#7F77DD" : "#3a3a4a";
-            const tc     = isActive ? "#EF9F27" : isRoot ? "#C4C0F5" : "#8888aa";
+            const fill   = isActive ? VIZ.activeFill : isRoot ? VIZ.doneFill : VIZ.idleFill;
+            const stroke = isActive ? VIZ.activeBorder : isRoot ? VIZ.doneBorder : VIZ.idleBorder;
+            const tc     = isActive ? VIZ.activeText : isRoot ? VIZ.doneText : VIZ.idleTextFaint;
             return (
               <g key={idx}>
                 <circle cx={p.x} cy={p.y} r={13} fill={fill} stroke={stroke} strokeWidth={1.5} />
@@ -90,9 +91,9 @@ export function HeapViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
           {arr.slice(0, count).map((val, idx) => {
             const isActive = idx === i1 || idx === i2;
             const x = 8 + idx * cellW;
-            const fill   = isActive ? "#3D2A00" : "#12122a";
-            const stroke = isActive ? "#EF9F27" : "#2a2a4a";
-            const tc     = isActive ? "#EF9F27" : "#666688";
+            const fill   = isActive ? VIZ.activeFill : VIZ.idleFill;
+            const stroke = isActive ? VIZ.activeBorder : VIZ.idleBorder;
+            const tc     = isActive ? VIZ.activeText : VIZ.idleTextFaint;
             return (
               <g key={idx}>
                 <rect x={x + 1} y={4} width={cellW - 4} height={24} rx={3}
@@ -102,7 +103,7 @@ export function HeapViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
                   {val}
                 </text>
                 <text x={x + cellW / 2} y={38} textAnchor="middle"
-                  fontSize={7} fontFamily="var(--font-mono)" fill="#444466">{idx}</text>
+                  fontSize={7} fontFamily="var(--font-mono)" fill={VIZ.idleTextFaint}>{idx}</text>
               </g>
             );
           })}
@@ -110,8 +111,8 @@ export function HeapViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
       </div>
 
       <div className="flex items-center gap-3 border-t border-border/40 px-3 py-1.5 text-[10px] text-muted-foreground">
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#7F77DD]" />root (min/max)</span>
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#EF9F27]" />active</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: VIZ.doneBar }} />root (min/max)</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: VIZ.activeBar }} />active</span>
       </div>
     </div>
   );

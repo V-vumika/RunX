@@ -3,6 +3,7 @@
 import type { Snapshot, ValueNode } from "@/types/snapshot";
 import { shortRepr } from "@/lib/explain/narrate";
 import { parseGraph, parseDist, parseFrontierNodes } from "@/lib/visualizers/graph";
+import { VIZ } from "@/lib/visualizers/palette";
 
 function parseSet(node: ValueNode | undefined): Set<string> {
   const s = new Set<string>();
@@ -79,18 +80,24 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
       <div className="overflow-hidden rounded-md border border-border/50">
         <div className="border-b border-border/40 bg-muted/40 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">traversal state</div>
         <div className="grid grid-cols-2 gap-1.5 p-2.5">
-          {currentVar && <div className="col-span-2 rounded border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5">
-            <div className="text-[10px] text-muted-foreground mb-0.5">current</div>
-            <div className="font-mono text-[11px] font-medium text-violet-300">{shortRepr(currentVar.value, 24)}</div>
-          </div>}
-          {queueVar && <div className="rounded border border-border/40 bg-muted/30 px-2 py-1.5">
-            <div className="text-[10px] text-muted-foreground mb-0.5">{queueVar.name}</div>
-            <div className="font-mono text-[11px] text-amber-300">{shortRepr(queueVar.value, 28)}</div>
-          </div>}
-          {visitedVar && <div className="rounded border border-border/40 bg-muted/30 px-2 py-1.5">
-            <div className="text-[10px] text-muted-foreground mb-0.5">visited</div>
-            <div className="font-mono text-[11px] text-emerald-300">{shortRepr(visitedVar.value, 28)}</div>
-          </div>}
+          {currentVar && (
+            <div className="col-span-2 rounded border px-2.5 py-1.5" style={{ borderColor: VIZ.activeBorder, background: VIZ.activeFill }}>
+              <div className="text-[10px] text-muted-foreground mb-0.5">current</div>
+              <div className="font-mono text-[11px] font-medium" style={{ color: VIZ.activeText }}>{shortRepr(currentVar.value, 24)}</div>
+            </div>
+          )}
+          {queueVar && (
+            <div className="rounded border border-border/40 bg-muted/30 px-2 py-1.5">
+              <div className="text-[10px] text-muted-foreground mb-0.5">{queueVar.name}</div>
+              <div className="font-mono text-[11px]" style={{ color: VIZ.pendingText }}>{shortRepr(queueVar.value, 28)}</div>
+            </div>
+          )}
+          {visitedVar && (
+            <div className="rounded border border-border/40 bg-muted/30 px-2 py-1.5">
+              <div className="text-[10px] text-muted-foreground mb-0.5">visited</div>
+              <div className="font-mono text-[11px]" style={{ color: VIZ.doneText }}>{shortRepr(visitedVar.value, 28)}</div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -111,7 +118,7 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
         {weighted ? "weighted graph" : "graph"} · {keys.length} nodes · {graph.edges.length} edges
       </div>
 
-      <div className="bg-[#0d0d1a] flex justify-center">
+      <div className="flex justify-center" style={{ background: VIZ.canvasBg }}>
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
           {/* grid dots */}
           {Array.from({ length: 6 }).map((_, row) =>
@@ -133,23 +140,23 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
             return (
               <g key={`${a}-${b}`}>
                 <line x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
-                  stroke={bothVisited ? "#1D9E75" : active ? "#7F77DD" : "#2a2a4a"}
+                  stroke={bothVisited ? VIZ.doneLine : active ? VIZ.activeLine : VIZ.idleLine}
                   strokeWidth={bothVisited ? 2 : active ? 1.5 : 1}
-                  strokeOpacity={bothVisited ? 0.7 : active ? 0.6 : 0.35} />
+                  strokeOpacity={bothVisited ? 0.7 : active ? 0.6 : 0.5} />
                 {/* edge being relaxed this step — bright, marching dashes */}
                 {relaxing && (
                   <line x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
-                    stroke="#EF9F27" strokeWidth={2.5} strokeDasharray="5 3" strokeOpacity={0.95}>
+                    stroke={VIZ.pendingBar} strokeWidth={2.5} strokeDasharray="5 3" strokeOpacity={0.95}>
                     <animate attributeName="stroke-dashoffset" from="0" to="-16" dur="0.5s" repeatCount="indefinite" />
                   </line>
                 )}
                 {weighted && w != null && (
                   <>
                     <rect x={mx - 8} y={my - 6} width={16} height={11} rx={2}
-                      fill="#0d0d1a" opacity={0.85} />
+                      fill={VIZ.canvasBg} opacity={0.85} />
                     <text x={mx} y={my + 2.5} textAnchor="middle"
                       fontSize={9} fontFamily="var(--font-mono)" fontWeight="700"
-                      fill={active ? "#9B96E8" : "#8888aa"}>
+                      fill={active ? VIZ.activeBar : VIZ.idleTextFaint}>
                       {w}
                     </text>
                   </>
@@ -166,26 +173,26 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
             const isVisited = visited.has(k);
             const isInQueue = inQueue.has(k);
 
-            const fill   = isCurrent ? "#4A3FB5" : isVisited ? "#0F5C3A" : isInQueue ? "#7A4800" : "#12122a";
-            const stroke = isCurrent ? "#9B96E8" : isVisited ? "#1D9E75" : isInQueue ? "#EF9F27" : "#2a2a4a";
-            const glow   = isCurrent ? "#7F77DD"  : isVisited ? "#1D9E75" : isInQueue ? "#EF9F27" : null;
-            const tc     = (isCurrent || isVisited || isInQueue) ? "#fff" : "#555577";
+            const fill   = isCurrent ? VIZ.activeFill : isVisited ? VIZ.doneFill : isInQueue ? VIZ.pendingFill : VIZ.idleFill;
+            const stroke = isCurrent ? VIZ.activeBorder : isVisited ? VIZ.doneBorder : isInQueue ? VIZ.pendingBorder : VIZ.idleBorder;
+            const glow   = isCurrent ? VIZ.activeBar : isVisited ? VIZ.doneBar : isInQueue ? VIZ.pendingBar : null;
+            const tc     = isCurrent ? VIZ.activeText : isVisited ? VIZ.doneText : isInQueue ? VIZ.pendingText : VIZ.idleTextFaint;
 
             const isImproved = improved.has(k);
             return (
               <g key={k}>
                 {glow && <circle cx={p.x} cy={p.y} r={nodeR + 6} fill={glow} opacity={0.12} />}
-                {/* distance just dropped — pulse a green ring */}
+                {/* distance just dropped — pulse a teal ring */}
                 {isImproved && (
-                  <circle cx={p.x} cy={p.y} r={nodeR + 2} fill="none" stroke="#34d399" strokeWidth={2}>
+                  <circle cx={p.x} cy={p.y} r={nodeR + 2} fill="none" stroke={VIZ.doneBar} strokeWidth={2}>
                     <animate attributeName="r" values={`${nodeR + 2};${nodeR + 9};${nodeR + 2}`} dur="0.9s" repeatCount="indefinite" />
                     <animate attributeName="stroke-opacity" values="0.9;0;0.9" dur="0.9s" repeatCount="indefinite" />
                   </circle>
                 )}
                 {isCurrent && (
                   <circle cx={p.x} cy={p.y} r={nodeR + 4}
-                    fill="none" stroke="#9B96E8" strokeWidth={1}
-                    strokeDasharray="3 2" strokeOpacity={0.5} />
+                    fill="none" stroke={VIZ.activeBorder} strokeWidth={1}
+                    strokeDasharray="3 2" strokeOpacity={0.6} />
                 )}
                 <circle cx={p.x} cy={p.y} r={nodeR} fill={fill} stroke={stroke} strokeWidth={1.5} />
                 <text x={p.x} y={p.y + 4} textAnchor="middle"
@@ -196,7 +203,7 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
                 {hasDist && (
                   <text x={p.x} y={p.y + nodeR + 9} textAnchor="middle"
                     fontSize={8.5} fontFamily="var(--font-mono)" fontWeight="700"
-                    fill={isImproved ? "#34d399" : dist.has(k) && Number.isFinite(dist.get(k)!) ? "#5BC8F5" : "#44445e"}>
+                    fill={isImproved ? VIZ.doneBar : dist.has(k) && Number.isFinite(dist.get(k)!) ? VIZ.activeBar : VIZ.idleTextFaint}>
                     {fmtDist(dist.get(k))}
                   </text>
                 )}
@@ -208,24 +215,30 @@ export function GraphViz({ snapshots, step }: { snapshots: Snapshot[]; step: num
 
       {/* legend + live state */}
       <div className="flex flex-wrap items-center gap-3 border-t border-border/40 px-3 py-1.5 text-[10px] text-muted-foreground">
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#9B96E8]" />current</span>
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#EF9F27]" />frontier</span>
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#1D9E75]" />visited</span>
-        {hasDist && <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#5BC8F5]" />distance</span>}
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: VIZ.activeBar }} />current</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: VIZ.pendingBar }} />frontier</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: VIZ.doneBar }} />visited</span>
+        {hasDist && <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: VIZ.activeBar }} />distance</span>}
       </div>
       <div className="grid grid-cols-2 gap-1.5 border-t border-border/40 p-2">
-        {queueVar && <div className="rounded border border-border/40 bg-muted/30 px-2 py-1">
-          <div className="mb-0.5 text-[10px] text-muted-foreground">{queueVar.name}</div>
-          <div className="font-mono text-[11px] font-medium text-amber-300 break-all">{shortRepr(queueVar.value, 32)}</div>
-        </div>}
-        {distVar && <div className="rounded border border-border/40 bg-muted/30 px-2 py-1">
-          <div className="mb-0.5 text-[10px] text-muted-foreground">{distVar.name}</div>
-          <div className="font-mono text-[11px] font-medium text-sky-300 break-all">{shortRepr(distVar.value, 32)}</div>
-        </div>}
-        {visitedVar && !distVar && <div className="rounded border border-border/40 bg-muted/30 px-2 py-1">
-          <div className="mb-0.5 text-[10px] text-muted-foreground">visited</div>
-          <div className="font-mono text-[11px] font-medium text-emerald-300 break-all">{shortRepr(visitedVar.value, 32)}</div>
-        </div>}
+        {queueVar && (
+          <div className="rounded border border-border/40 bg-muted/30 px-2 py-1">
+            <div className="mb-0.5 text-[10px] text-muted-foreground">{queueVar.name}</div>
+            <div className="font-mono text-[11px] font-medium break-all" style={{ color: VIZ.pendingText }}>{shortRepr(queueVar.value, 32)}</div>
+          </div>
+        )}
+        {distVar && (
+          <div className="rounded border border-border/40 bg-muted/30 px-2 py-1">
+            <div className="mb-0.5 text-[10px] text-muted-foreground">{distVar.name}</div>
+            <div className="font-mono text-[11px] font-medium break-all" style={{ color: VIZ.activeText }}>{shortRepr(distVar.value, 32)}</div>
+          </div>
+        )}
+        {visitedVar && !distVar && (
+          <div className="rounded border border-border/40 bg-muted/30 px-2 py-1">
+            <div className="mb-0.5 text-[10px] text-muted-foreground">visited</div>
+            <div className="font-mono text-[11px] font-medium break-all" style={{ color: VIZ.doneText }}>{shortRepr(visitedVar.value, 32)}</div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import type { Snapshot } from "@/types/snapshot";
 import { shortRepr } from "@/lib/explain/narrate";
+import { VIZ } from "@/lib/visualizers/palette";
 
 export function IterativeViz({ snapshots, step }: { snapshots: Snapshot[]; step: number }) {
   const snap  = snapshots[step];
@@ -29,9 +30,13 @@ export function IterativeViz({ snapshots, step }: { snapshots: Snapshot[]; step:
         {loopVars.length > 0 && (
           <div className="flex gap-2 flex-wrap">
             {loopVars.map((v) => (
-              <div key={v.name} className="rounded border border-cyan-500/30 bg-cyan-500/8 px-4 py-2 text-center min-w-12">
+              <div
+                key={v.name}
+                className="rounded border px-4 py-2 text-center min-w-12"
+                style={{ borderColor: VIZ.activeBorder, background: VIZ.activeFill }}
+              >
                 <div className="text-[9px] text-muted-foreground mb-0.5">{v.name}</div>
-                <div className="font-mono text-lg font-bold text-cyan-300">{shortRepr(v.value, 6)}</div>
+                <div className="font-mono text-lg font-bold" style={{ color: VIZ.activeText }}>{shortRepr(v.value, 6)}</div>
               </div>
             ))}
           </div>
@@ -49,9 +54,9 @@ export function IterativeViz({ snapshots, step }: { snapshots: Snapshot[]; step:
                 {items.slice(0, count).map((item, idx) => {
                   const isActive = idx === curIdx;
                   const x = idx * cellW;
-                  const fill   = isActive ? "#0C2A4A" : "#12122a";
-                  const stroke = isActive ? "#3B82F6" : "#2a2a4a";
-                  const tc     = isActive ? "#93C5FD" : "#555577";
+                  const fill   = isActive ? VIZ.activeFill : VIZ.idleFill;
+                  const stroke = isActive ? VIZ.activeBorder : VIZ.idleBorder;
+                  const tc     = isActive ? VIZ.activeText : VIZ.idleTextFaint;
                   return (
                     <g key={idx}>
                       <rect x={x+1} y={4} width={cellW-2} height={26} rx={3}
@@ -61,12 +66,12 @@ export function IterativeViz({ snapshots, step }: { snapshots: Snapshot[]; step:
                         {shortRepr(item, 4)}
                       </text>
                       <text x={x+cellW/2} y={38} textAnchor="middle"
-                        fontSize={7} fontFamily="var(--font-mono)" fill="#333355">
+                        fontSize={7} fontFamily="var(--font-mono)" fill={VIZ.idleTextFaint}>
                         {idx}
                       </text>
                       {isActive && (
                         <polygon points={`${x+cellW/2-4},${H-2} ${x+cellW/2+4},${H-2} ${x+cellW/2},${H-8}`}
-                          fill="#3B82F6" opacity={0.8} />
+                          fill={VIZ.activeBar} opacity={0.8} />
                       )}
                     </g>
                   );

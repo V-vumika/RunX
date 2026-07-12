@@ -1,6 +1,8 @@
 "use client";
 
 import type { Snapshot } from "@/types/snapshot";
+import { VIZ, VIZ_GRADIENT_ACTIVE } from "@/lib/visualizers/palette";
+import { VizGradientDefs } from "@/components/visualizers/VizGradientDefs";
 
 export function SortViz({ snapshots, step }: { snapshots: Snapshot[]; step: number }) {
   const snap = snapshots[step];
@@ -29,8 +31,9 @@ export function SortViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
       <div className="border-b border-border/40 bg-muted/40 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
         array · {arrVar.name} · {arr.length} elements
       </div>
-      <div className="bg-muted/10 py-2 flex justify-center">
+      <div className="py-2 flex justify-center" style={{ background: VIZ.canvasBg }}>
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+          <VizGradientDefs />
           {arr.slice(0, count).map((v, idx) => {
             const isCmp    = idx === j || idx === j + 1;
             const isSorted = iVal >= 0 && idx >= sortedFrom;
@@ -38,16 +41,16 @@ export function SortViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
             const bh = Math.max(6, Math.round((v / max) * barMaxH));
             const by = H - bh - 22;
 
-            const fillBar   = isSorted ? "#1D9E75" : isCmp ? "#EF9F27" : "#3B5BDB";
-            const fillCell  = isSorted ? "#E1F5EE" : isCmp ? "#FAEEDA" : "#1e1e2e";
-            const strokeCell = isSorted ? "#5DCAA5" : isCmp ? "#EF9F27" : "#3a3a4a";
-            const textColor = isSorted ? "#085041" : isCmp ? "#633806" : "#8888aa";
+            const fillBar    = isSorted ? VIZ.doneBar : isCmp ? `url(#${VIZ_GRADIENT_ACTIVE})` : VIZ.idleBar;
+            const fillCell   = isSorted ? VIZ.doneFill : isCmp ? VIZ.activeFill : VIZ.idleFill;
+            const strokeCell = isSorted ? VIZ.doneBorder : isCmp ? VIZ.activeBorder : VIZ.idleBorder;
+            const textColor  = isSorted ? VIZ.doneText : isCmp ? VIZ.activeText : VIZ.idleText;
 
             return (
               <g key={idx}>
                 {/* bar */}
                 <rect x={x + 2} y={by} width={cellW - 4} height={bh}
-                  rx={3} fill={fillBar} opacity={isSorted ? 0.7 : isCmp ? 0.85 : 0.45} />
+                  rx={3} fill={fillBar} opacity={isSorted ? 0.85 : isCmp ? 1 : 0.7} />
                 {/* cell box */}
                 <rect x={x + 1} y={H - 20} width={cellW - 2} height={18}
                   rx={3} fill={fillCell} stroke={strokeCell} strokeWidth={1} />
@@ -58,15 +61,15 @@ export function SortViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
                 </text>
                 {/* index */}
                 <text x={x + cellW / 2} y={by - 3} textAnchor="middle"
-                  fontSize={8} fontFamily="var(--font-mono)" fill="#555577" opacity={0.6}>
+                  fontSize={8} fontFamily="var(--font-mono)" fill={VIZ.idleTextFaint}>
                   {idx}
                 </text>
                 {/* compare arrows */}
                 {(idx === j) && (
-                  <text x={x + cellW / 2} y={H - 23} textAnchor="middle" fontSize={8} fill="#EF9F27">▲</text>
+                  <text x={x + cellW / 2} y={H - 23} textAnchor="middle" fontSize={8} fill={VIZ.activeBar}>▲</text>
                 )}
                 {(idx === j + 1) && (
-                  <text x={x + cellW / 2} y={H - 23} textAnchor="middle" fontSize={8} fill="#EF9F27">▲</text>
+                  <text x={x + cellW / 2} y={H - 23} textAnchor="middle" fontSize={8} fill={VIZ.activeBar}>▲</text>
                 )}
               </g>
             );
@@ -74,7 +77,7 @@ export function SortViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
 
           {/* swap indicator */}
           {j >= 0 && j + 1 < arr.length && (
-            <text x={W / 2} y={12} textAnchor="middle" fontSize={9} fill="#EF9F27" opacity={0.8}>
+            <text x={W / 2} y={12} textAnchor="middle" fontSize={9} fill={VIZ.activeBar} opacity={0.9}>
               comparing [{j}] ↔ [{j + 1}]
             </text>
           )}
@@ -82,9 +85,9 @@ export function SortViz({ snapshots, step }: { snapshots: Snapshot[]; step: numb
       </div>
       {/* legend */}
       <div className="flex items-center gap-4 border-t border-border/40 px-3 py-1.5 text-[10px] text-muted-foreground">
-        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-[#EF9F27]" />comparing</span>
-        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-[#1D9E75]" />sorted</span>
-        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-[#3B5BDB] opacity-60" />unsorted</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm" style={{ background: VIZ.activeBar }} />comparing</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm" style={{ background: VIZ.doneBar }} />sorted</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm opacity-60" style={{ background: VIZ.idleBar }} />unsorted</span>
       </div>
     </div>
   );

@@ -2,6 +2,11 @@
 
 import type { Snapshot } from "@/types/snapshot";
 import { shortRepr } from "@/lib/explain/narrate";
+import { VIZ } from "@/lib/visualizers/palette";
+
+/** Neutral boundary-pointer accent (lo/hi) — a landmark, not a state, so it
+ *  sits outside the idle/active/pending/done bucket system. Reuses frost. */
+const POINTER = "#d1e4fa";
 
 export function BinarySearchViz({ snapshots, step }: { snapshots: Snapshot[]; step: number }) {
   const snap  = snapshots[step];
@@ -25,9 +30,9 @@ export function BinarySearchViz({ snapshots, step }: { snapshots: Snapshot[]; st
     <div className="overflow-hidden rounded-md border border-border/50">
       <div className="border-b border-border/40 bg-muted/40 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
         binary search · {arrVar.name}
-        {target && <span className="ml-2 text-amber-400/70">target = {shortRepr(target.value, 8)}</span>}
+        {target && <span className="ml-2" style={{ color: VIZ.pendingText }}>target = {shortRepr(target.value, 8)}</span>}
       </div>
-      <div className="bg-muted/10 flex justify-center py-2">
+      <div className="flex justify-center py-2" style={{ background: VIZ.canvasBg }}>
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
           {arr.slice(0, count).map((v, idx) => {
             const isMid      = idx === mid;
@@ -35,18 +40,18 @@ export function BinarySearchViz({ snapshots, step }: { snapshots: Snapshot[]; st
             const outOfRange = lo >= 0 && hi >= 0 && !inRange;
             const x = startX + idx * cellW;
 
-            const fill   = isMid      ? "#3D2A00"
-                         : inRange    ? "#0C2A4A"
+            const fill   = isMid      ? VIZ.activeFill
+                         : inRange    ? VIZ.pendingFill
                          : outOfRange ? "transparent"
-                         : "#1e1e2e";
-            const stroke = isMid      ? "#EF9F27"
-                         : inRange    ? "#3B82F6"
-                         : outOfRange ? "#1a1a2e"
-                         : "#3a3a4a";
-            const tc     = isMid      ? "#EF9F27"
-                         : inRange    ? "#93C5FD"
-                         : outOfRange ? "#2a2a3a"
-                         : "#666688";
+                         : VIZ.idleFill;
+            const stroke = isMid      ? VIZ.activeBorder
+                         : inRange    ? VIZ.pendingBorder
+                         : outOfRange ? "rgba(186,215,247,0.05)"
+                         : VIZ.idleBorder;
+            const tc     = isMid      ? VIZ.activeText
+                         : inRange    ? VIZ.pendingText
+                         : outOfRange ? "rgba(157,167,186,0.3)"
+                         : VIZ.idleTextFaint;
 
             return (
               <g key={idx}>
@@ -59,19 +64,19 @@ export function BinarySearchViz({ snapshots, step }: { snapshots: Snapshot[]; st
                 {/* pointer labels */}
                 {isMid && (
                   <text x={x + cellW / 2} y={15} textAnchor="middle" fontSize={8}
-                    fontFamily="var(--font-mono)" fill="#EF9F27">mid</text>
+                    fontFamily="var(--font-mono)" fill={VIZ.activeBar}>mid</text>
                 )}
                 {idx === lo && !isMid && (
                   <text x={x + cellW / 2} y={15} textAnchor="middle" fontSize={8}
-                    fontFamily="var(--font-mono)" fill="#3B82F6">lo</text>
+                    fontFamily="var(--font-mono)" fill={POINTER}>lo</text>
                 )}
                 {idx === hi && !isMid && (
                   <text x={x + cellW / 2} y={15} textAnchor="middle" fontSize={8}
-                    fontFamily="var(--font-mono)" fill="#3B82F6">hi</text>
+                    fontFamily="var(--font-mono)" fill={POINTER}>hi</text>
                 )}
                 {/* index */}
                 <text x={x + cellW / 2} y={55} textAnchor="middle" fontSize={7}
-                  fontFamily="var(--font-mono)" fill="#333355">{idx}</text>
+                  fontFamily="var(--font-mono)" fill={VIZ.idleTextFaint}>{idx}</text>
               </g>
             );
           })}
@@ -81,17 +86,17 @@ export function BinarySearchViz({ snapshots, step }: { snapshots: Snapshot[]; st
             <>
               <line x1={startX + lo * cellW + 1} y1={44}
                 x2={startX + (hi + 1) * cellW - 1} y2={44}
-                stroke="#3B82F6" strokeWidth={1} strokeOpacity={0.3} strokeDasharray="3 2" />
+                stroke={POINTER} strokeWidth={1} strokeOpacity={0.3} strokeDasharray="3 2" />
             </>
           )}
         </svg>
       </div>
       {/* stats */}
       <div className="flex items-center gap-4 border-t border-border/40 px-3 py-1.5 text-[10px] font-mono">
-        <span className="text-muted-foreground">lo <span className="text-sky-400">{lo >= 0 ? lo : "—"}</span></span>
-        <span className="text-muted-foreground">mid <span className="text-amber-400">{mid >= 0 ? mid : "—"}</span></span>
-        <span className="text-muted-foreground">hi <span className="text-sky-400">{hi >= 0 ? hi : "—"}</span></span>
-        {lo >= 0 && hi >= 0 && <span className="text-muted-foreground">range <span className="text-emerald-400">{hi - lo + 1}</span></span>}
+        <span className="text-muted-foreground">lo <span style={{ color: POINTER }}>{lo >= 0 ? lo : "—"}</span></span>
+        <span className="text-muted-foreground">mid <span style={{ color: VIZ.activeBar }}>{mid >= 0 ? mid : "—"}</span></span>
+        <span className="text-muted-foreground">hi <span style={{ color: POINTER }}>{hi >= 0 ? hi : "—"}</span></span>
+        {lo >= 0 && hi >= 0 && <span className="text-muted-foreground">range <span style={{ color: VIZ.doneBar }}>{hi - lo + 1}</span></span>}
       </div>
     </div>
   );
