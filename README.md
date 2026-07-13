@@ -1,60 +1,70 @@
+![Build](https://img.shields.io/github/actions/workflow/status/V-vumika/RunX/build.yml?branch=main) ![License](https://img.shields.io/badge/license-MIT-blue)
+
 # RunX
 
 An AI-powered code execution, DSA, and complexity visualizer for students.
 
 RunX lets you **run code step-by-step**, **visualize data structures and
-algorithms** in real time, and (later) **analyze time/space complexity** with an
-AI explanation layer. The goal is to replace the opaque "Code → Output" mental
-model with visibility into execution, memory, variables, the call stack, and
+algorithms** in real time, and **analyze time/space complexity** with a
+rules-based detector (no LLM — the class is always computed, never guessed).
+The goal is to replace the opaque "Code → Output" mental model with
+visibility into execution, memory, variables, the call stack, and
 data-structure changes.
 
-## Status — Phase 1 (MVP)
+## Status — v1.0
 
-The end-to-end execution pipeline is working:
+Python and JavaScript are full, equal citizens end to end:
 
-**Editor → Execution Engine → Snapshots → State Store → Inspector**
-
-- ✅ Monaco editor with Python input
-- ✅ Pyodide runtime in a Web Worker, tracing every line via `sys.settrace()`
-- ✅ Per-line snapshots (line, call stack, locals, stdout) serialized to JSON
-- ✅ Zustand store with run / step-forward / step-back / jump-to-step controls
-- ✅ Variable Inspector, Call Stack, and Output panels
-- ✅ Current-line highlighting + time-travel slider
+- ✅ Monaco editor, Python + JavaScript
+- ✅ Per-line execution tracing for both languages (Pyodide `sys.settrace`
+  for Python; AST instrumentation via acorn/astring for JavaScript), into a
+  shared `Snapshot`/`ValueNode` contract
+- ✅ 11 algorithm/DSA visualizers, auto-selected from the trace
+- ✅ Rules-based time/space complexity analysis (no LLM — the class is
+  always computed, never guessed)
+- ✅ LeetCode-paste support: a bare function/class is detected and given an
+  inputs panel so it runs
+- ✅ Interview mode — practice DSA problems with a target complexity, both
+  languages
+- ✅ Marketing landing page at `/`; the workspace lives at `/app`
 
 ## Tech stack
 
-- **Framework:** Next.js (App Router) + TypeScript
-- **Styling:** Tailwind CSS v4 + shadcn/ui
+- **Framework:** Next.js 16 (App Router) + TypeScript
+- **Styling:** Tailwind CSS v4 + shadcn/ui (Radix)
 - **Editor:** Monaco (`@monaco-editor/react`)
 - **State:** Zustand
-- **Python execution:** Pyodide (loaded from CDN, run in a classic Web Worker)
-- **JavaScript execution:** a dedicated classic Web Worker (`AsyncFunction`,
-  console/stdin/error capture — output-only for now, per-line tracing later)
-- Later: Framer Motion (animation), React Flow + D3 (graphs/trees), Supabase
-  (db/auth), OpenAI/Gemini (AI layer)
+- **Animation:** Framer Motion
+- **Graphs/trees:** plain SVG visualizers (`TreeViz`, `GraphViz`)
+- **Python execution:** Pyodide (loaded from CDN, runs in a classic Web Worker)
+- **JavaScript execution:** a dedicated Web Worker; source is instrumented
+  with `acorn` (parse) + `astring` (regenerate) for the per-line trace
+- Later: a backend sandbox for Java/C++, Supabase (accounts/save)
 
 ## Architecture
 
 ```
-Monaco Editor                         src/components/editor
+Monaco Editor                          src/components/editor
    ↓
-Execution Engine (Pyodide + settrace) public/workers/pyodide.worker.js
-   ↓                                  src/lib/execution/pyodide-client.ts
-Snapshot Generator                    (line, variables, call stack per step)
+Execution engine (per language)        public/workers/{pyodide,js}.worker.js
+   ↓                                   src/lib/execution/{pyodide,js}-client.ts
+Entry synthesis (LeetCode-paste)       src/lib/execution/entry/
    ↓
-State Store (Zustand)                 src/lib/store/execution-store.ts
+Snapshot trace                         (line, variables, call stack per step)
    ↓
-Visualizer Engine                     src/components/visualizers (Phase 3+)
+State store (Zustand)                  src/lib/store/execution-store.ts
    ↓
-AI Analysis Layer                     src/lib/ai (Phase 7+)
+Classifier + narrator (rules-based)    src/lib/explain/
    ↓
-UI Components                         src/components
+Visualizer engine (11 visualizers)     src/components/visualizers
+   ↓
+UI (Explain / Complexity / Output)     src/components
 ```
 
-The contract between the worker and the UI lives in `src/types/snapshot.ts`
-(`Snapshot`, `StackFrame`, `Variable`, `ValueNode`, `RunResult`). The same
-`ValueNode` tree feeds the variable inspector today and the DSA visualizers
-later.
+The contract between every language's worker and the UI lives in
+`src/types/snapshot.ts` (`Snapshot`, `StackFrame`, `Variable`, `ValueNode`,
+`RunResult`). Adding a language means writing a new tracer that emits this
+same shape — not a UI rebuild.
 
 ## Getting started
 
@@ -63,28 +73,44 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000, edit the Python in the left pane, hit **Run**, then
-step through execution with the controls (or the ← / → arrow keys) and watch the
-variables, call stack, and output update at each step.
+Open http://localhost:3000/app, paste or write code in the editor, hit
+**Run**, then step through execution with the controls (or the ← / → arrow
+keys, or Space to auto-play) and watch the variables, call stack, output,
+and matching visualizer update at each step.
 
-> The first run downloads the Pyodide runtime (~several MB) from the jsDelivr
-> CDN, so it needs network access and takes a moment on first load.
+> The first Python run downloads the Pyodide runtime from the jsDelivr CDN,
+> so it needs network access and takes a moment on first load. JavaScript
+> has no such dependency.
 
 ## Project structure
 
 ```
-public/workers/        Execution workers (Pyodide for Python, plain worker for JS)
-src/app/               Next.js App Router entry + global styles
+public/workers/         Execution workers (Python + JavaScript)
+src/app/                Next.js App Router: landing (/), workspace (/app),
+                         interview mode (/app/interview)
 src/components/
-  editor/              Monaco code editor + language selector
-  execution/           Run/step controls, call stack, output
-  inspector/           Variable inspector + recursive value renderer
-  visualizers/         DSA visualizers (Phase 3+)
-  ui/                  shadcn/ui primitives
+  editor/                Monaco code editor + language selector
+  execution/             Run/step controls, output, inputs, stdin
+  inspector/             Recursive value renderer
+  visualizers/           11 DSA visualizers
+  interview/              Interview mode UI
+  landing/                Marketing page sections
+  ui/                     shadcn/ui primitives
 src/lib/
-  execution/           Typed worker clients + per-language provider registry
-  store/               Zustand execution store
-  ai/                  AI provider interface (Phase 7+)
-  supabase/            DB/auth client (later)
-src/types/             Shared snapshot/value types
+  execution/              Worker clients, entry synthesis, provider registry
+  explain/                Rules-based classifier, narrator, complexity
+  interview/               Interview problem bank + grading
+  store/                   Zustand execution store
+src/types/               Shared snapshot/value types
 ```
+
+## Deploy
+
+RunX is a static-friendly Next.js app with no backend/database dependency
+for Python + JavaScript (Pyodide loads from a CDN; JS runs in its own
+worker). To deploy on Vercel:
+
+1. Import the repo at vercel.com (Add New → Project → pick this repo).
+2. Leave build settings on their Next.js defaults.
+3. After the first deploy, set `NEXT_PUBLIC_SITE_URL` to your assigned
+   domain in Project Settings → Environment Variables, then redeploy.
