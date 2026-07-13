@@ -3,6 +3,22 @@
   "version": "1.0.0",
   "private": true,
   "description": "An AI-powered code-execution, DSA, and complexity visualizer for students.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/V-vumika/RunX.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "code-visualizer",
+    "algorithm-visualizer",
+    "dsa",
+    "python",
+    "javascript",
+    "education"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -16,12 +32,10 @@
     "@radix-ui/react-slider": "^1.4.1",
     "@radix-ui/react-slot": "^1.3.0",
     "@radix-ui/react-tabs": "^1.1.15",
-    "@xyflow/react": "^12.11.0",
     "acorn": "^8.17.0",
     "astring": "^1.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "d3": "^7.9.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.18.0",
     "monaco-editor": "^0.55.1",
@@ -35,7 +49,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/d3": "^7.4.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
