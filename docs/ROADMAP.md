@@ -61,10 +61,10 @@ the core commitment.
 - [x] Monaco editor, Pyodide worker + `sys.settrace`, snapshot contract
 - [x] Zustand store + step controls, Variable Inspector / Call Stack / Output
 
-### Phase 3 — Memory boxes ✅ DONE
-- [x] 🟣 `MemoryView` — draw each variable as a box (name + value)
-- [x] 🔵 use `ValueNode.id` to show shared references / aliasing — `src/lib/visualizers/aliasing.ts` (`buildAliasMap`)
-- [x] 🔵 wire into the workspace layout — Memory tab + `MemoryView` scaffold
+### Phase 3 — Memory boxes ✅ DONE (superseded)
+- [x] 🟣 `MemoryView` — draw each variable as a box (name + value) — _later removed; superseded by live structure detection in `src/lib/visualizers/detect-live.ts`_
+- [x] 🔵 use `ValueNode.id` to show shared references / aliasing — _`aliasing.ts`/`buildAliasMap` later removed along with `MemoryView`_
+- [x] 🔵 wire into the workspace layout — _Memory tab removed with `MemoryView`_
 
 ### Phase 4 — Call-stack visual polish ✅ DONE
 - [x] 🟣 nicer nested frame cards, clear recursion display
@@ -79,12 +79,12 @@ the core commitment.
 - [x] 🟣 searching views: linear / binary
 - [x] 🔵 step-to-animation mapping helpers
 
-### Phase 7 — Trees & graphs (Day 1–3) 🚧 IN PROGRESS
-- [x] 🔵 structure detection for tree/graph shapes + baseline `TreeView` (React Flow + D3)
-- [x] 🟣 polish `TreeView` (card style, legend, null-leaf indicator)
-- [x] 🔵 reshape-animation fix (real CSS `transform` transition) — this is the pattern every future animated view should follow; Framer Motion alone can't reach into React Flow's node positioning
-- [ ] 🟣 `GraphView` with React Flow + D3
-- [ ] 🔵 BFS / DFS / Dijkstra step animations
+### Phase 7 — Trees & graphs ✅ DONE (2026-07-13 — updated for the React-Flow/D3 removal)
+- [x] 🔵 structure detection for tree/graph shapes + baseline `TreeViz` (plain SVG — React Flow/D3 were later removed, zero imports)
+- [x] 🟣 polish `TreeViz` (card style, legend, null-leaf indicator)
+- [x] 🔵 reshape-animation fix (real CSS `transform` transition)
+- [x] 🟣 `GraphViz` (plain SVG)
+- [x] 🔵 BFS / DFS / Dijkstra step animations
 
 ### Phase 8 — Complexity analyzer (Day 4–6)
 - [ ] 🔵 rules-based class detector for Python (loop nesting + recursion shape) — **decides the class, always; never the LLM**
@@ -92,7 +92,7 @@ the core commitment.
 - [ ] 🟣 complexity result panel UI
 
 ### Phase 9 — Multi-language engines (Day 7–26) — the big lift
-- [ ] 🔵 (Day 7–11) **JavaScript tracer** — AST instrumentation, dedicated Web Worker, mapped into `ValueNode`
+- [x] 🔵 (Day 7–11) **JavaScript tracer** — AST instrumentation, dedicated Web Worker, mapped into `ValueNode` — done 2026-07-12
 - [ ] 🔵 (Day 12–18) **Backend sandbox infra** — self-hosted Piston-style Docker sandbox on a small VPS; minimal "submit code + language → get trace stream" API
 - [ ] 🔵 (Day 19–22) **Java tracer** — source instrumentation (reflection-based locals dump) on the sandbox, mapped into `ValueNode`
 - [ ] 🔵 (Day 23–26) **C++ tracer** — GDB/MI-driven stepping on the sandbox, mapped into `ValueNode` — highest risk, see cut order above
@@ -112,6 +112,6 @@ the core commitment.
 - [ ] 🔵 Supabase auth (email + OAuth), save/load snippets (now stores language alongside code), share a trace by link
 
 ### Phase 12 — Interview mode + Polish & ship (Day 37–40)
-- [ ] 🔵 interview mode: solve a DSA problem → complexity + optimization tips, reusing Phase 8's detector — **scoped to Python first**; multi-language interview mode is a stretch goal past day 40
+- [x] 🔵 interview mode: solve a DSA problem → complexity + optimization tips, reusing Phase 8's detector — shipped 2026-07-12 for **both Python and JavaScript** (ahead of the original Python-first plan)
 - [ ] 🟣 interview-mode UI
 - [ ] basic tests, deploy frontend to Vercel **and** the sandbox VPS, landing page + docs
