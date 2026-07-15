@@ -120,13 +120,13 @@ export function LinkedListViz({ snapshots, step }: { snapshots: Snapshot[]; step
 
       <div className="flex items-start gap-0 overflow-x-auto bg-[#0b0b16] px-4 py-5">
         {/* head entry pointer */}
-        <div className="mr-1 flex flex-col items-center gap-1 pt-[18px]">
+        <div className="mr-1 flex flex-col items-center gap-1 pt-4.5">
           <span className="rounded bg-[#3D2A00] px-1.5 py-0.5 font-mono text-[9px] font-bold text-[#EF9F27]">head</span>
           <span className="text-base text-[#EF9F27]/70">→</span>
         </div>
 
         {nodes.length === 0 ? (
-          <div className="flex flex-col items-center gap-1 pt-[18px]">
+          <div className="flex flex-col items-center gap-1 pt-4.5">
             <span className="rounded-md border border-dashed border-[#2a2a3a] px-3 py-2 font-mono text-[11px] text-muted-foreground/50">null</span>
             <span className="text-[9px] text-muted-foreground/50">empty list</span>
           </div>
@@ -168,14 +168,14 @@ export function LinkedListViz({ snapshots, step }: { snapshots: Snapshot[]; step
                   </div>
                   {/* arrow to next node */}
                   {i < nodes.length - 1 && (
-                    <span className="px-1 pt-[26px] text-base text-[#4a4a6a]">→</span>
+                    <span className="px-1 pt-6.5 text-base text-[#4a4a6a]">→</span>
                   )}
                 </div>
               );
             })}
 
             {/* terminator */}
-            <span className="px-1 pt-[26px] text-base text-[#4a4a6a]">→</span>
+            <span className="px-1 pt-6.5 text-base text-[#4a4a6a]">→</span>
             <div className="flex flex-col items-center gap-1">
               <div className="flex min-h-4 flex-wrap justify-center gap-0.5">
                 {nullRefs.map((r) => (
