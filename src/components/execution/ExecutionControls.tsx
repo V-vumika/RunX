@@ -53,10 +53,11 @@ export function ExecutionControls() {
       if (tag === "textarea" || tag === "input" || (el as HTMLElement)?.isContentEditable) return;
       if (e.key === "ArrowRight") { e.preventDefault(); e.stopPropagation(); stepForward(); }
       else if (e.key === "ArrowLeft") { e.preventDefault(); e.stopPropagation(); stepBackward(); }
+      else if (e.key === " ") { e.preventDefault(); e.stopPropagation(); togglePlay(); }
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [stepForward, stepBackward]);
+  }, [stepForward, stepBackward, togglePlay]);
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -89,6 +90,7 @@ export function ExecutionControls() {
           onClick={() => goToStep(0)}
           disabled={!hasTrace || atStart}
           title="Jump to start"
+          aria-label="Jump to start"
         >
           <SkipBack className="size-4" />
         </Button>
@@ -97,6 +99,7 @@ export function ExecutionControls() {
           onClick={stepBackward}
           disabled={!hasTrace || atStart}
           title="Step back (←)"
+          aria-label="Step back"
         >
           <ChevronLeft className="size-4" />
         </Button>
@@ -106,7 +109,8 @@ export function ExecutionControls() {
           variant="outline" size="icon"
           onClick={togglePlay}
           disabled={!hasTrace || atEnd}
-          title={isPlaying ? "Pause (Space)" : "Auto-play"}
+          title={isPlaying ? "Pause (Space)" : "Auto-play (Space)"}
+          aria-label={isPlaying ? "Pause" : "Auto-play"}
         >
           {isPlaying
             ? <Pause className="size-4" />
@@ -118,6 +122,7 @@ export function ExecutionControls() {
           onClick={stepForward}
           disabled={!hasTrace || atEnd}
           title="Step forward (→)"
+          aria-label="Step forward"
         >
           <ChevronRight className="size-4" />
         </Button>
@@ -126,6 +131,7 @@ export function ExecutionControls() {
           onClick={reset}
           disabled={!hasTrace}
           title="Clear trace"
+          aria-label="Clear trace"
         >
           <RotateCcw className="size-4" />
         </Button>
