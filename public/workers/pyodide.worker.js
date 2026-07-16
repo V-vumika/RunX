@@ -22,7 +22,6 @@
 const PYODIDE_VERSION = "0.28.3";
 const PYODIDE_BASE = "https://cdn.jsdelivr.net/pyodide/v" + PYODIDE_VERSION + "/full/";
 
-// eslint-disable-next-line no-undef
 importScripts(PYODIDE_BASE + "pyodide.js");
 
 /*
@@ -388,7 +387,6 @@ function ensurePyodide() {
   if (!loadPromise) {
     loadPromise = (async () => {
       self.postMessage({ type: "status", status: "loading-runtime" });
-      // eslint-disable-next-line no-undef
       pyodide = await loadPyodide({ indexURL: PYODIDE_BASE });
       self.postMessage({ type: "ready" });
       return pyodide;
