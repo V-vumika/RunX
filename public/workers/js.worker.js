@@ -98,7 +98,7 @@ function shortRepr(v) {
 function typeName(v) {
   try {
     if (v && v.constructor && v.constructor.name) return v.constructor.name;
-  } catch (e) {
+  } catch {
     /* proxies etc. */
   }
   return "Object";
@@ -181,7 +181,7 @@ function makeSerializer(maxDepth) {
     var keys;
     try {
       keys = Object.keys(v);
-    } catch (e) {
+    } catch {
       keys = [];
     }
     var attrs = [];
@@ -190,7 +190,7 @@ function makeSerializer(maxDepth) {
       var val;
       try {
         val = v[name];
-      } catch (e) {
+      } catch {
         continue; // skip throwing getters
       }
       attrs.push({ name: name, value: ser(val, depth + 1, seen2) });
