@@ -197,7 +197,7 @@ function ExecutionDashboard() {
           {/* Visualization */}
           <div className="border-b border-[rgba(186,215,247,0.08)] lg:border-b-0 lg:border-r">
             <PanelLabel>Visualization · sorting</PanelLabel>
-            <div className="flex h-[460px] flex-col px-5 pb-5 pt-4">
+            <div className="flex h-115 flex-col px-5 pb-5 pt-4">
               <div className="flex flex-1 items-end justify-center gap-2.5">
                 {snap.bars.map((b, idx) => {
                   const active = idx === snap.cmp[0] || idx === snap.cmp[1];
@@ -288,7 +288,7 @@ function PanelLabel({ children }: { children: React.ReactNode }) {
 /** A numeric value that flips up when it changes. */
 function FlipValue({ value }: { value: number }) {
   return (
-    <span className="relative inline-flex min-w-[16px] justify-end overflow-hidden">
+    <span className="relative inline-flex min-w-4 justify-end overflow-hidden">
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.span
           key={value}
