@@ -37,12 +37,13 @@ never touches a concrete client.
 
 - `python` → Pyodide worker client (below) — full per-line tracing.
 - `javascript` → `js-client.ts` + `public/workers/js.worker.js` — executes via
-  `AsyncFunction` inside a plain worker (never main-thread eval), captures
-  console output + `prompt()`/`readline()` stdin, returns a `RunResult` with
-  ONE synthetic `final` snapshot carrying stdout. No per-line tracer yet
-  (Phase 9); Explain shows a Python-only notice meanwhile. Complexity DOES
-  work for JS: `src/lib/explain/lang/` (per-language profiles) statically
-  analyzes the source and the store fills `result.complexity` from it.
+  `AsyncFunction` inside a plain worker (never main-thread eval). Source is
+  instrumented on the main thread first (`src/lib/execution/js-tracer/instrument.ts`,
+  acorn + astring), so the worker emits a full per-line `Snapshot[]` — line,
+  call, and return events with captured return values — same as Python.
+  Explain and all visualizers work for JS. Complexity also works for JS:
+  `src/lib/explain/lang/` (per-language profiles) statically analyzes the
+  source and the store fills `result.complexity` from it.
 - `java` / `cpp` → future Judge0 CE client registers here; no store/UI change.
 
 ## Complexity analysis — `src/lib/explain/lang/`
@@ -79,11 +80,13 @@ Singleton. Owns the worker, tracks engine status, `run(code) → Promise<RunResu
 
 ## The store — `src/lib/store/execution-store.ts`
 
-State: `code, language, snapshots, currentStep, isRunning, result, engineStatus`
-(+ per-language code buffers, so switching languages never loses work).
+State: `code, language, snapshots, currentStep, isRunning, result, engineStatus,
+stdin, inputs, entry, isPlaying, playSpeed` (+ per-language code buffers, so
+switching languages never loses work).
 Actions: `setCode, setLanguage, initEngine, run, stepForward, stepBackward,
-goToStep, reset`. Selector: `selectCurrentSnapshot(state)`. `initEngine`/`run`
-resolve the engine through `getExecutionClient(language)`.
+goToStep, reset, setInput, setStdin, togglePlay, setPlaySpeed, pause`.
+Selector: `selectCurrentSnapshot(state)`. `initEngine`/`run` resolve the
+engine through `getExecutionClient(language)`.
 
 ## Adding a visualizer (the common future task)
 
