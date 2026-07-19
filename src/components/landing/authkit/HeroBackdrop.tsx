@@ -45,7 +45,7 @@ export function HeroBackdrop() {
       {/* Bright source at the apex, then a wide diffused cone falling from it,
           then a soft halo bloom behind the wordmark. */}
       <div className="absolute left-1/2 top-[-2%] size-20 -translate-x-1/2 ak-beam-source" />
-      <div className="absolute left-1/2 top-[-1%] h-[70vh] w-[52rem] -translate-x-1/2 ak-beam" />
+      <div className="absolute left-1/2 top-[-1%] h-[70vh] w-208 -translate-x-1/2 ak-beam" />
       <div className="absolute inset-x-0 top-0 h-[60vh] ak-halo" />
 
       {/* Corners recede so the lit center is the focus. */}
