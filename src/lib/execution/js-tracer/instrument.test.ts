@@ -28,7 +28,6 @@ function runInstrumented(code: string) {
     return value;
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-implied-eval
   const fn = new Function("$rx_trace", "$rx_enter", "$rx_exit", "$rx_ret", "console", '"use strict";\n' + code);
   fn($rx_trace, $rx_enter, $rx_exit, $rx_ret, console);
   return { trace, finalDepth: stack.length, returns };
