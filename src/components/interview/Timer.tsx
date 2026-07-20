@@ -33,6 +33,7 @@ export function Timer() {
         type="button"
         onClick={() => setRunning((r) => !r)}
         title={running ? "Pause timer" : "Resume timer"}
+        aria-label={running ? "Pause timer" : "Resume timer"}
         className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
       >
         {running ? <Pause className="size-3" /> : <Play className="size-3" />}
@@ -41,6 +42,7 @@ export function Timer() {
         type="button"
         onClick={() => setSeconds(0)}
         title="Reset timer"
+        aria-label="Reset timer"
         className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
       >
         <TimerReset className="size-3" />
