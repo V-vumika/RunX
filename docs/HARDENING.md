@@ -21,7 +21,8 @@ _Goal: any Python that runs shows a genuinely useful, correct view; nothing fail
 - ✅ **1.3 Regression test corpus** 🔵 — `vitest` added (dev dep); `npm test`. 22 tests across
   `support-check`, `entry/python`, `narrate`, `classify` — the classifier tests lock in "structure beats
   name heuristics" (Trie/LinkedList with a `search()` method must not become linear-search). Config runs
-  serially (`fileParallelism: false`) to dodge a Windows/vitest-4 worker-pool bug.
+  serially (`vitest.config.ts`'s `poolOptions.threads.singleThread: true`, not `fileParallelism`) to dodge
+  a Windows/vitest-4 worker-pool bug. See `docs/TESTING.md` for the up-to-date test-running notes.
 
 **Exit:** ✅ paste anything that runs → useful view or a clear reason; `npm test` green (22).
 
@@ -69,7 +70,7 @@ Tests: `measure.test.ts` (+ updated `support-check` for stdin). 32 total.
 
 ---
 
-## Status: all three phases DONE (2026-07-05). Next track = Phase 9 multi-language (JS → sandbox → Java → C++), per `docs/ROADMAP.md`. Deferred from this plan: AI teacher, Supabase, watch/breakpoints.
+## Status: all three phases DONE (2026-07-05). Next track = Phase 9 multi-language, per `docs/ROADMAP.md`. **Update 2026-07-13:** the JS tracer shipped 2026-07-12 client-side, with no sandbox needed — only Java/C++ still need one (see `docs/JAVA_CPP_SANDBOX_NOTES.md`). Deferred from this plan: AI teacher, Supabase, watch/breakpoints.
 
 ---
 
