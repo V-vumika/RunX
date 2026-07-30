@@ -43,6 +43,7 @@ export const metadata: Metadata = {
     "learn to code",
   ],
   applicationName: "RunX",
+  manifest: "/manifest.webmanifest",
   openGraph: {
     title: "RunX · See how your code actually runs",
     description:
