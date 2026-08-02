@@ -1,0 +1,14 @@
+# Default: either of us.
+* @Shiv-Reddy @V-vumika
+
+# Shiv: engine, data contract, store, AI/backend, anything cross-cutting.
+/src/lib/execution/ @Shiv-Reddy
+/src/lib/store/ @Shiv-Reddy
+/src/types/ @Shiv-Reddy
+/src/lib/ai/ @Shiv-Reddy
+/public/workers/ @Shiv-Reddy
+
+# Vumi: self-contained visual components and UI panels.
+/src/components/visualizers/ @V-vumika
+/src/components/landing/ @V-vumika
+/src/components/interview/ @V-vumika
