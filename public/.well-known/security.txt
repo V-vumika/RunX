@@ -1,0 +1,3 @@
+Contact: https://github.com/V-vumika/RunX/security/policy
+Preferred-Languages: en
+Canonical: https://runx.example/.well-known/security.txt
