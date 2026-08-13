@@ -1,0 +1,6 @@
+queue.db
+queue.db-wal
+queue.db-shm
+daemon.pid
+logs/
+patches/
