@@ -68,6 +68,8 @@ same shape — not a UI rebuild.
 
 ## Getting started
 
+Requires Node.js 20 or newer.
+
 ```bash
 npm install
 npm run dev
