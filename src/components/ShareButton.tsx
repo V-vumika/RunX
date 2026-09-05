@@ -13,22 +13,36 @@ import { encodeShare } from "@/lib/share";
  * updated in place so a plain copy also works.
  */
 export function ShareButton() {
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
 
-  const share = () => {
+  const share = async () => {
     const { code, stdin, language } = useExecutionStore.getState();
     const token = encodeShare({ code, stdin, language });
     const url = `${location.origin}${location.pathname}#s=${token}`;
     history.replaceState(null, "", url);
-    navigator.clipboard?.writeText(url).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
+
+    try {
+      if (!navigator.clipboard) throw new Error("Clipboard API unavailable");
+      await navigator.clipboard.writeText(url);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("failed");
+    }
+
+    setTimeout(() => setCopyStatus("idle"), 1800);
   };
 
   return (
-    <Button variant="outline" size="sm" className="gap-2" onClick={share} title="Copy a link to this code">
-      {copied ? <Check className="size-4 text-emerald-500" /> : <Share2 className="size-4" />}
-      {copied ? "Copied!" : "Share"}
+    <Button
+      variant="outline"
+      size="sm"
+      className="gap-2"
+      onClick={share}
+      title="Copy a link to this code"
+      aria-live="polite"
+    >
+      {copyStatus === "copied" ? <Check className="size-4 text-emerald-500" /> : <Share2 className="size-4" />}
+      {copyStatus === "copied" ? "Copied!" : copyStatus === "failed" ? "Copy failed" : "Share"}
     </Button>
   );
 }
