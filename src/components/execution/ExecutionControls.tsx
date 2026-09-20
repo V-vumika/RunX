@@ -160,6 +160,9 @@ export function ExecutionControls() {
             <button
               key={s}
               onClick={() => setPlaySpeed(s)}
+              type="button"
+              aria-label={`Set playback speed to ${s} times`}
+              aria-pressed={playSpeed === s}
               className={`rounded px-2 py-0.5 font-mono text-[11px] transition-colors ${
                 playSpeed === s
                   ? "bg-violet-600 text-white"
