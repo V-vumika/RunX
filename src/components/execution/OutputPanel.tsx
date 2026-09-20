@@ -17,15 +17,18 @@ export function OutputPanel() {
 
   const stdout = snapshot?.stdout ?? "";
 
-  // ── NEW: copy button state ──
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
 
-  function handleCopy() {
+  async function handleCopy() {
     if (!stdout) return;
-    navigator.clipboard.writeText(stdout).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    try {
+      if (!navigator.clipboard) throw new Error("Clipboard API unavailable");
+      await navigator.clipboard.writeText(stdout);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("failed");
+    }
+    setTimeout(() => setCopyStatus("idle"), 2000);
   }
 
   return (
@@ -40,13 +43,16 @@ export function OutputPanel() {
           {hasTrace && stdout && (
             <button
               onClick={handleCopy}
+              aria-live="polite"
               className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              {copied ? (
+              {copyStatus === "copied" ? (
                 <>
                   <Check className="size-3 text-emerald-400" />
                   <span className="text-emerald-400">Copied</span>
                 </>
+              ) : copyStatus === "failed" ? (
+                <span className="text-destructive">Copy failed</span>
               ) : (
                 <>
                   <Copy className="size-3" />
